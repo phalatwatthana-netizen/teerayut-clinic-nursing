@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ธีรยุทธคลินิกการพยาบาลและการผดุงครรภ์</title>
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (CDN) สำหรับ Icon ที่ดูทันสมัยและสะอาดตา -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts: Noto Sans Thai -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- ตั้งค่า Color Palette ตามภาพต้นแบบ (MOP Palette) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans Thai"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            blueDark: '#2792E8',   /* ฟ้าน้ำเงินเข้ม MOP */
+                            blueMain: '#2792E8',   /* ใช้เป็นสีหลัก */
+                            blueLight: '#8FC2E8',  /* ฟ้าอ่อน MOP */
+                            bluePale: '#B7D0E4',   /* ฟ้าหม่นอ่อน MOP */
+                            greenDark: '#2F8F4C',  /* เขียวเข้ม MOP */
+                            greenMain: '#48BC49',  /* เขียวธรรมชาติ MOP */
+                            greenLight: '#8DC927', /* เขียวสด MOP */
+                            teal: '#148A8E',       /* เขียวอมฟ้า MOP */
+                            grayLight: '#D4D5D7',  /* เทาอ่อน MOP */
+                            grayMid: '#A9A9AB',    /* เทากลาง MOP */
+                            bg: '#F5F7F9',         /* พื้นหลังแอปพลิเคชัน */
+                            white: '#FFFFFF'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* ปรับแต่ง Scrollbar ให้ดูเรียบเนียน */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #B7D0E4; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #8FC2E8; }
+        
+        /* Gradient พิเศษตามภาพต้นแบบ */
+        .bg-brand-gradient {
+            background: linear-gradient(90deg, #2792E8 0%, #148A8E 50%, #48BC49 100%);
+        }
+
+        /* สำหรับสลับหน้าต่าง */
+        .app-section { display: none; }
+        .app-section.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* สำหรับ Toast Notification */
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .toast-enter { animation: slideInRight 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-brand-bg font-sans text-gray-800 antialiased h-screen flex overflow-hidden">
+
+    <!-- Sidebar (เมนูหลักด้านข้าง - โทนสีฟ้าน้ำเงินเข้ม) -->
+    <aside class="w-64 bg-[#2792E8] shadow-lg hidden md:flex flex-col h-full z-20 absolute md:relative transition-transform transform -translate-x-full md:translate-x-0" id="sidebar">
+        <!-- Logo Area -->
+        <div class="h-20 flex items-center px-6 border-b border-white/10">
+            <i class="ph-fill ph-heartbeat text-white text-3xl mr-3"></i>
+            <div>
+                <h1 class="text-lg font-bold text-white leading-tight">ธีรยุทธคลินิก</h1>
+                <p class="text-xs text-[#B7D0E4] font-medium">การพยาบาล/ผดุงครรภ์</p>
+            </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1" id="nav-menu">
+            <button onclick="navTo('dashboard')" id="nav-dashboard" class="w-full flex items-center px-3 py-2.5 bg-white/20 text-white rounded-lg font-semibold transition-colors text-left">
+                <i class="ph ph-squares-four text-xl mr-3"></i> หน้าหลัก
+            </button>
+            
+            <p class="px-3 pt-4 pb-2 text-xs font-semibold text-[#B7D0E4]/70 uppercase tracking-wider">ระบบบริการ</p>
+            <button onclick="navTo('patients')" id="nav-patients" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-identification-card text-xl mr-3"></i> ห้องบัตร
+            </button>
+            <button onclick="navTo('triage')" id="nav-triage" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-heartbeat text-xl mr-3"></i> ห้องซักประวัติ
+            </button>
+            <button onclick="navTo('examination')" id="nav-examination" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-stethoscope text-xl mr-3"></i> ห้องตรวจ
+            </button>
+            <button onclick="navTo('pharmacy')" id="nav-pharmacy" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-pill text-xl mr-3"></i> ห้องยา
+            </button>
+            <button onclick="navTo('appointments')" id="nav-appointments" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-calendar-plus text-xl mr-3"></i> ห้องนัด
+            </button>
+            <button onclick="navTo('referral')" id="nav-referral" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-ambulance text-xl mr-3"></i> ห้องส่งต่อ
+            </button>
+            
+            <p class="px-3 pt-4 pb-2 text-xs font-semibold text-[#B7D0E4]/70 uppercase tracking-wider">ระบบจัดการ</p>
+            <button onclick="navTo('billing')" id="nav-billing" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-receipt text-xl mr-3"></i> ค่าใช้จ่าย
+            </button>
+            <button onclick="navTo('reports')" id="nav-reports" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-chart-line-up text-xl mr-3"></i> รายงานสรุป
+            </button>
+        </nav>
+
+        <!-- User Info -->
+        <div class="p-4 border-t border-white/10">
+            <div class="flex items-center">
+                <img src="https://ui-avatars.com/api/?name=พยาบาล+วิชาชีพ&background=8FC2E8&color=2792E8" alt="User Avatar" class="w-10 h-10 rounded-full border border-white/20">
+                <div class="ml-3 overflow-hidden">
+                    <p class="text-sm font-semibold text-white truncate">พยาบาล วิชาชีพ</p>
+                    <p class="text-xs text-[#B7D0E4] truncate">ผู้ดูแลระบบ</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Overlay สำหรับ Mobile -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-10 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        
+        <!-- Toast Notification Container -->
+        <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2"></div>
+
+        <!-- HeaderBar -->
+        <header class="h-20 bg-white shadow-sm flex items-center justify-between px-4 sm:px-6 z-10">
+            <div class="flex items-center">
+                <button onclick="toggleSidebar()" class="md:hidden mr-4 text-gray-500 hover:text-brand-blueMain">
+                    <i class="ph ph-list text-2xl"></i>
+                </button>
+                <h2 class="text-xl font-semibold text-gray-800" id="header-title">หน้าหลัก (Dashboard)</h2>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-brand-teal font-medium hidden lg:block" id="currentDateDisplay">กำลังโหลดวันที่...</span>
+                <!-- Notifications -->
+                <button class="relative p-2 text-gray-500 hover:text-brand-blueMain transition-colors">
+                    <i class="ph ph-bell text-2xl"></i>
+                    <span class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                </button>
+                <button class="bg-brand-bg hover:bg-brand-bluePale/30 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center">
+                    <i class="ph ph-sign-out mr-2"></i> <span class="hidden sm:inline">ออกจากระบบ</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8" id="main-content">
+            
+            <!-- ================= SECTION: DASHBOARD ================= -->
+            <section id="section-dashboard" class="app-section active">
+                <!-- Welcome Banner -->
+                <div class="bg-white rounded-2xl p-6 mb-6 shadow-sm relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 border border-brand-bluePale/30">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-brand-gradient"></div>
+                    <div>
+                        <h3 class="text-xl font-bold text-brand-blueDark mb-1">สวัสดี, ยินดีต้อนรับสู่ระบบคลินิก 👋</h3>
+                        <p class="text-gray-500 text-sm">ภาพรวมการให้บริการและนัดหมายประจำวัน</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="navTo('patients')" class="bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center shadow-sm">
+                            <i class="ph ph-user-plus mr-2 text-lg"></i> ลงทะเบียนใหม่
+                        </button>
+                        <button onclick="navTo('examination')" class="bg-brand-greenMain hover:bg-brand-greenDark text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center shadow-sm">
+                            <i class="ph ph-stethoscope mr-2 text-lg"></i> เข้าห้องตรวจ
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-brand-bluePale/20 flex items-center">
+                        <div class="w-10 h-10 rounded-full bg-brand-blueLight/20 text-brand-blueMain flex items-center justify-center text-xl mr-3 shrink-0">
+                            <i class="ph-fill ph-users"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">ผู้รับบริการวันนี้</p>
+                            <p class="text-xl font-bold text-gray-800">12</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-brand-bluePale/20 flex items-center">
+                        <div class="w-10 h-10 rounded-full bg-brand-teal/10 text-brand-teal flex items-center justify-center text-xl mr-3 shrink-0">
+                            <i class="ph-fill ph-calendar-check"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">นัดหมายวันนี้</p>
+                            <p class="text-xl font-bold text-gray-800">5</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-brand-bluePale/20 flex items-center">
+                        <div class="w-10 h-10 rounded-full bg-pink-50 text-pink-500 flex items-center justify-center text-xl mr-3 shrink-0">
+                            <i class="ph-fill ph-baby"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">ฝากครรภ์/ติดตาม</p>
+                            <p class="text-xl font-bold text-gray-800">3</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-brand-bluePale/20 flex items-center">
+                        <div class="w-10 h-10 rounded-full bg-brand-greenLight/20 text-brand-greenMain flex items-center justify-center text-xl mr-3 shrink-0">
+                            <i class="ph-fill ph-coins"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">รายได้วันนี้</p>
+                            <p class="text-xl font-bold text-gray-800">4,500 ฿</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table & Announcements -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-hidden">
+                        <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <h3 class="font-semibold text-brand-blueDark flex items-center">
+                                <i class="ph-fill ph-clock-countdown text-brand-teal mr-2 text-lg"></i> คิวตรวจและนัดหมายวันนี้
+                            </h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="bg-white text-gray-500 text-xs uppercase border-b border-gray-100">
+                                        <th class="p-3 font-medium">เวลา</th>
+                                        <th class="p-3 font-medium">ชื่อ-สกุล</th>
+                                        <th class="p-3 font-medium">บริการ</th>
+                                        <th class="p-3 font-medium">สถานะ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="appointmentTableBody" class="text-sm divide-y divide-gray-50">
+                                    <!-- JS will populate -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30">
+                        <div class="p-4 border-b border-gray-100 bg-gray-50/50">
+                            <h3 class="font-semibold text-brand-blueDark flex items-center">
+                                <i class="ph-fill ph-megaphone text-brand-greenMain mr-2 text-lg"></i> ประกาศ
+                            </h3>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <div class="flex items-start">
+                                <div class="w-2 h-2 mt-1.5 rounded-full bg-red-500 mr-2 shrink-0"></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">อัปเดตสต๊อกยา</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">วัคซีนบาดทะยักใกล้หมด กรุณาตรวจสอบ</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="w-2 h-2 mt-1.5 rounded-full bg-brand-teal mr-2 shrink-0"></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">ประชุม ANC</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">วันศุกร์นี้ 13:00 น.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= SECTION: PATIENTS (ห้องบัตร) ================= -->
+            <section id="section-patients" class="app-section">
+                
+                <!-- View 1: ตารางรายชื่อ (List View) -->
+                <div id="patient-list-view" class="block">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-brand-blueDark">ทะเบียนผู้รับบริการ (ห้องบัตร)</h3>
+                            <p class="text-sm text-gray-500">ค้นหาและจัดการข้อมูลผู้รับบริการทั้งหมด</p>
+                        </div>
+                        <div class="flex w-full md:w-auto gap-2">
+                            <div class="relative flex-1 md:w-64">
+                                <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-lg"></i>
+                                <input type="text" placeholder="ค้นหา ชื่อ, เลขบัตร, เบอร์โทร..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain transition-colors">
+                            </div>
+                            <button onclick="togglePatientForm(true)" class="bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center shadow-sm shrink-0">
+                                <i class="ph ph-plus mr-2 text-lg"></i> เพิ่มประวัติใหม่
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="bg-brand-bg text-gray-600 text-xs uppercase border-b border-gray-200">
+                                        <th class="p-4 font-medium">รหัส (HN)</th>
+                                        <th class="p-4 font-medium">ชื่อ - นามสกุล</th>
+                                        <th class="p-4 font-medium">อายุ/เพศ</th>
+                                        <th class="p-4 font-medium">เบอร์โทรศัพท์</th>
+                                        <th class="p-4 font-medium">ประวัติแพ้ยา</th>
+                                        <th class="p-4 font-medium text-right">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="patientTableBody" class="text-sm divide-y divide-gray-50">
+                                    <!-- JS will populate mock data -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <div class="p-4 border-t border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <p class="text-xs text-gray-500">แสดง 1 ถึง 5 จาก 120 รายการ</p>
+                            <div class="flex space-x-1">
+                                <button class="px-3 py-1.5 border border-gray-200 text-gray-400 rounded hover:bg-gray-100 text-sm disabled:opacity-50" disabled><i class="ph ph-caret-left"></i></button>
+                                <button class="px-3 py-1.5 border border-brand-blueMain bg-brand-blueMain text-white rounded text-sm font-medium">1</button>
+                                <button class="px-3 py-1.5 border border-gray-200 text-gray-600 rounded hover:bg-gray-100 text-sm"><i class="ph ph-caret-right"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View 2: ฟอร์มลงทะเบียน (Form View - ซ่อนเป็นค่าเริ่มต้น) -->
+                <div id="patient-form-view" class="hidden">
+                    <div class="flex items-center mb-6">
+                        <button onclick="togglePatientForm(false)" class="text-gray-500 hover:text-brand-blueMain mr-3 p-1 rounded-lg hover:bg-brand-bluePale/50 transition-colors">
+                            <i class="ph ph-arrow-left text-2xl"></i>
+                        </button>
+                        <div>
+                            <h3 class="text-xl font-bold text-brand-blueDark">ลงทะเบียนผู้รับบริการใหม่</h3>
+                            <p class="text-sm text-gray-500">กรุณากรอกข้อมูลให้ครบถ้วนเพื่อประโยชน์ในการรักษา</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 p-6">
+                        <form id="patientForm" onsubmit="savePatient(event)">
+                            <!-- Section 1: ข้อมูลส่วนตัว -->
+                            <h4 class="text-brand-blueDark font-semibold border-b border-gray-100 pb-2 mb-4 flex items-center">
+                                <i class="ph-fill ph-user mr-2 text-lg"></i> ข้อมูลส่วนบุคคล
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div class="lg:col-span-1">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">เลขบัตรประชาชน <span class="text-red-500">*</span></label>
+                                    <input type="text" id="cid" maxlength="13" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                                </div>
+                                <div class="lg:col-span-1">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">คำนำหน้า <span class="text-red-500">*</span></label>
+                                    <select id="prefix" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                                        <option value="">เลือก...</option>
+                                        <option value="นาย">นาย</option>
+                                        <option value="นาง">นาง</option>
+                                        <option value="นางสาว">นางสาว</option>
+                                        <option value="ด.ช.">เด็กชาย (ด.ช.)</option>
+                                        <option value="ด.ญ.">เด็กหญิง (ด.ญ.)</option>
+                                    </select>
+                                </div>
+                                <div class="lg:col-span-1">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">ชื่อ <span class="text-red-500">*</span></label>
+                                    <input type="text" id="firstName" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                                </div>
+                                <div class="lg:col-span-1">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">นามสกุล <span class="text-red-500">*</span></label>
+                                    <input type="text" id="lastName" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                                </div>
+                                <div class="lg:col-span-1">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">วัน/เดือน/ปีเกิด (พ.ศ.)</label>
+                                    <input type="date" id="birthDate" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                                </div>
+                                <div class="lg:col-span-1">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">เพศ</label>
+                                    <select id="gender" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                                        <option value="">เลือก...</option>
+                                        <option value="ชาย">ชาย</option>
+                                        <option value="หญิง">หญิง</option>
+                                    </select>
+                                </div>
+                                <div class="lg:col-span-1">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label>
+                                    <input type="tel" id="phone" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                                </div>
+                            </div>
+                            
+                            <!-- Section 2: ข้อมูลสุขภาพ -->
+                            <h4 class="text-brand-greenDark font-semibold border-b border-gray-100 pb-2 mb-4 flex items-center mt-6">
+                                <i class="ph-fill ph-heartbeat mr-2 text-lg"></i> ข้อมูลสุขภาพและการติดต่อ
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">ที่อยู่ปัจจุบัน</label>
+                                    <textarea id="address" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">โรคประจำตัว (ถ้าไม่มีให้เว้นว่าง)</label>
+                                    <input type="text" id="disease" placeholder="เช่น เบาหวาน, ความดัน..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-teal focus:ring-1 focus:ring-brand-teal bg-brand-bg/50">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-red-600 mb-1">ประวัติแพ้ยา (สำคัญ) <span class="text-red-500">*</span></label>
+                                    <input type="text" id="allergy" required placeholder="ระบุชื่อยา หรือพิมพ์ 'ไม่มี'" class="w-full px-3 py-2 border border-red-300 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">ผู้ติดต่อฉุกเฉิน (ชื่อ - ความสัมพันธ์)</label>
+                                    <input type="text" id="emContact" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">เบอร์โทรศัพท์ผู้ติดต่อฉุกเฉิน</label>
+                                    <input type="tel" id="emPhone" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                                </div>
+                            </div>
+
+                            <!-- Section 3: PDPA -->
+                            <div class="bg-brand-bluePale/20 p-4 rounded-lg border border-brand-bluePale mb-6">
+                                <label class="flex items-start cursor-pointer">
+                                    <div class="flex items-center h-5">
+                                        <input type="checkbox" id="pdpa" required class="w-4 h-4 text-brand-blueMain border-gray-300 rounded focus:ring-brand-blueMain mt-0.5">
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <span class="font-medium text-brand-blueDark">ความยินยอมตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA) <span class="text-red-500">*</span></span>
+                                        <p class="text-gray-500 text-xs mt-1">ข้าพเจ้ายินยอมให้คลินิกจัดเก็บ ประมวลผล และใช้งานข้อมูลส่วนบุคคลและข้อมูลสุขภาพของข้าพเจ้า เพื่อวัตถุประสงค์ในการตรวจรักษา การพยาบาล การผดุงครรภ์ และการติดต่อสื่อสารที่เกี่ยวข้องกับบริการของคลินิกเท่านั้น</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Section 4: เอกสารแนบ (เพิ่มใหม่) -->
+                            <h4 class="text-brand-teal font-semibold border-b border-gray-100 pb-2 mb-4 flex items-center mt-6">
+                                <i class="ph-fill ph-file-arrow-up mr-2 text-lg"></i> แนบเอกสาร (ถ้ามี)
+                            </h4>
+                            <div class="mb-6">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">สำเนาบัตรประชาชน / ใบส่งตัว / เอกสารอื่นๆ (JPG, PNG, PDF ขนาดไม่เกิน 5MB)</label>
+                                <input type="file" id="patientFile" accept=".jpg,.jpeg,.png,.pdf" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-brand-bg/50 focus:outline-none focus:border-brand-blueMain file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-brand-bluePale/30 file:text-brand-blueDark hover:file:bg-brand-bluePale/50">
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex justify-end space-x-3 border-t border-gray-100 pt-4">
+                                <button type="button" onclick="togglePatientForm(false)" class="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                    ยกเลิก
+                                </button>
+                                <button type="submit" class="px-5 py-2 bg-brand-greenMain hover:bg-brand-greenDark text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
+                                    <i class="ph ph-floppy-disk mr-2 text-lg"></i> บันทึกข้อมูล
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ================= SECTION: TRIAGE (ห้องซักประวัติ) ================= -->
+            <section id="section-triage" class="app-section">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-brand-blueDark">ห้องซักประวัติ และตรวจรักษา</h3>
+                        <p class="text-sm text-gray-500">บันทึกสัญญาณชีพ (Vitals Sign) อาการสำคัญ และการประเมินเบื้องต้น</p>
+                    </div>
+                    <!-- จำลองกล่องเลือกผู้รับบริการ -->
+                    <div class="flex items-center bg-white border border-brand-bluePale/50 rounded-lg px-3 py-2 shadow-sm">
+                        <i class="ph-fill ph-user-circle text-brand-blueMain text-xl mr-2"></i>
+                        <select class="bg-transparent text-sm font-medium text-gray-700 focus:outline-none w-48 sm:w-64 cursor-pointer">
+                            <option value="">-- เลือกรหัส / ชื่อผู้รอคิว --</option>
+                            <option value="PAT-661001-0001">PAT-0001 | คุณ สมศรี ใจดี (รอซักประวัติ)</option>
+                            <option value="PAT-661001-0004">PAT-0004 | ด.ช. มานะ อดทน (รอตรวจ)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 p-6">
+                    <form id="triageForm" onsubmit="saveTriage(event)">
+                        
+                        <!-- Vitals Section -->
+                        <div class="bg-brand-bg/40 p-5 rounded-xl border border-brand-bluePale/30 mb-6">
+                            <h4 class="text-brand-greenDark font-semibold mb-4 flex items-center text-sm border-b border-white/50 pb-2">
+                                <i class="ph-fill ph-activity mr-2 text-lg"></i> สัญญาณชีพ (Vital Signs)
+                            </h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-xs font-bold text-brand-blueDark mb-1">BP (mmHg)</label>
+                                    <div class="flex items-center">
+                                        <input type="number" id="bp_sys" placeholder="Sys" class="w-full px-2 py-2 border border-gray-200 rounded-l-lg text-sm focus:outline-none focus:border-brand-blueMain text-center bg-white shadow-sm">
+                                        <span class="bg-gray-100 px-2 py-2 border-y border-gray-200 text-gray-500 text-sm">/</span>
+                                        <input type="number" id="bp_dia" placeholder="Dia" class="w-full px-2 py-2 border border-gray-200 rounded-r-lg text-sm focus:outline-none focus:border-brand-blueMain text-center bg-white shadow-sm">
+                                    </div>
+                                </div>
+                                <div class="col-span-1">
+                                    <label class="block text-xs font-bold text-brand-blueDark mb-1">BT (°C)</label>
+                                    <input type="number" step="0.1" id="bt" placeholder="36.5" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-white shadow-sm">
+                                </div>
+                                <div class="col-span-1">
+                                    <label class="block text-xs font-bold text-brand-blueDark mb-1">PR (/min)</label>
+                                    <input type="number" id="pr" placeholder="80" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-white shadow-sm">
+                                </div>
+                                <div class="col-span-1">
+                                    <label class="block text-xs font-bold text-brand-blueDark mb-1">Weight (kg)</label>
+                                    <input type="number" step="0.1" id="weight" oninput="calculateBMI()" placeholder="50.0" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-white shadow-sm">
+                                </div>
+                                <div class="col-span-1">
+                                    <label class="block text-xs font-bold text-brand-blueDark mb-1">Height (cm)</label>
+                                    <input type="number" step="0.1" id="height" oninput="calculateBMI()" placeholder="160.0" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-white shadow-sm">
+                                </div>
+                                <div class="col-span-1">
+                                    <label class="block text-xs font-bold text-brand-teal mb-1">BMI</label>
+                                    <input type="text" id="bmi" readonly placeholder="Auto" class="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-semibold text-gray-500 text-center shadow-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Clinical Notes Section (อิงจากกระดาษฟอร์ม) -->
+                        <div class="space-y-4 px-2">
+                            <div class="flex flex-col sm:flex-row sm:items-start gap-2">
+                                <label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">CC :</label>
+                                <input type="text" id="cc" placeholder="อาการสำคัญที่มาพบ (Chief Complaint)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain border-b-2 focus:border-b-brand-blueMain bg-gray-50/50 hover:bg-white transition-colors shadow-sm">
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-start gap-2">
+                                <label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PI :</label>
+                                <textarea id="pi" rows="2" placeholder="ประวัติการเจ็บป่วยปัจจุบัน (Present Illness)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain border-b-2 focus:border-b-brand-blueMain bg-gray-50/50 hover:bg-white transition-colors shadow-sm"></textarea>
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-start gap-2">
+                                <label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PH :</label>
+                                <input type="text" id="ph" placeholder="ประวัติการเจ็บป่วยในอดีต (Past History)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain border-b-2 focus:border-b-brand-blueMain bg-gray-50/50 hover:bg-white transition-colors shadow-sm">
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-start gap-2">
+                                <label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PE :</label>
+                                <textarea id="pe" rows="2" placeholder="การตรวจร่างกาย (Physical Examination)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain border-b-2 focus:border-b-brand-blueMain bg-gray-50/50 hover:bg-white transition-colors shadow-sm"></textarea>
+                            </div>
+                            
+                            <div class="border-t border-dashed border-gray-200 my-4 pt-4"></div>
+
+                            <div class="flex flex-col sm:flex-row sm:items-start gap-2">
+                                <label class="sm:w-32 text-sm font-bold text-brand-greenDark shrink-0 pt-2">Dx :</label>
+                                <input type="text" id="dx" placeholder="การประเมินทางการพยาบาล / การวินิจฉัย (Diagnosis)" class="w-full px-3 py-2 border border-brand-greenLight/50 rounded-lg text-sm focus:outline-none focus:border-brand-greenMain border-b-2 focus:border-b-brand-greenMain bg-brand-greenLight/10 hover:bg-white transition-colors shadow-sm">
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-start gap-2">
+                                <label class="sm:w-32 text-sm font-bold text-brand-greenDark shrink-0 pt-2">Rx :</label>
+                                <input type="text" id="rx" placeholder="ยาที่สั่งจ่าย (Prescription)" class="w-full px-3 py-2 border border-brand-greenLight/50 rounded-lg text-sm focus:outline-none focus:border-brand-greenMain border-b-2 focus:border-b-brand-greenMain bg-brand-greenLight/10 hover:bg-white transition-colors shadow-sm">
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-start gap-2">
+                                <label class="sm:w-32 text-sm font-bold text-brand-greenDark shrink-0 pt-2">Treatment :</label>
+                                <input type="text" id="treatment" placeholder="การพยาบาล / หัตถการที่ให้" class="w-full px-3 py-2 border border-brand-greenLight/50 rounded-lg text-sm focus:outline-none focus:border-brand-greenMain border-b-2 focus:border-b-brand-greenMain bg-brand-greenLight/10 hover:bg-white transition-colors shadow-sm">
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                                <label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0">Follow Up :</label>
+                                <div class="flex flex-col sm:flex-row gap-2 w-full">
+                                    <input type="date" id="followUpDate" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain shadow-sm">
+                                    <input type="text" id="followUpNote" placeholder="รายละเอียดการนัดหมาย (ถ้ามี)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain shadow-sm">
+                                </div>
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-2 mt-4 pt-4">
+                                <label class="sm:w-32 text-sm font-bold text-gray-500 shrink-0">Signature :</label>
+                                <input type="text" id="signature" value="พยาบาล วิชาชีพ" readonly class="w-full sm:w-64 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 cursor-not-allowed">
+                                <span class="text-xs text-gray-400 ml-2 hidden sm:inline">(ลงนามโดยระบบ)</span>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex justify-end space-x-3 border-t border-gray-100 pt-6 mt-6">
+                            <button type="button" class="px-5 py-2.5 border border-brand-blueMain text-brand-blueMain rounded-lg text-sm font-medium hover:bg-brand-bluePale/30 transition-colors flex items-center">
+                                <i class="ph ph-printer mr-2 text-lg"></i> พิมพ์ใบสั่งยา
+                            </button>
+                            <button type="submit" class="px-5 py-2.5 bg-brand-greenMain hover:bg-brand-greenDark text-white rounded-lg text-sm font-medium transition-colors shadow-md flex items-center">
+                                <i class="ph ph-check-circle mr-2 text-lg"></i> บันทึกเข้าระบบ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- ================= SECTION: EXAMINATION (ห้องตรวจ) ================= -->
+            <section id="section-examination" class="app-section">
+                <div class="bg-white p-10 rounded-xl shadow-sm text-center border border-brand-bluePale/30">
+                    <i class="ph ph-stethoscope text-4xl text-brand-greenMain mb-3"></i>
+                    <h3 class="text-xl font-medium text-brand-blueDark">ห้องตรวจ</h3>
+                    <p class="text-gray-500 text-sm mt-2">บันทึกการพยาบาล, หัตถการ, ผลการตรวจ และการฝากครรภ์</p>
+                </div>
+            </section>
+
+            <!-- ================= SECTION: PHARMACY (ห้องยา) ================= -->
+            <section id="section-pharmacy" class="app-section">
+                <div class="bg-white p-10 rounded-xl shadow-sm text-center border border-brand-bluePale/30">
+                    <i class="ph ph-pill text-4xl text-purple-500 mb-3"></i>
+                    <h3 class="text-xl font-medium text-brand-blueDark">ห้องยา</h3>
+                    <p class="text-gray-500 text-sm mt-2">จัดยาตามคำสั่ง จ่ายยา และให้คำแนะนำ</p>
+                </div>
+            </section>
+
+            <!-- ================= SECTION: APPOINTMENTS (ห้องนัด) ================= -->
+            <section id="section-appointments" class="app-section">
+                <div class="bg-white p-10 rounded-xl shadow-sm text-center border border-brand-bluePale/30">
+                    <i class="ph ph-calendar-plus text-4xl text-brand-teal mb-3"></i>
+                    <h3 class="text-xl font-medium text-brand-blueDark">ห้องนัด</h3>
+                    <p class="text-gray-500 text-sm mt-2">ปฏิทินจัดการคิวนัดหมายล่วงหน้า</p>
+                </div>
+            </section>
+
+            <!-- ================= SECTION: REFERRAL (ห้องส่งต่อ) ================= -->
+            <section id="section-referral" class="app-section">
+                <div class="bg-white p-10 rounded-xl shadow-sm text-center border border-brand-bluePale/30">
+                    <i class="ph ph-ambulance text-4xl text-red-500 mb-3"></i>
+                    <h3 class="text-xl font-medium text-brand-blueDark">ห้องส่งต่อ (Referral)</h3>
+                    <p class="text-gray-500 text-sm mt-2">ออกใบส่งตัว จัดการเอกสารส่งต่อผู้รับบริการไปยังสถานพยาบาลอื่น</p>
+                </div>
+            </section>
+
+            <!-- ================= SECTION: BILLING (ค่าใช้จ่าย) ================= -->
+            <section id="section-billing" class="app-section">
+                <div class="bg-white p-10 rounded-xl shadow-sm text-center border border-brand-bluePale/30">
+                    <i class="ph ph-receipt text-4xl text-gray-400 mb-3"></i>
+                    <h3 class="text-xl font-medium text-brand-blueDark">ค่าใช้จ่าย / ออกใบเสร็จ</h3>
+                </div>
+            </section>
+
+            <!-- ================= SECTION: REPORTS (รายงาน) ================= -->
+            <section id="section-reports" class="app-section">
+                <div class="bg-white p-10 rounded-xl shadow-sm text-center border border-brand-bluePale/30">
+                    <i class="ph ph-chart-line-up text-4xl text-gray-400 mb-3"></i>
+                    <h3 class="text-xl font-medium text-brand-blueDark">รายงานสรุป</h3>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script>
+        // ชื่อหัวข้อของแต่ละเมนู
+        const pageTitles = {
+            'dashboard': 'หน้าหลัก (Dashboard)',
+            'patients': 'ห้องบัตร (ทะเบียนผู้รับบริการ)',
+            'triage': 'ห้องซักประวัติ (Vitals Sign)',
+            'examination': 'ห้องตรวจ (บันทึกการพยาบาล)',
+            'pharmacy': 'ห้องยา (จัดยา/จ่ายยา)',
+            'appointments': 'ห้องนัด (ตารางนัดหมาย)',
+            'referral': 'ห้องส่งต่อ (เอกสารส่งตัว)',
+            'billing': 'ระบบค่าใช้จ่าย',
+            'reports': 'รายงานสรุป'
+        };
+
+        // ฟังก์ชันสลับหน้าต่าง (Navigation) สำหรับธีม Sidebar สีน้ำเงินเข้ม
+        function navTo(sectionId) {
+            // 1. ซ่อนทุก Section
+            const sections = document.querySelectorAll('.app-section');
+            sections.forEach(sec => sec.classList.remove('active'));
+            
+            // 2. แสดง Section ที่เลือก
+            const targetSection = document.getElementById('section-' + sectionId);
+            if(targetSection) targetSection.classList.add('active');
+            
+            // 3. อัปเดตสไตล์ของปุ่มเมนูใน Sidebar
+            const navButtons = document.querySelectorAll('#nav-menu button');
+            navButtons.forEach(btn => {
+                // ล้างสไตล์ Active ออก (คืนค่าเป็นสีฟ้าหม่นอ่อน)
+                btn.classList.remove('bg-white/20', 'text-white', 'font-semibold');
+                btn.classList.add('text-[#B7D0E4]');
+            });
+            
+            // ใส่สไตล์ Active ให้ปุ่มที่ถูกคลิก (พื้นหลังโปร่งแสง ตัวหนังสือขาว)
+            const activeBtn = document.getElementById('nav-' + sectionId);
+            if(activeBtn) {
+                activeBtn.classList.remove('text-[#B7D0E4]');
+                activeBtn.classList.add('bg-white/20', 'text-white', 'font-semibold');
+            }
+            
+            // 4. เปลี่ยนข้อความ Header
+            document.getElementById('header-title').innerText = pageTitles[sectionId] || '';
+
+            // ปิด Sidebar หากเปิดอยู่ในโหมดมือถือ
+            if(window.innerWidth < 768) {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar.classList.contains('-translate-x-full')) {
+                    toggleSidebar();
+                }
+            }
+        }
+
+        // --- ระบบแจ้งเตือน (Toast Notification) ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            // กำหนดสีและไอคอนตามประเภท
+            let icon = 'ph-check-circle';
+            let colorClass = 'border-brand-greenMain text-brand-greenDark bg-green-50';
+            
+            if (type === 'error') {
+                icon = 'ph-warning-circle';
+                colorClass = 'border-red-500 text-red-700 bg-red-50';
+            }
+
+            toast.className = `toast-enter flex items-center p-4 rounded-lg border-l-4 shadow-lg bg-white min-w-[250px] ${colorClass}`;
+            toast.innerHTML = `
+                <i class="ph-fill ${icon} text-2xl mr-3"></i>
+                <span class="font-medium text-sm">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            // ลบ Toast ออกหลังจาก 3 วินาที
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease-in';
+                setTimeout(() => {
+                    if(container.contains(toast)) container.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        // Mock Data สำหรับ Dashboard
+        const mockAppointments = [
+            { time: "09:00", name: "คุณ สมศรี ใจดี", type: "ฝากครรภ์", status: "รอตรวจ", color: "text-yellow-600 bg-yellow-50" },
+            { time: "09:30", name: "คุณ สมชาย รักชาติ", type: "ทำแผล", status: "กำลังตรวจ", color: "text-blue-600 bg-blue-50" },
+            { time: "10:00", name: "ด.ช. มานะ อดทน", type: "ฉีดวัคซีน", status: "เสร็จสิ้น", color: "text-green-600 bg-green-50" }
+        ];
+
+        // Mock Data สำหรับห้องบัตร (Patients)
+        const mockPatients = [
+            { hn: "PAT-661001-0001", name: "นาง สมศรี ใจดี", age: "28", gender: "หญิง", phone: "081-234-5678", allergy: "ไม่มี", allergyColor: "text-gray-500" },
+            { hn: "PAT-661001-0002", name: "นาย สมชาย รักชาติ", age: "45", gender: "ชาย", phone: "089-876-5432", allergy: "Penicillin", allergyColor: "text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded" },
+            { hn: "PAT-661001-0003", name: "นางสาว วนิดา สวยงาม", age: "24", gender: "หญิง", phone: "082-333-4444", allergy: "ไม่มี", allergyColor: "text-gray-500" },
+            { hn: "PAT-661001-0004", name: "ด.ช. มานะ อดทน", age: "5", gender: "ชาย", phone: "081-111-2222", allergy: "Aspirin", allergyColor: "text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded" },
+            { hn: "PAT-661001-0005", name: "นาง อรทัย พึ่งพา", age: "32", gender: "หญิง", phone: "085-555-6666", allergy: "ไม่มี", allergyColor: "text-gray-500" }
+        ];
+
+        // แสดงตาราง Dashboard
+        function renderDashboardTable() {
+            const tbody = document.getElementById('appointmentTableBody');
+            if(!tbody) return;
+            
+            let html = '';
+            mockAppointments.forEach(app => {
+                html += `
+                    <tr class="hover:bg-brand-bg/50">
+                        <td class="p-3 text-gray-600">${app.time}</td>
+                        <td class="p-3 font-medium text-gray-800">${app.name}</td>
+                        <td class="p-3 text-gray-600">${app.type}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 text-[11px] font-medium rounded-full ${app.color}">${app.status}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // อัปเดตวันที่
+        function updateDate() {
+            const dateEl = document.getElementById('currentDateDisplay');
+            if(dateEl) {
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                dateEl.innerText = new Date().toLocaleDateString('th-TH', options);
+            }
+        }
+
+        // --- ส่วนของระบบห้องบัตร (Patients) ---
+        
+        // แสดงตารางรายชื่อผู้รับบริการ
+        function renderPatientsTable() {
+            const tbody = document.getElementById('patientTableBody');
+            if(!tbody) return;
+            
+            let html = '';
+            mockPatients.forEach(p => {
+                html += `
+                    <tr class="hover:bg-brand-bg transition-colors">
+                        <td class="p-4 text-brand-blueMain font-medium">${p.hn}</td>
+                        <td class="p-4 font-medium text-gray-800">${p.name}</td>
+                        <td class="p-4 text-gray-600">${p.age} ปี / ${p.gender}</td>
+                        <td class="p-4 text-gray-600">${p.phone}</td>
+                        <td class="p-4">
+                            <span class="${p.allergyColor}">${p.allergy}</span>
+                        </td>
+                        <td class="p-4 text-right space-x-1 flex justify-end">
+                            <button class="p-1.5 text-orange-500 hover:bg-orange-50 rounded" title="ส่งไปห้องซักประวัติ" onclick="navTo('triage')">
+                                <i class="ph ph-heartbeat text-lg"></i>
+                            </button>
+                            <button class="p-1.5 text-gray-500 hover:text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="แก้ไข/ดูประวัติ">
+                                <i class="ph ph-pencil-simple text-lg"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // สลับหน้าจอระหว่าง List View กับ Form View ในห้องบัตร
+        function togglePatientForm(showForm) {
+            const listView = document.getElementById('patient-list-view');
+            const formView = document.getElementById('patient-form-view');
+            
+            if (showForm) {
+                listView.classList.add('hidden');
+                formView.classList.remove('hidden');
+            } else {
+                formView.classList.add('hidden');
+                listView.classList.remove('hidden');
+            }
+        }
+
+        // คำนวณ BMI อัตโนมัติ (เพิ่มใหม่)
+        function calculateBMI() {
+            const weight = parseFloat(document.getElementById('weight').value);
+            const heightCm = parseFloat(document.getElementById('height').value);
+            const bmiInput = document.getElementById('bmi');
+
+            if (weight > 0 && heightCm > 0) {
+                const heightM = heightCm / 100;
+                const bmi = weight / (heightM * heightM);
+                bmiInput.value = bmi.toFixed(2);
+                
+                // แจ้งสีตามเกณฑ์
+                if (bmi < 18.5) { 
+                    bmiInput.className = "w-full px-3 py-2 border border-blue-300 bg-blue-50 text-blue-700 rounded-lg text-sm font-semibold text-center shadow-sm"; 
+                } else if (bmi >= 18.5 && bmi <= 22.9) { 
+                    bmiInput.className = "w-full px-3 py-2 border border-green-300 bg-green-50 text-green-700 rounded-lg text-sm font-semibold text-center shadow-sm"; 
+                } else if (bmi >= 23 && bmi <= 24.9) { 
+                    bmiInput.className = "w-full px-3 py-2 border border-yellow-300 bg-yellow-50 text-yellow-700 rounded-lg text-sm font-semibold text-center shadow-sm"; 
+                } else { 
+                    bmiInput.className = "w-full px-3 py-2 border border-red-300 bg-red-50 text-red-700 rounded-lg text-sm font-semibold text-center shadow-sm"; 
+                }
+            } else {
+                bmiInput.value = '';
+                bmiInput.className = "w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-semibold text-gray-500 text-center shadow-sm";
+            }
+        }
+
+        // จำลองบันทึกซักประวัติ (Mock Save Triage)
+        function saveTriage(event) {
+            event.preventDefault();
+            const btn = event.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-2 text-lg"></i> กำลังบันทึก...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                showToast('บันทึกข้อมูลการซักประวัติและการรักษาเรียบร้อยแล้ว');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                
+                // เลื่อนหน้าจอกลับไปด้านบน
+                document.getElementById('main-content').scrollTop = 0;
+            }, 800);
+        }
+
+        // จำลองการบันทึกข้อมูล (Mock Save) พร้อมแปลงไฟล์ Base64
+        function savePatient(event) {
+            event.preventDefault(); // ป้องกันการรีเฟรชหน้า
+            
+            const btn = event.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            
+            // เปลี่ยนปุ่มเป็นสถานะกำลังโหลด
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-2 text-lg"></i> กำลังบันทึก...';
+            btn.classList.remove('bg-brand-greenMain', 'hover:bg-brand-greenDark');
+            btn.classList.add('bg-gray-400');
+            btn.disabled = true;
+
+            // ดึงข้อมูลพื้นฐานจากฟอร์ม
+            const formData = {
+                cid: document.getElementById('cid').value,
+                prefix: document.getElementById('prefix').value,
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                birthDate: document.getElementById('birthDate').value,
+                gender: document.getElementById('gender').value,
+                phone: document.getElementById('phone').value,
+                address: document.getElementById('address').value,
+                disease: document.getElementById('disease').value,
+                allergy: document.getElementById('allergy').value,
+                emContact: document.getElementById('emContact').value,
+                emPhone: document.getElementById('emPhone').value,
+                pdpa: document.getElementById('pdpa').checked
+            };
+
+            // ตรวจสอบว่ามีการแนบไฟล์หรือไม่
+            const fileInput = document.getElementById('patientFile');
+            const file = fileInput.files[0];
+
+            if (file) {
+                // ถ้ามีไฟล์ ให้แปลงเป็น Base64 ก่อนส่ง
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    formData.fileBase64 = e.target.result.split(',')[1];
+                    formData.fileName = file.name;
+                    formData.fileMimeType = file.type;
+                    
+                    sendDataToBackend(formData, btn, originalText, event);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // ถ้าไม่มีไฟล์ ส่งข้อมูลฟอร์มได้เลย
+                sendDataToBackend(formData, btn, originalText, event);
+            }
+        }
+
+        // ฟังก์ชันแยกสำหรับส่งข้อมูลไปให้ Apps Script
+        function sendDataToBackend(formData, btn, originalText, event) {
+            if (typeof google !== 'undefined' && google.script) {
+                // โหมดรันจริงบน Apps Script
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        btn.innerHTML = originalText;
+                        btn.classList.add('bg-brand-greenMain', 'hover:bg-brand-greenDark');
+                        btn.classList.remove('bg-gray-400');
+                        btn.disabled = false;
+                        
+                        if(response.status === 'success') {
+                            let msg = `บันทึกสำเร็จ! รหัสผู้ป่วย: ${response.hn}`;
+                            if(response.fileUrl) msg += ' (อัปโหลดไฟล์เรียบร้อย)';
+                            showToast(msg, 'success');
+                            
+                            event.target.reset(); // ล้างฟอร์ม
+                            if (document.getElementById('patientFile')) {
+                                document.getElementById('patientFile').value = ''; // ล้างไฟล์แนบ
+                            }
+                            togglePatientForm(false); // กลับไปหน้าตาราง
+                        } else {
+                            showToast(`เกิดข้อผิดพลาด: ${response.message}`, 'error');
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        btn.innerHTML = originalText;
+                        btn.classList.add('bg-brand-greenMain', 'hover:bg-brand-greenDark');
+                        btn.classList.remove('bg-gray-400');
+                        btn.disabled = false;
+                        showToast('ไม่สามารถเชื่อมต่อฐานข้อมูลได้', 'error');
+                    })
+                    .savePatientData(formData);
+            } else {
+                // โหมดทดสอบ (Mock) บนคอมพิวเตอร์ทั่วไป
+                setTimeout(() => {
+                    let msg = 'บันทึกข้อมูลสำเร็จ! (โหมดทดสอบ)';
+                    if(formData.fileName) msg += ' พร้อมจำลองการอัปโหลดไฟล์';
+                    showToast(msg);
+                    
+                    btn.innerHTML = originalText;
+                    btn.classList.add('bg-brand-greenMain', 'hover:bg-brand-greenDark');
+                    btn.classList.remove('bg-gray-400');
+                    btn.disabled = false;
+                    
+                    event.target.reset();
+                    if(document.getElementById('patientFile')) {
+                        document.getElementById('patientFile').value = '';
+                    }
+                    togglePatientForm(false);
+                }, 1500);
+            }
+        }
+
+        // เปิด/ปิด Sidebar สำหรับมือถือ
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // เริ่มต้นการทำงานเมื่อโหลดหน้าเว็บเสร็จ
+        window.onload = () => {
+            renderDashboardTable();
+            renderPatientsTable();
+            updateDate();
+        };
+    </script>
+</body>
+</html>
