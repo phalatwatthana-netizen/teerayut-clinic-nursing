@@ -40,6 +40,7 @@
     </script>
 
     <style>
+        html { font-size: 17px; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #B7D0E4; border-radius: 10px; }
@@ -84,13 +85,13 @@
                 <i class="ph ph-identification-card text-xl mr-3"></i> ห้องบัตร
             </button>
             <button onclick="navTo('triage')" id="nav-triage" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
-                <i class="ph ph-heartbeat text-xl mr-3"></i> ห้องซักประวัติ <span id="badge-triage" class="ml-auto text-[10px] bg-white/25 text-white px-1.5 rounded-full hidden">0</span>
+                <i class="ph ph-heartbeat text-xl mr-3"></i> ห้องซักประวัติ <span id="badge-triage" class="ml-auto text-xs bg-white/25 text-white px-1.5 rounded-full hidden">0</span>
             </button>
             <button onclick="navTo('examination')" id="nav-examination" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
-                <i class="ph ph-stethoscope text-xl mr-3"></i> ห้องตรวจ <span id="badge-examination" class="ml-auto text-[10px] bg-white/25 text-white px-1.5 rounded-full hidden">0</span>
+                <i class="ph ph-stethoscope text-xl mr-3"></i> ห้องตรวจ <span id="badge-examination" class="ml-auto text-xs bg-white/25 text-white px-1.5 rounded-full hidden">0</span>
             </button>
             <button onclick="navTo('pharmacy')" id="nav-pharmacy" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
-                <i class="ph ph-pill text-xl mr-3"></i> ห้องยา <span id="badge-pharmacy" class="ml-auto text-[10px] bg-white/25 text-white px-1.5 rounded-full hidden">0</span>
+                <i class="ph ph-pill text-xl mr-3"></i> ห้องยา <span id="badge-pharmacy" class="ml-auto text-xs bg-white/25 text-white px-1.5 rounded-full hidden">0</span>
             </button>
             <button onclick="navTo('appointments')" id="nav-appointments" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
                 <i class="ph ph-calendar-plus text-xl mr-3"></i> ห้องนัด
@@ -101,7 +102,7 @@
 
             <p class="px-3 pt-4 pb-2 text-xs font-semibold text-[#B7D0E4]/70 uppercase tracking-wider">ระบบจัดการ</p>
             <button onclick="navTo('billing')" id="nav-billing" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
-                <i class="ph ph-receipt text-xl mr-3"></i> ค่าใช้จ่าย <span id="badge-billing" class="ml-auto text-[10px] bg-white/25 text-white px-1.5 rounded-full hidden">0</span>
+                <i class="ph ph-receipt text-xl mr-3"></i> ค่าใช้จ่าย <span id="badge-billing" class="ml-auto text-xs bg-white/25 text-white px-1.5 rounded-full hidden">0</span>
             </button>
             <button onclick="navTo('reports')" id="nav-reports" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
                 <i class="ph ph-chart-line-up text-xl mr-3"></i> รายงานสรุป
@@ -268,15 +269,15 @@
                                 <div class="md:col-span-2">
                                     <label class="block text-xs font-medium text-gray-600 mb-1">ที่อยู่ปัจจุบัน</label>
                                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                        <div><label class="block text-[11px] text-gray-500 mb-1">บ้านเลขที่</label><input id="addr_no" placeholder="เช่น 12/3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
-                                        <div><label class="block text-[11px] text-gray-500 mb-1">อาคาร/หมู่บ้าน/หมู่</label><input id="addr_building" placeholder="เช่น หมู่ 5 / คอนโด..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
-                                        <div class="md:col-span-2"><label class="block text-[11px] text-gray-500 mb-1">ถนน/ซอย</label><input id="addr_road" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
-                                        <div><label class="block text-[11px] text-gray-500 mb-1">จังหวัด <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_province" list="provinceList" autocomplete="off" oninput="onProvinceInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="provinceList"></datalist></div>
-                                        <div><label class="block text-[11px] text-gray-500 mb-1">อำเภอ/เขต <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_amphure" list="amphureList" autocomplete="off" oninput="onAmphureInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="amphureList"></datalist></div>
-                                        <div><label class="block text-[11px] text-gray-500 mb-1">ตำบล/แขวง <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_tambon" list="tambonList" autocomplete="off" oninput="onTambonInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="tambonList"></datalist></div>
-                                        <div><label class="block text-[11px] text-gray-500 mb-1">รหัสไปรษณีย์</label><input id="addr_zip" maxlength="5" inputmode="numeric" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
+                                        <div><label class="block text-xs text-gray-500 mb-1">บ้านเลขที่</label><input id="addr_no" placeholder="เช่น 12/3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
+                                        <div><label class="block text-xs text-gray-500 mb-1">อาคาร/หมู่บ้าน/หมู่</label><input id="addr_building" placeholder="เช่น หมู่ 5 / คอนโด..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
+                                        <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">ถนน/ซอย</label><input id="addr_road" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
+                                        <div><label class="block text-xs text-gray-500 mb-1">จังหวัด <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_province" list="provinceList" autocomplete="off" oninput="onProvinceInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="provinceList"></datalist></div>
+                                        <div><label class="block text-xs text-gray-500 mb-1">อำเภอ/เขต <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_amphure" list="amphureList" autocomplete="off" oninput="onAmphureInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="amphureList"></datalist></div>
+                                        <div><label class="block text-xs text-gray-500 mb-1">ตำบล/แขวง <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_tambon" list="tambonList" autocomplete="off" oninput="onTambonInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="tambonList"></datalist></div>
+                                        <div><label class="block text-xs text-gray-500 mb-1">รหัสไปรษณีย์</label><input id="addr_zip" maxlength="5" inputmode="numeric" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
                                     </div>
-                                    <p id="addrLoadHint" class="text-[11px] text-gray-400 mt-1"></p>
+                                    <p id="addrLoadHint" class="text-xs text-gray-400 mt-1"></p>
                                 </div>
                                 <div><label class="block text-xs font-medium text-gray-600 mb-1">โรคประจำตัว</label>
                                     <input type="text" id="disease" placeholder="เช่น เบาหวาน, ความดัน..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-teal bg-brand-bg/50"></div>
@@ -390,7 +391,7 @@
                                 <div class="mt-5">
                                     <div class="flex justify-between items-center mb-2"><label class="text-xs font-bold text-brand-blueDark"><i class="ph-fill ph-pill mr-1"></i> รายการยา / เวชภัณฑ์</label>
                                         <button type="button" onclick="addMedRow()" class="text-xs bg-brand-bluePale/30 text-brand-blueDark px-2 py-1 rounded-lg hover:bg-brand-bluePale/50"><i class="ph ph-plus"></i> เพิ่มยา</button></div>
-                                    <div class="grid grid-cols-12 gap-2 text-[11px] text-gray-500 font-medium px-1 mb-1"><span class="col-span-6">ชื่อยา / วิธีใช้</span><span class="col-span-2 text-center">จำนวน</span><span class="col-span-3 text-center">ราคา/หน่วย</span><span class="col-span-1"></span></div>
+                                    <div class="grid grid-cols-12 gap-2 text-xs text-gray-500 font-medium px-1 mb-1"><span class="col-span-6">ชื่อยา / วิธีใช้</span><span class="col-span-2 text-center">จำนวน</span><span class="col-span-3 text-center">ราคา/หน่วย</span><span class="col-span-1"></span></div>
                                     <div id="medList" class="space-y-2"></div>
                                 </div>
 
@@ -596,7 +597,7 @@
     const todayVisits = () => State.visits.filter(v=>v.date===todayISO());
     function nextHN(){ let mx=0; State.patients.forEach(p=>{const n=parseInt(String(p.hn).replace(/\D/g,''),10); if(n>mx)mx=n;}); return 'HN'+String(mx+1).padStart(5,'0'); }
     function nextVN(){ const d=todayISO().replace(/-/g,''); let mx=0; State.visits.forEach(v=>{ if(String(v.vn).startsWith('V'+d)){ const n=parseInt(String(v.vn).slice(9),10); if(n>mx)mx=n; }}); return 'V'+d+String(mx+1).padStart(3,'0'); }
-    function statusBadge(s){ return `<span class="px-2 py-1 text-[11px] font-medium rounded-full ${STATUS_STYLE[s]||'text-gray-600 bg-gray-100'}">${esc(s)}</span>`; }
+    function statusBadge(s){ return `<span class="px-2 py-1 text-xs font-medium rounded-full ${STATUS_STYLE[s]||'text-gray-600 bg-gray-100'}">${esc(s)}</span>`; }
     const visitByVN = vn => State.visits.find(v=>v.vn===vn);
 
     /* ---------- Toast ---------- */
@@ -886,7 +887,7 @@
         const active = State.current.vn===v.vn ? 'bg-brand-bluePale/30' : 'hover:bg-brand-bg';
         const fn = { [STATUS.EXAM]:'loadExam', [STATUS.PHARM]:'loadPharmacy', [STATUS.BILL]:'loadBilling' }[v.status] || 'loadExam';
         return `<div onclick="${fn}('${v.vn}')" class="p-3 cursor-pointer ${active} transition-colors">
-            <div class="flex justify-between items-center"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span><span class="text-[11px] text-gray-400">${fmtTime(v.createdAt)}</span></div>
+            <div class="flex justify-between items-center"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span><span class="text-xs text-gray-400">${fmtTime(v.createdAt)}</span></div>
             <div class="text-xs text-gray-500">${esc(v.hn)} · ${esc(v.cc||'-')}</div>
         </div>`;
     }
@@ -1042,9 +1043,9 @@
         $('#ref_patient').innerHTML = `<option value="">-- เลือกผู้รับบริการ --</option>` + State.patients.map(p=>`<option value="${esc(p.hn)}">${esc(p.hn)} | ${esc(pname(p))}</option>`).join('');
         const refs = State.visits.filter(v=>v.status===STATUS.REFER).sort((a,b)=>(b.referAt||'').localeCompare(a.referAt||''));
         $('#referHistory').innerHTML = refs.length ? refs.map(v=>{ const p=patientByHN(v.hn)||{}; return `
-            <div class="p-3"><div class="flex justify-between"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span><span class="text-[11px] text-gray-400">${fmtDateTH(v.date)}</span></div>
+            <div class="p-3"><div class="flex justify-between"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span><span class="text-xs text-gray-400">${fmtDateTH(v.date)}</span></div>
             <div class="text-xs text-gray-500">→ ${esc(v.referTo||'-')} · ${esc(v.referReason||'')}</div>
-            <button onclick="printReferral('${v.vn}')" class="text-[11px] text-brand-blueMain mt-1"><i class="ph ph-printer"></i> พิมพ์ใบส่งตัว</button></div>`; }).join('')
+            <button onclick="printReferral('${v.vn}')" class="text-xs text-brand-blueMain mt-1"><i class="ph ph-printer"></i> พิมพ์ใบส่งตัว</button></div>`; }).join('')
             : `<div class="p-8 text-center text-gray-400 text-sm"><i class="ph ph-ambulance text-2xl block mb-1"></i>ยังไม่มีประวัติส่งต่อ</div>`;
     }
     async function saveReferral(event){
