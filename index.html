@@ -249,8 +249,12 @@
                                     <input type="text" id="firstName" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
                                 <div><label class="block text-xs font-medium text-gray-600 mb-1">นามสกุล <span class="text-red-500">*</span></label>
                                     <input type="text" id="lastName" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
-                                <div><label class="block text-xs font-medium text-gray-600 mb-1">วัน/เดือน/ปีเกิด</label>
-                                    <input type="date" id="birthDate" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
+                                <div class="lg:col-span-2"><label class="block text-xs font-medium text-gray-600 mb-1">วันเดือนปีเกิด (พ.ศ.)</label>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <select id="bd_day" class="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><option value="">วัน</option></select>
+                                        <select id="bd_month" class="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><option value="">เดือน</option></select>
+                                        <select id="bd_year" class="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><option value="">ปี พ.ศ.</option></select>
+                                    </div></div>
                                 <div><label class="block text-xs font-medium text-gray-600 mb-1">เพศ</label>
                                     <select id="gender" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50">
                                         <option value="">เลือก...</option><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option>
@@ -261,8 +265,19 @@
 
                             <h4 class="text-brand-greenDark font-semibold border-b border-gray-100 pb-2 mb-4 flex items-center mt-6"><i class="ph-fill ph-heartbeat mr-2 text-lg"></i> ข้อมูลสุขภาพและการติดต่อ</h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-600 mb-1">ที่อยู่ปัจจุบัน</label>
-                                    <textarea id="address" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></textarea></div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">ที่อยู่ปัจจุบัน</label>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <div><label class="block text-[11px] text-gray-500 mb-1">บ้านเลขที่</label><input id="addr_no" placeholder="เช่น 12/3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
+                                        <div><label class="block text-[11px] text-gray-500 mb-1">อาคาร/หมู่บ้าน/หมู่</label><input id="addr_building" placeholder="เช่น หมู่ 5 / คอนโด..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
+                                        <div class="md:col-span-2"><label class="block text-[11px] text-gray-500 mb-1">ถนน/ซอย</label><input id="addr_road" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
+                                        <div><label class="block text-[11px] text-gray-500 mb-1">จังหวัด <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_province" list="provinceList" autocomplete="off" oninput="onProvinceInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="provinceList"></datalist></div>
+                                        <div><label class="block text-[11px] text-gray-500 mb-1">อำเภอ/เขต <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_amphure" list="amphureList" autocomplete="off" oninput="onAmphureInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="amphureList"></datalist></div>
+                                        <div><label class="block text-[11px] text-gray-500 mb-1">ตำบล/แขวง <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_tambon" list="tambonList" autocomplete="off" oninput="onTambonInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="tambonList"></datalist></div>
+                                        <div><label class="block text-[11px] text-gray-500 mb-1">รหัสไปรษณีย์</label><input id="addr_zip" maxlength="5" inputmode="numeric" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
+                                    </div>
+                                    <p id="addrLoadHint" class="text-[11px] text-gray-400 mt-1"></p>
+                                </div>
                                 <div><label class="block text-xs font-medium text-gray-600 mb-1">โรคประจำตัว</label>
                                     <input type="text" id="disease" placeholder="เช่น เบาหวาน, ความดัน..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-teal bg-brand-bg/50"></div>
                                 <div><label class="block text-xs font-medium text-red-600 mb-1">ประวัติแพ้ยา (สำคัญ) <span class="text-red-500">*</span></label>
@@ -672,6 +687,56 @@
     }
     function goToStation(station, vn){ State.current.vn = vn; navTo(station); }
 
+    /* ---------- วันเกิด (ระบบไทย พ.ศ.) ---------- */
+    const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    function populateBirthDateSelects(){
+        const dSel=$('#bd_day'); if(!dSel || dSel.dataset.filled) return;
+        let d='<option value="">วัน</option>'; for(let i=1;i<=31;i++) d+=`<option value="${i}">${i}</option>`; dSel.innerHTML=d;
+        let m='<option value="">เดือน</option>'; THAI_MONTHS.forEach((x,i)=>m+=`<option value="${i+1}">${x}</option>`); $('#bd_month').innerHTML=m;
+        const beNow=new Date().getFullYear()+543; let y='<option value="">ปี พ.ศ.</option>';
+        for(let yy=beNow;yy>=beNow-100;yy--) y+=`<option value="${yy}">${yy}</option>`; $('#bd_year').innerHTML=y;
+        dSel.dataset.filled='1';
+    }
+    function getBirthDateISO(){
+        const d=+$('#bd_day').value, m=+$('#bd_month').value, be=+$('#bd_year').value;
+        if(!d||!m||!be) return '';
+        return `${be-543}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    }
+    function setBirthDateFromISO(iso){
+        populateBirthDateSelects();
+        if(!iso){ $('#bd_day').value=''; $('#bd_month').value=''; $('#bd_year').value=''; return; }
+        const dt=new Date(iso); $('#bd_day').value=dt.getDate(); $('#bd_month').value=dt.getMonth()+1; $('#bd_year').value=dt.getFullYear()+543;
+    }
+
+    /* ---------- ที่อยู่ไทย (จังหวัด→อำเภอ→ตำบล + รหัสไปรษณีย์อัตโนมัติ) ---------- */
+    const THAI_GEO_URL='https://cdn.jsdelivr.net/gh/kongvut/thai-province-data@master/api_province_with_amphure_tambon.json';
+    function setDatalist(id, names){ const el=$('#'+id); if(el) el.innerHTML = names.map(n=>`<option value="${esc(n)}">`).join(''); }
+    async function loadThaiAddress(){
+        const hint=$('#addrLoadHint');
+        if(State.thaiGeo){ setDatalist('provinceList', State.thaiGeo.map(p=>p.name_th)); return; }
+        if(hint) hint.textContent='⏳ กำลังโหลดข้อมูลที่อยู่ไทย...';
+        try{
+            const r=await fetch(THAI_GEO_URL); State.thaiGeo=await r.json();
+            setDatalist('provinceList', State.thaiGeo.map(p=>p.name_th));
+            if(hint) hint.textContent='💡 พิมพ์ค้นหา จังหวัด → อำเภอ → ตำบล แล้วระบบเติมรหัสไปรษณีย์ให้อัตโนมัติ';
+        }catch(e){ if(hint) hint.textContent='⚠️ โหลดฐานข้อมูลที่อยู่ไม่ได้ — พิมพ์กรอกเองได้ตามปกติ'; }
+    }
+    const findProv = () => State.thaiGeo && State.thaiGeo.find(p=>p.name_th===$('#addr_province').value);
+    function onProvinceInput(){ const p=findProv(); setDatalist('amphureList', p?p.amphure.map(a=>a.name_th):[]); setDatalist('tambonList', []); }
+    function onAmphureInput(){ const p=findProv(); if(!p) return; const a=p.amphure.find(x=>x.name_th===$('#addr_amphure').value); setDatalist('tambonList', a?a.tambon.map(t=>t.name_th):[]); }
+    function onTambonInput(){ const p=findProv(); if(!p) return; const a=p.amphure.find(x=>x.name_th===$('#addr_amphure').value); if(!a) return; const t=a.tambon.find(x=>x.name_th===$('#addr_tambon').value); if(t && t.zip_code) $('#addr_zip').value=t.zip_code; }
+    function composeAddress(a){
+        const parts=[];
+        if(a.addr_no) parts.push('เลขที่ '+a.addr_no);
+        if(a.addr_building) parts.push(a.addr_building);
+        if(a.addr_road) parts.push('ถ.'+a.addr_road);
+        if(a.addr_tambon) parts.push('ต.'+a.addr_tambon);
+        if(a.addr_amphure) parts.push('อ.'+a.addr_amphure);
+        if(a.addr_province) parts.push('จ.'+a.addr_province);
+        if(a.addr_zip) parts.push(a.addr_zip);
+        return parts.join(' ');
+    }
+
     /* ============================================================ PATIENTS */
     function renderPatientsTable(){
         const q = ($('#patientSearch')?.value||'').toLowerCase().trim();
@@ -694,30 +759,41 @@
         }).join('') : `<tr><td colspan="6" class="p-8 text-center text-gray-400"><i class="ph ph-user-list text-3xl block mb-2"></i>${q?'ไม่พบผู้รับบริการ':'ยังไม่มีผู้รับบริการ — กด "เพิ่มประวัติใหม่"'}</td></tr>`;
     }
     function togglePatientForm(show){ $('#patient-list-view').classList.toggle('hidden', show); $('#patient-form-view').classList.toggle('hidden', !show); }
-    function openPatientForm(hn){
+    const ADDR_FIELDS=['addr_no','addr_building','addr_road','addr_province','addr_amphure','addr_tambon','addr_zip'];
+    async function openPatientForm(hn){
+        navTo('patients');
         $('#patientForm').reset(); $('#patientFile').value=''; $('#existingFile').classList.add('hidden');
+        populateBirthDateSelects();
         if(hn){
             const p = patientByHN(hn)||{};
             $('#patientFormTitle').textContent='แก้ไขข้อมูลผู้รับบริการ';
             $('#editHn').value=p.hn||'';
-            ['cid','prefix','firstName','lastName','birthDate','gender','phone','address','disease','allergy','emContact','emPhone'].forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
+            ['cid','prefix','firstName','lastName','gender','phone','disease','allergy','emContact','emPhone'].forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
+            setBirthDateFromISO(p.birthDate);
+            ADDR_FIELDS.forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
             $('#pdpa').checked=true;
             if(p.fileUrl){ const e=$('#existingFile'); e.classList.remove('hidden'); e.innerHTML=`<i class="ph ph-paperclip"></i> มีเอกสารแนบแล้ว — <a href="${esc(p.fileUrl)}" target="_blank" class="underline">เปิดดู</a>`; }
+            togglePatientForm(true);
+            await loadThaiAddress(); onProvinceInput(); onAmphureInput();
         } else {
             $('#patientFormTitle').textContent='ลงทะเบียนผู้รับบริการใหม่'; $('#editHn').value='';
+            togglePatientForm(true);
+            loadThaiAddress();
         }
-        togglePatientForm(true);
-        navTo('patients'); togglePatientForm(true);
     }
     async function savePatient(event){
         event.preventDefault();
         const btn = event.target.querySelector('button[type="submit"]'); const orig = btn.innerHTML;
         btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-2 text-lg"></i> กำลังบันทึก...'; btn.disabled=true;
         const editHn = $('#editHn').value;
+        const addr={}; ADDR_FIELDS.forEach(f=>addr[f]=$('#'+f).value.trim());
         const p = {
             hn: editHn || nextHN(),
             cid:$('#cid').value.trim(), prefix:$('#prefix').value, firstName:$('#firstName').value.trim(), lastName:$('#lastName').value.trim(),
-            birthDate:$('#birthDate').value, gender:$('#gender').value, phone:$('#phone').value.trim(), address:$('#address').value.trim(),
+            birthDate:getBirthDateISO(), gender:$('#gender').value, phone:$('#phone').value.trim(),
+            addr_no:addr.addr_no, addr_building:addr.addr_building, addr_road:addr.addr_road,
+            addr_province:addr.addr_province, addr_amphure:addr.addr_amphure, addr_tambon:addr.addr_tambon, addr_zip:addr.addr_zip,
+            address: composeAddress(addr),
             disease:$('#disease').value.trim(), allergy:$('#allergy').value.trim(), emContact:$('#emContact').value.trim(), emPhone:$('#emPhone').value.trim(),
             createdAt: (editHn && patientByHN(editHn)?.createdAt) || nowISO()
         };
