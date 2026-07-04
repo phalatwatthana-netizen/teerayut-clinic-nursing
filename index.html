@@ -65,6 +65,50 @@
 </head>
 <body class="bg-brand-bg font-sans text-gray-800 antialiased h-screen flex overflow-hidden">
 
+    <!-- ===== LOGIN SCREEN ===== -->
+    <div id="loginScreen" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-brand-gradient">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div class="bg-brand-gradient h-1.5"></div>
+            <div class="p-8">
+                <div class="flex flex-col items-center text-center mb-6">
+                    <div class="w-16 h-16 rounded-2xl bg-brand-bluePale/30 flex items-center justify-center mb-3">
+                        <i class="ph-fill ph-heartbeat text-brand-blueMain text-4xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-brand-blueDark leading-tight">ธีรยุทธคลินิก</h1>
+                    <p class="text-sm text-gray-500 mt-1">การพยาบาลและการผดุงครรภ์</p>
+                    <p class="text-xs text-brand-teal mt-2 font-medium">เข้าสู่ระบบเพื่อใช้งาน</p>
+                </div>
+                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">ชื่อผู้ใช้</label>
+                        <div class="relative">
+                            <i class="ph ph-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                            <input type="text" id="loginUser" required autocomplete="username" placeholder="username"
+                                class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">รหัสผ่าน</label>
+                        <div class="relative">
+                            <i class="ph ph-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                            <input type="password" id="loginPass" required autocomplete="current-password" placeholder="••••••••"
+                                class="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                            <button type="button" onclick="togglePassView()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-blueMain" tabindex="-1">
+                                <i class="ph ph-eye text-lg" id="passEyeIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p id="loginError" class="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 hidden"></p>
+                    <button type="submit" id="loginBtn"
+                        class="w-full bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center shadow-sm">
+                        <i class="ph ph-sign-in mr-2 text-lg"></i> เข้าสู่ระบบ
+                    </button>
+                </form>
+                <p id="loginHint" class="text-xs text-gray-400 text-center mt-5"></p>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar -->
     <aside class="w-64 bg-[#2792E8] shadow-lg hidden md:flex flex-col h-full z-20 absolute md:relative transition-transform transform -translate-x-full md:translate-x-0" id="sidebar">
         <div class="h-20 flex items-center px-6 border-b border-white/10">
@@ -115,10 +159,13 @@
         <div class="p-4 border-t border-white/10">
             <div class="flex items-center">
                 <img src="https://ui-avatars.com/api/?name=Teerayut+Clinic&background=8FC2E8&color=2792E8" alt="User Avatar" class="w-10 h-10 rounded-full border border-white/20">
-                <div class="ml-3 overflow-hidden">
-                    <p class="text-sm font-semibold text-white truncate">พยาบาล วิชาชีพ</p>
+                <div class="ml-3 overflow-hidden flex-1">
+                    <p id="userName" class="text-sm font-semibold text-white truncate">พยาบาล วิชาชีพ</p>
                     <p id="conn-status" class="text-xs text-[#B7D0E4] truncate">โหมดออฟไลน์</p>
                 </div>
+                <button onclick="logout()" title="ออกจากระบบ" class="ml-2 p-2 text-[#B7D0E4] hover:text-white hover:bg-white/10 rounded-lg transition-colors shrink-0">
+                    <i class="ph ph-sign-out text-xl"></i>
+                </button>
             </div>
         </div>
     </aside>
@@ -1154,6 +1201,70 @@
     }
     function resetData(){ if(!confirm('ล้างข้อมูลในเครื่องทั้งหมด? (ไม่กระทบ Google Sheets)')) return; localStorage.removeItem('clinic_patients'); localStorage.removeItem('clinic_visits'); localStorage.removeItem('clinic_appts'); boot(); showToast('ล้างข้อมูลแล้ว'); }
 
+    /* ============================================================ AUTH / LOGIN */
+    const Auth = {
+        key: 'clinic_session',
+        /* บัญชีเริ่มต้นสำหรับโหมดออฟไลน์ (เปลี่ยนได้ตามต้องการ) */
+        LOCAL: [
+            { username:'admin', password:'clinic123', name:'ผู้ดูแลระบบ', role:'admin' }
+        ],
+        get(){ try { return JSON.parse(localStorage.getItem(Auth.key)||'null'); } catch(e){ return null; } },
+        set(u){ localStorage.setItem(Auth.key, JSON.stringify(u)); },
+        clear(){ localStorage.removeItem(Auth.key); },
+        async login(username, password){
+            if(Store.online()){
+                // ตรวจสอบกับชีต Users ผ่าน Google Apps Script
+                const d = await Store.post('login', { username, password });
+                if(d && d.user) return d.user;
+                throw new Error('เข้าสู่ระบบไม่สำเร็จ');
+            }
+            const u = Auth.LOCAL.find(x=>x.username===username && x.password===password);
+            if(u) return { username:u.username, name:u.name, role:u.role };
+            throw new Error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+        }
+    };
+    function showLogin(){
+        $('#loginScreen').classList.remove('hidden');
+        $('#loginScreen').classList.add('flex');
+        $('#loginHint').textContent = Store.online() ? '' : 'โหมดออฟไลน์: admin / clinic123';
+        setTimeout(()=>$('#loginUser')?.focus(), 100);
+    }
+    function hideLogin(){
+        $('#loginScreen').classList.add('hidden');
+        $('#loginScreen').classList.remove('flex');
+    }
+    function togglePassView(){
+        const inp=$('#loginPass'), ic=$('#passEyeIcon');
+        if(inp.type==='password'){ inp.type='text'; ic.className='ph ph-eye-slash text-lg'; }
+        else { inp.type='password'; ic.className='ph ph-eye text-lg'; }
+    }
+    async function handleLogin(event){
+        event.preventDefault();
+        const btn=$('#loginBtn'), orig=btn.innerHTML, err=$('#loginError');
+        err.classList.add('hidden');
+        btn.innerHTML='<i class="ph ph-spinner animate-spin mr-2 text-lg"></i> กำลังเข้าสู่ระบบ...'; btn.disabled=true;
+        try{
+            const user = await Auth.login($('#loginUser').value.trim(), $('#loginPass').value);
+            Auth.set(user);
+            applyUser(user);
+            $('#loginForm').reset();
+            hideLogin();
+            await boot();
+        }catch(e){
+            err.textContent = e.message || 'เข้าสู่ระบบไม่สำเร็จ';
+            err.classList.remove('hidden');
+        }finally{ btn.innerHTML=orig; btn.disabled=false; }
+    }
+    function applyUser(user){
+        if(!user) return;
+        const el=$('#userName'); if(el) el.textContent = user.name || user.username || 'ผู้ใช้งาน';
+    }
+    function logout(){
+        if(!confirm('ออกจากระบบ?')) return;
+        Auth.clear();
+        showLogin();
+    }
+
     /* ============================================================ BOOT */
     function updateDate(){ const el=$('#currentDateDisplay'); if(el) el.innerText=new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }
     async function boot(){
@@ -1163,7 +1274,12 @@
         const cur = document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard';
         renderView(cur); updateBadges();
     }
-    window.onload = () => { updateDate(); setInterval(updateDate, 60000); boot(); };
+    window.onload = () => {
+        updateDate(); setInterval(updateDate, 60000);
+        const session = Auth.get();
+        if(session){ applyUser(session); hideLogin(); boot(); }
+        else { showLogin(); }
+    };
     </script>
 </body>
 </html>
