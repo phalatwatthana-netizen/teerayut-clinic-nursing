@@ -596,12 +596,17 @@
     };
     const CLINIC = { name:'ธีรยุทธคลินิกการพยาบาลและการผดุงครรภ์', sub:'บริการพยาบาล • ผดุงครรภ์ • ฝากครรภ์' };
 
+    /* ---------- ตั้งค่าเริ่มต้น: ทำออนไลน์ทั้งระบบอัตโนมัติ ----------
+       วาง URL /exec ของ Google Apps Script Web App ตรงนี้ 1 ครั้ง
+       แล้วทุกเครื่องจะเชื่อมต่อ Google Sheets ให้เองโดยไม่ต้องตั้งค่า */
+    const DEFAULT_API_URL = '';
+
     /* ---------- State ---------- */
     const State = { patients:[], visits:[], appointments:[], current:{} };
 
     /* ---------- API / Store ---------- */
     const Store = {
-        url(){ return localStorage.getItem('clinic_api_url') || ''; },
+        url(){ const saved=localStorage.getItem('clinic_api_url'); return (saved!==null?saved:DEFAULT_API_URL) || ''; },
         online(){ return !!Store.url(); },
         async post(action, data){
             const r = await fetch(Store.url(), { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action, data }) });
