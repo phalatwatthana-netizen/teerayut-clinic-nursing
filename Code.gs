@@ -1,193 +1,199 @@
-/*  ============================================================
-    ธีรยุทธคลินิก — Google Apps Script Backend (Code.gs)
-    รองรับ: load, login, savePatient, saveVisit,
-            saveAppointment, deleteAppointment
-    วิธีติดตั้ง: ดู SETUP.md
-    ============================================================ */
+/**************************************************************
+ * ธีรยุทธคลินิก — Google Apps Script Backend (Code.gs)
+ * ฐานข้อมูล: Google Sheets | ไฟล์แนบ: Google Drive
+ *
+ * วิธีใช้:
+ *  1) สร้าง Google Sheet ใหม่ 1 ไฟล์
+ *  2) Extensions > Apps Script > วางโค้ดนี้แทนของเดิม
+ *  3) Deploy > New deployment > Web app
+ *       - Execute as: Me
+ *       - Who has access: Anyone
+ *  4) คัดลอก URL (.../exec) ไปวางในหน้า "ตั้งค่า" ของเว็บแอป
+ **************************************************************/
 
-/* ---------- ตั้งค่า ----------
-   ปล่อยว่างไว้ถ้าผูกสคริปต์กับชีตโดยตรง (Extensions > Apps Script)
-   หรือใส่ Spreadsheet ID ถ้าต้องการระบุชีตเอง */
-const SHEET_ID = '';
+var SHEET_PATIENTS = 'Patients';
+var SHEET_VISITS = 'Visits';
+var SHEET_APPTS = 'Appointments';
+var SHEET_USERS = 'Users';
+var DRIVE_FOLDER = 'ThirayutClinic_Files';
 
-/* คอลัมน์ของแต่ละชีต (แถวแรกจะถูกสร้างอัตโนมัติถ้ายังไม่มี) */
-const HEADERS = {
-  Patients: ['hn','cid','prefix','firstName','lastName','birthDate','gender','phone',
-    'addr_no','addr_building','addr_road','addr_province','addr_amphure','addr_tambon','addr_zip',
-    'address','disease','allergy','emContact','emPhone','fileUrl','createdAt'],
-  Visits: ['vn','hn','date','status','cc','pi','ph','pe',
-    'bp_sys','bp_dia','bt','pr','weight','height','bmi',
-    'dx','treatment','lab','meds','followUpDate','followUpNote',
-    'serviceFee','otherFee','medTotal','total','paid','payMethod',
-    'referTo','referReason',
-    'createdAt','triageAt','examAt','dispenseAt','doneAt','referAt'],
+var HEADERS = {
+  Patients: ['hn','cid','prefix','firstName','lastName','birthDate','gender','phone','address','disease','allergy','emContact','emPhone','fileUrl','createdAt'],
+  Visits: ['vn','hn','date','status','cc','pi','ph','pe','bp_sys','bp_dia','bt','pr','weight','height','bmi','dx','treatment','lab','meds_json','medTotal','serviceFee','otherFee','total','paid','payMethod','referTo','referReason','followUpDate','followUpNote','createdAt','triageAt','examAt','dispenseAt','doneAt','referAt'],
   Appointments: ['id','hn','name','date','time','type','status','createdAt'],
   Users: ['username','password','name','role','active']
 };
+var KEY = { Patients:'hn', Visits:'vn', Appointments:'id' };
 
-/* meds เก็บเป็น JSON string ในชีต แต่ส่งกลับเป็น array */
-const JSON_FIELDS = { Visits: ['meds'] };
-
-/* ---------- Entry points ---------- */
+/* ---------- HTTP entry points ---------- */
 function doGet(e) {
-  const action = (e && e.parameter && e.parameter.action) || 'load';
-  if (action === 'load') return json(loadAll());
-  return json({ status: 'error', message: 'unknown GET action: ' + action });
+  try {
+    var action = (e && e.parameter && e.parameter.action) || 'load';
+    if (action === 'load') return json(loadAll());
+    return json({ status: 'error', message: 'unknown action' });
+  } catch (err) {
+    return json({ status: 'error', message: String(err) });
+  }
 }
 
 function doPost(e) {
   try {
-    const body = JSON.parse(e.postData.contents);
-    const action = body.action;
-    const data = body.data;
-    switch (action) {
-      case 'login':             return json(login(data));
-      case 'savePatient':       return json(savePatient(data));
-      case 'saveVisit':         return json(saveVisit(data));
-      case 'saveAppointment':   return json(saveAppointment(data));
-      case 'deleteAppointment': return json(deleteAppointment(data));
-      default: return json({ status: 'error', message: 'unknown action: ' + action });
-    }
+    var body = JSON.parse(e.postData.contents);
+    var action = body.action;
+    var data = body.data || {};
+    if (action === 'login')             return json(login(data));
+    if (action === 'savePatient')       return json(savePatient(data));
+    if (action === 'saveVisit')         return json(upsert(SHEET_VISITS, data));
+    if (action === 'saveAppointment')   return json(upsert(SHEET_APPTS, data));
+    if (action === 'deleteAppointment') return json(deleteRecord(SHEET_APPTS, data.id));
+    return json({ status: 'error', message: 'unknown action: ' + action });
   } catch (err) {
-    return json({ status: 'error', message: String(err && err.message || err) });
+    return json({ status: 'error', message: String(err) });
   }
 }
-
-/* ---------- Helpers ---------- */
-function ss() { return SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet(); }
 
 function json(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/* คืน sheet และสร้าง header ให้อัตโนมัติถ้ายังไม่มี */
-function sheet(name) {
-  const book = ss();
-  let sh = book.getSheetByName(name);
+/* ---------- Sheet helpers ---------- */
+function getSheet(name) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(name);
   if (!sh) {
-    sh = book.insertSheet(name);
-    sh.getRange(1, 1, 1, HEADERS[name].length).setValues([HEADERS[name]]);
-    sh.setFrozenRows(1);
+    sh = ss.insertSheet(name);
+    sh.appendRow(HEADERS[name]);
   } else if (sh.getLastRow() === 0) {
-    sh.getRange(1, 1, 1, HEADERS[name].length).setValues([HEADERS[name]]);
-    sh.setFrozenRows(1);
+    sh.appendRow(HEADERS[name]);
   }
   return sh;
 }
 
-/* อ่านทุกแถวเป็น array ของ object ตาม header */
 function readAll(name) {
-  const sh = sheet(name);
-  const values = sh.getDataRange().getValues();
+  var sh = getSheet(name);
+  var values = sh.getDataRange().getValues();
   if (values.length < 2) return [];
-  const head = values[0];
-  const jsonCols = JSON_FIELDS[name] || [];
-  const rows = [];
-  for (let i = 1; i < values.length; i++) {
-    const row = values[i];
-    if (row.every(c => c === '' || c === null)) continue;
-    const obj = {};
-    for (let c = 0; c < head.length; c++) {
-      let v = row[c];
-      const key = head[c];
-      if (jsonCols.indexOf(key) >= 0) {
-        try { v = v ? JSON.parse(v) : []; } catch (e) { v = []; }
-      }
-      obj[key] = v;
+  var head = values[0];
+  var out = [];
+  for (var r = 1; r < values.length; r++) {
+    var row = values[r];
+    if (!row[0]) continue; // skip empty key
+    var obj = {};
+    for (var c = 0; c < head.length; c++) obj[head[c]] = row[c];
+    if (name === SHEET_VISITS) {
+      try { obj.meds = obj.meds_json ? JSON.parse(obj.meds_json) : []; } catch (x) { obj.meds = []; }
+      delete obj.meds_json;
     }
-    rows.push(obj);
+    out.push(obj);
   }
-  return rows;
+  return out;
 }
 
-/* เขียนแบบ upsert ตามคอลัมน์ key */
-function upsert(name, keyField, record) {
-  const sh = sheet(name);
-  const head = HEADERS[name];
-  const jsonCols = JSON_FIELDS[name] || [];
-  const rowArr = head.map(k => {
-    let v = record[k];
-    if (v === undefined || v === null) v = '';
-    if (jsonCols.indexOf(k) >= 0 && typeof v !== 'string') v = JSON.stringify(v || []);
-    return v;
-  });
-  const keyIdx = head.indexOf(keyField);
-  const data = sh.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][keyIdx]) === String(record[keyField])) {
-      sh.getRange(i + 1, 1, 1, head.length).setValues([rowArr]);
-      return { row: i + 1, updated: true };
-    }
-  }
-  sh.appendRow(rowArr);
-  return { row: sh.getLastRow(), updated: false };
-}
-
-/* ---------- Actions ---------- */
 function loadAll() {
   return {
     status: 'success',
-    patients: readAll('Patients'),
-    visits: readAll('Visits'),
-    appointments: readAll('Appointments')
+    patients: readAll(SHEET_PATIENTS),
+    visits: readAll(SHEET_VISITS),
+    appointments: readAll(SHEET_APPTS)
   };
 }
 
-function login(data) {
-  const sh = sheet('Users');
-  // ถ้ายังไม่มีผู้ใช้เลย ให้สร้างบัญชีเริ่มต้น admin/clinic123
-  if (sh.getLastRow() < 2) {
-    sh.appendRow(['admin', 'clinic123', 'ผู้ดูแลระบบ', 'admin', 'yes']);
+/* upsert a record into a sheet by its KEY column */
+function upsert(name, data) {
+  var sh = getSheet(name);
+  var headers = HEADERS[name];
+  var keyField = KEY[name];
+
+  // prepare row payload (handle nested meds for Visits)
+  var rec = {};
+  for (var k in data) rec[k] = data[k];
+  if (name === SHEET_VISITS) {
+    rec.meds_json = JSON.stringify(data.meds || []);
   }
-  const users = readAll('Users');
-  const u = users.find(x =>
-    String(x.username).trim() === String(data.username).trim() &&
-    String(x.password) === String(data.password) &&
-    String(x.active).toLowerCase() !== 'no'
-  );
-  if (!u) return { status: 'error', message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
-  return { status: 'success', user: { username: u.username, name: u.name || u.username, role: u.role || 'staff' } };
-}
 
-function savePatient(p) {
-  // แนบไฟล์ลง Google Drive ถ้ามี fileBase64
-  if (p.fileBase64 && p.fileName) {
-    try {
-      const folder = getUploadFolder();
-      const blob = Utilities.newBlob(Utilities.base64Decode(p.fileBase64), p.fileMimeType || 'application/octet-stream', p.fileName);
-      const file = folder.createFile(blob);
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      p.fileUrl = file.getUrl();
-    } catch (e) { /* ไม่ให้ล้มทั้งการบันทึกถ้าอัปโหลดไม่ได้ */ }
+  var keyVal = rec[keyField];
+  var rowArr = headers.map(function (h) {
+    var v = rec[h];
+    return (v === undefined || v === null) ? '' : v;
+  });
+
+  // find existing row by key
+  var keyColIdx = headers.indexOf(keyField); // 0-based
+  var lastRow = Math.max(sh.getLastRow(), 1);
+  var keyValues = sh.getRange(1, keyColIdx + 1, lastRow, 1).getValues();
+  var foundRow = -1;
+  for (var i = 1; i < keyValues.length; i++) {
+    if (String(keyValues[i][0]) === String(keyVal)) { foundRow = i + 1; break; }
   }
-  delete p.fileBase64; delete p.fileName; delete p.fileMimeType;
-  upsert('Patients', 'hn', p);
-  return { status: 'success', hn: p.hn, fileUrl: p.fileUrl || '' };
+  if (foundRow > 0) {
+    sh.getRange(foundRow, 1, 1, headers.length).setValues([rowArr]);
+  } else {
+    sh.appendRow(rowArr);
+  }
+
+  var res = { status: 'success' };
+  res[keyField] = keyVal;
+  return res;
 }
 
-function saveVisit(v) {
-  upsert('Visits', 'vn', v);
-  return { status: 'success', vn: v.vn };
-}
-
-function saveAppointment(a) {
-  upsert('Appointments', 'id', a);
-  return { status: 'success', id: a.id };
-}
-
-function deleteAppointment(d) {
-  const sh = sheet('Appointments');
-  const data = sh.getDataRange().getValues();
-  const idIdx = HEADERS.Appointments.indexOf('id');
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][idIdx]) === String(d.id)) { sh.deleteRow(i + 1); return { status: 'success' }; }
+function deleteRecord(name, keyVal) {
+  var sh = getSheet(name);
+  var headers = HEADERS[name];
+  var keyColIdx = headers.indexOf(KEY[name]);
+  var lastRow = Math.max(sh.getLastRow(), 1);
+  var values = sh.getRange(1, keyColIdx + 1, lastRow, 1).getValues();
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === String(keyVal)) { sh.deleteRow(i + 1); break; }
   }
   return { status: 'success' };
 }
 
-function getUploadFolder() {
-  const name = 'ธีรยุทธคลินิก - เอกสารผู้ป่วย';
-  const it = DriveApp.getFoldersByName(name);
-  return it.hasNext() ? it.next() : DriveApp.createFolder(name);
+/* ---------- Login (ตรวจสอบผู้ใช้จากชีต Users) ---------- */
+function login(data) {
+  var sh = getSheet(SHEET_USERS);
+  // ถ้ายังไม่มีผู้ใช้เลย สร้างบัญชีเริ่มต้น admin/clinic123 ให้อัตโนมัติ
+  if (sh.getLastRow() < 2) {
+    sh.appendRow(['admin', 'clinic123', 'ผู้ดูแลระบบ', 'admin', 'yes']);
+  }
+  var users = readAll(SHEET_USERS);
+  var u = null;
+  for (var i = 0; i < users.length; i++) {
+    var x = users[i];
+    if (String(x.username).trim() === String(data.username).trim() &&
+        String(x.password) === String(data.password) &&
+        String(x.active).toLowerCase() !== 'no') { u = x; break; }
+  }
+  if (!u) return { status: 'error', message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
+  return { status: 'success', user: { username: u.username, name: u.name || u.username, role: u.role || 'staff' } };
+}
+
+/* ---------- Patient save with optional Drive upload ---------- */
+function savePatient(data) {
+  // handle file upload to Drive (if provided)
+  if (data.fileBase64 && data.fileName) {
+    try {
+      var folder = getDriveFolder();
+      var bytes = Utilities.base64Decode(data.fileBase64);
+      var blob = Utilities.newBlob(bytes, data.fileMimeType || 'application/octet-stream',
+        (data.hn || 'file') + '_' + data.fileName);
+      var file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      data.fileUrl = file.getUrl();
+    } catch (err) {
+      // ถ้าอัปโหลดไม่สำเร็จ ยังบันทึกข้อมูลผู้ป่วยต่อไป
+    }
+  }
+  // strip file payload before writing to sheet
+  delete data.fileBase64; delete data.fileName; delete data.fileMimeType;
+
+  var res = upsert(SHEET_PATIENTS, data);
+  res.fileUrl = data.fileUrl || '';
+  return res;
+}
+
+function getDriveFolder() {
+  var it = DriveApp.getFoldersByName(DRIVE_FOLDER);
+  if (it.hasNext()) return it.next();
+  return DriveApp.createFolder(DRIVE_FOLDER);
 }
