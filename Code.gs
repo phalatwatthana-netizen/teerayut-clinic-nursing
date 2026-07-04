@@ -149,6 +149,22 @@ function deleteRecord(name, keyVal) {
   return { status: 'success' };
 }
 
+/* ---------- ติดตั้งครั้งแรก (รันเองจากเมนู Apps Script) ----------
+   เลือกฟังก์ชัน setupSheets แล้วกด Run เพื่อสร้างทุกชีตพร้อมหัวตาราง
+   และบัญชีผู้ใช้เริ่มต้น admin / clinic123 */
+function setupSheets() {
+  getSheet(SHEET_PATIENTS);
+  getSheet(SHEET_VISITS);
+  getSheet(SHEET_APPTS);
+  var users = getSheet(SHEET_USERS);
+  if (users.getLastRow() < 2) {
+    // username, password, name, role, active
+    users.appendRow(['admin', 'clinic123', 'ผู้ดูแลระบบ', 'admin', 'yes']);
+    users.appendRow(['nurse', 'nurse123', 'พยาบาลวิชาชีพ', 'staff', 'yes']);
+  }
+  return 'สร้างชีตเรียบร้อย: Patients, Visits, Appointments, Users';
+}
+
 /* ---------- Login (ตรวจสอบผู้ใช้จากชีต Users) ---------- */
 function login(data) {
   var sh = getSheet(SHEET_USERS);
