@@ -11,6 +11,8 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Google Fonts: Noto Sans Thai -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- ข้อมูลเขตการปกครองไทย (ฝังในโปรเจกต์ ไม่ต้องพึ่ง CDN ภายนอก) -->
+    <script src="thai-address.js"></script>
 
     <!-- Color Palette ตามภาพต้นแบบ (MOP Palette) -->
     <script>
@@ -781,9 +783,13 @@
     async function loadThaiAddress(){
         const hint=$('#addrLoadHint');
         if(!State.thaiGeo){
-            if(hint) hint.textContent='⏳ กำลังโหลดข้อมูลเขตการปกครองไทย...';
-            try{ const r=await fetch(THAI_GEO_URL); State.thaiGeo=await r.json(); }
-            catch(e){ if(hint) hint.textContent='⚠️ โหลดฐานข้อมูลที่อยู่ไม่ได้ — ตรวจการเชื่อมต่ออินเทอร์เน็ต'; return; }
+            // ใช้ข้อมูลที่ฝังในไฟล์ thai-address.js ก่อน (ไม่ต้องต่อเน็ต)
+            if(window.THAI_GEO_DATA){ State.thaiGeo = window.THAI_GEO_DATA; }
+            else {
+                if(hint) hint.textContent='⏳ กำลังโหลดข้อมูลเขตการปกครองไทย...';
+                try{ const r=await fetch(THAI_GEO_URL); State.thaiGeo=await r.json(); }
+                catch(e){ if(hint) hint.textContent='⚠️ โหลดฐานข้อมูลที่อยู่ไม่ได้'; return; }
+            }
         }
         fillSelect('addr_province', State.thaiGeo.map(p=>p.name_th), 'เลือกจังหวัด...');
         if(hint) hint.textContent='💡 เลือกจังหวัด → อำเภอ → ตำบล แล้วรหัสไปรษณีย์จะเติมให้อัตโนมัติ';
