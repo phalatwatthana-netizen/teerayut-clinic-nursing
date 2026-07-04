@@ -329,10 +329,10 @@
                                         <div><label class="block text-xs text-gray-500 mb-1">บ้านเลขที่</label><input id="addr_no" placeholder="เช่น 12/3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
                                         <div><label class="block text-xs text-gray-500 mb-1">อาคาร/หมู่บ้าน/หมู่</label><input id="addr_building" placeholder="เช่น หมู่ 5 / คอนโด..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
                                         <div class="md:col-span-2"><label class="block text-xs text-gray-500 mb-1">ถนน/ซอย</label><input id="addr_road" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
-                                        <div><label class="block text-xs text-gray-500 mb-1">จังหวัด <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_province" list="provinceList" autocomplete="off" oninput="onProvinceInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="provinceList"></datalist></div>
-                                        <div><label class="block text-xs text-gray-500 mb-1">อำเภอ/เขต <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_amphure" list="amphureList" autocomplete="off" oninput="onAmphureInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="amphureList"></datalist></div>
-                                        <div><label class="block text-xs text-gray-500 mb-1">ตำบล/แขวง <i class="ph ph-magnifying-glass text-brand-teal"></i></label><input id="addr_tambon" list="tambonList" autocomplete="off" oninput="onTambonInput()" placeholder="พิมพ์ค้นหา..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><datalist id="tambonList"></datalist></div>
-                                        <div><label class="block text-xs text-gray-500 mb-1">รหัสไปรษณีย์</label><input id="addr_zip" maxlength="5" inputmode="numeric" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
+                                        <div><label class="block text-xs text-gray-500 mb-1">จังหวัด</label><select id="addr_province" onchange="onProvinceChange()" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"><option value="">เลือกจังหวัด...</option></select></div>
+                                        <div><label class="block text-xs text-gray-500 mb-1">อำเภอ/เขต</label><select id="addr_amphure" onchange="onAmphureChange()" disabled class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50 disabled:bg-gray-100 disabled:text-gray-400"><option value="">เลือกจังหวัดก่อน</option></select></div>
+                                        <div><label class="block text-xs text-gray-500 mb-1">ตำบล/แขวง</label><select id="addr_tambon" onchange="onTambonChange()" disabled class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50 disabled:bg-gray-100 disabled:text-gray-400"><option value="">เลือกอำเภอก่อน</option></select></div>
+                                        <div><label class="block text-xs text-gray-500 mb-1">รหัสไปรษณีย์</label><input id="addr_zip" maxlength="5" inputmode="numeric" readonly placeholder="อัตโนมัติ" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none bg-gray-100 text-gray-600"></div>
                                     </div>
                                     <p id="addrLoadHint" class="text-xs text-gray-400 mt-1"></p>
                                 </div>
@@ -773,21 +773,50 @@
 
     /* ---------- ที่อยู่ไทย (จังหวัด→อำเภอ→ตำบล + รหัสไปรษณีย์อัตโนมัติ) ---------- */
     const THAI_GEO_URL='https://cdn.jsdelivr.net/gh/kongvut/thai-province-data@master/api_province_with_amphure_tambon.json';
-    function setDatalist(id, names){ const el=$('#'+id); if(el) el.innerHTML = names.map(n=>`<option value="${esc(n)}">`).join(''); }
+    /* เติม <option> ให้ <select> */
+    function fillSelect(id, names, placeholder){
+        const el=$('#'+id); if(!el) return;
+        el.innerHTML = `<option value="">${placeholder}</option>` + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    }
     async function loadThaiAddress(){
         const hint=$('#addrLoadHint');
-        if(State.thaiGeo){ setDatalist('provinceList', State.thaiGeo.map(p=>p.name_th)); return; }
-        if(hint) hint.textContent='⏳ กำลังโหลดข้อมูลที่อยู่ไทย...';
-        try{
-            const r=await fetch(THAI_GEO_URL); State.thaiGeo=await r.json();
-            setDatalist('provinceList', State.thaiGeo.map(p=>p.name_th));
-            if(hint) hint.textContent='💡 พิมพ์ค้นหา จังหวัด → อำเภอ → ตำบล แล้วระบบเติมรหัสไปรษณีย์ให้อัตโนมัติ';
-        }catch(e){ if(hint) hint.textContent='⚠️ โหลดฐานข้อมูลที่อยู่ไม่ได้ — พิมพ์กรอกเองได้ตามปกติ'; }
+        if(!State.thaiGeo){
+            if(hint) hint.textContent='⏳ กำลังโหลดข้อมูลเขตการปกครองไทย...';
+            try{ const r=await fetch(THAI_GEO_URL); State.thaiGeo=await r.json(); }
+            catch(e){ if(hint) hint.textContent='⚠️ โหลดฐานข้อมูลที่อยู่ไม่ได้ — ตรวจการเชื่อมต่ออินเทอร์เน็ต'; return; }
+        }
+        fillSelect('addr_province', State.thaiGeo.map(p=>p.name_th), 'เลือกจังหวัด...');
+        if(hint) hint.textContent='💡 เลือกจังหวัด → อำเภอ → ตำบล แล้วรหัสไปรษณีย์จะเติมให้อัตโนมัติ';
     }
     const findProv = () => State.thaiGeo && State.thaiGeo.find(p=>p.name_th===$('#addr_province').value);
-    function onProvinceInput(){ const p=findProv(); setDatalist('amphureList', p?p.amphure.map(a=>a.name_th):[]); setDatalist('tambonList', []); }
-    function onAmphureInput(){ const p=findProv(); if(!p) return; const a=p.amphure.find(x=>x.name_th===$('#addr_amphure').value); setDatalist('tambonList', a?a.tambon.map(t=>t.name_th):[]); }
-    function onTambonInput(){ const p=findProv(); if(!p) return; const a=p.amphure.find(x=>x.name_th===$('#addr_amphure').value); if(!a) return; const t=a.tambon.find(x=>x.name_th===$('#addr_tambon').value); if(t && t.zip_code) $('#addr_zip').value=t.zip_code; }
+    function onProvinceChange(){
+        const p=findProv();
+        const am=$('#addr_amphure'), tb=$('#addr_tambon');
+        fillSelect('addr_amphure', p?p.amphure.map(a=>a.name_th):[], 'เลือกอำเภอ/เขต...');
+        fillSelect('addr_tambon', [], 'เลือกอำเภอก่อน');
+        am.disabled=!p; tb.disabled=true; $('#addr_zip').value='';
+    }
+    function onAmphureChange(){
+        const p=findProv(); const tb=$('#addr_tambon'); $('#addr_zip').value='';
+        const a=p&&p.amphure.find(x=>x.name_th===$('#addr_amphure').value);
+        fillSelect('addr_tambon', a?a.tambon.map(t=>t.name_th):[], 'เลือกตำบล/แขวง...');
+        tb.disabled=!a;
+    }
+    function onTambonChange(){
+        const p=findProv(); if(!p) return;
+        const a=p.amphure.find(x=>x.name_th===$('#addr_amphure').value); if(!a) return;
+        const t=a.tambon.find(x=>x.name_th===$('#addr_tambon').value);
+        $('#addr_zip').value = (t && t.zip_code) ? t.zip_code : '';
+    }
+    /* ตั้งค่าที่อยู่จากข้อมูลเดิม (ตอนแก้ไข) โดยไล่ cascade ให้ครบ */
+    function setAddressFromPatient(p){
+        if(!State.thaiGeo) return;
+        $('#addr_province').value = p.addr_province||'';
+        onProvinceChange();
+        if(p.addr_amphure){ $('#addr_amphure').value = p.addr_amphure; onAmphureChange(); }
+        if(p.addr_tambon){ $('#addr_tambon').value = p.addr_tambon; onTambonChange(); }
+        if(p.addr_zip) $('#addr_zip').value = p.addr_zip;
+    }
     function composeAddress(a){
         const parts=[];
         if(a.addr_no) parts.push('เลขที่ '+a.addr_no);
@@ -823,6 +852,7 @@
     }
     function togglePatientForm(show){ $('#patient-list-view').classList.toggle('hidden', show); $('#patient-form-view').classList.toggle('hidden', !show); }
     const ADDR_FIELDS=['addr_no','addr_building','addr_road','addr_province','addr_amphure','addr_tambon','addr_zip'];
+    const ADDR_TEXT_FIELDS=['addr_no','addr_building','addr_road'];
     async function openPatientForm(hn){
         navTo('patients');
         $('#patientForm').reset(); $('#patientFile').value=''; $('#existingFile').classList.add('hidden');
@@ -833,15 +863,15 @@
             $('#editHn').value=p.hn||'';
             ['cid','prefix','firstName','lastName','gender','phone','race','nationality','maritalStatus','disease','allergy','emContact','emPhone'].forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
             setBirthDateFromISO(p.birthDate);
-            ADDR_FIELDS.forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
+            ADDR_TEXT_FIELDS.forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
             $('#pdpa').checked=true;
             if(p.fileUrl){ const e=$('#existingFile'); e.classList.remove('hidden'); e.innerHTML=`<i class="ph ph-paperclip"></i> มีเอกสารแนบแล้ว — <a href="${esc(p.fileUrl)}" target="_blank" class="underline">เปิดดู</a>`; }
             togglePatientForm(true);
-            await loadThaiAddress(); onProvinceInput(); onAmphureInput();
+            await loadThaiAddress(); setAddressFromPatient(p);
         } else {
             $('#patientFormTitle').textContent='ลงทะเบียนผู้รับบริการใหม่'; $('#editHn').value='';
             togglePatientForm(true);
-            loadThaiAddress();
+            await loadThaiAddress(); onProvinceChange();
         }
     }
     async function savePatient(event){
