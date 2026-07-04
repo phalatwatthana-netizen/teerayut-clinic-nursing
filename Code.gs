@@ -18,7 +18,7 @@ var SHEET_USERS = 'Users';
 var DRIVE_FOLDER = 'ThirayutClinic_Files';
 
 var HEADERS = {
-  Patients: ['hn','cid','prefix','firstName','lastName','birthDate','gender','phone','address','disease','allergy','emContact','emPhone','fileUrl','createdAt'],
+  Patients: ['hn','cid','prefix','firstName','lastName','birthDate','gender','phone','race','nationality','maritalStatus','address','disease','allergy','emContact','emPhone','fileUrl','createdAt'],
   Visits: ['vn','hn','date','status','cc','pi','ph','pe','bp_sys','bp_dia','bt','pr','weight','height','bmi','dx','treatment','lab','meds_json','medTotal','serviceFee','otherFee','total','paid','payMethod','referTo','referReason','followUpDate','followUpNote','createdAt','triageAt','examAt','dispenseAt','doneAt','referAt'],
   Appointments: ['id','hn','name','date','time','type','status','createdAt'],
   Users: ['username','password','name','role','active']

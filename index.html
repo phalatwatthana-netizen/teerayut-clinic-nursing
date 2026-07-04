@@ -309,6 +309,16 @@
                                     </select></div>
                                 <div><label class="block text-xs font-medium text-gray-600 mb-1">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label>
                                     <input type="tel" id="phone" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
+                                <div><label class="block text-xs font-medium text-gray-600 mb-1">เชื้อชาติ</label>
+                                    <input type="text" id="race" value="ไทย" list="raceList" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50">
+                                    <datalist id="raceList"><option value="ไทย"><option value="จีน"><option value="ลาว"><option value="พม่า"><option value="เขมร"><option value="อื่นๆ"></datalist></div>
+                                <div><label class="block text-xs font-medium text-gray-600 mb-1">สัญชาติ</label>
+                                    <input type="text" id="nationality" value="ไทย" list="nationalityList" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50">
+                                    <datalist id="nationalityList"><option value="ไทย"><option value="ลาว"><option value="พม่า"><option value="กัมพูชา"><option value="เวียดนาม"><option value="อื่นๆ"></datalist></div>
+                                <div><label class="block text-xs font-medium text-gray-600 mb-1">สถานภาพสมรส</label>
+                                    <select id="maritalStatus" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50">
+                                        <option value="">เลือก...</option><option value="โสด">โสด</option><option value="สมรส">สมรส</option><option value="หม้าย">หม้าย</option><option value="หย่า">หย่า</option><option value="แยกกันอยู่">แยกกันอยู่</option>
+                                    </select></div>
                             </div>
 
                             <h4 class="text-brand-greenDark font-semibold border-b border-gray-100 pb-2 mb-4 flex items-center mt-6"><i class="ph-fill ph-heartbeat mr-2 text-lg"></i> ข้อมูลสุขภาพและการติดต่อ</h4>
@@ -821,7 +831,7 @@
             const p = patientByHN(hn)||{};
             $('#patientFormTitle').textContent='แก้ไขข้อมูลผู้รับบริการ';
             $('#editHn').value=p.hn||'';
-            ['cid','prefix','firstName','lastName','gender','phone','disease','allergy','emContact','emPhone'].forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
+            ['cid','prefix','firstName','lastName','gender','phone','race','nationality','maritalStatus','disease','allergy','emContact','emPhone'].forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
             setBirthDateFromISO(p.birthDate);
             ADDR_FIELDS.forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
             $('#pdpa').checked=true;
@@ -844,6 +854,7 @@
             hn: editHn || nextHN(),
             cid:$('#cid').value.trim(), prefix:$('#prefix').value, firstName:$('#firstName').value.trim(), lastName:$('#lastName').value.trim(),
             birthDate:getBirthDateISO(), gender:$('#gender').value, phone:$('#phone').value.trim(),
+            race:$('#race').value.trim(), nationality:$('#nationality').value.trim(), maritalStatus:$('#maritalStatus').value,
             addr_no:addr.addr_no, addr_building:addr.addr_building, addr_road:addr.addr_road,
             addr_province:addr.addr_province, addr_amphure:addr.addr_amphure, addr_tambon:addr.addr_tambon, addr_zip:addr.addr_zip,
             address: composeAddress(addr),
