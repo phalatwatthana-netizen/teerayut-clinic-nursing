@@ -79,7 +79,8 @@ function readAll(name) {
   var sh = getSheet(name);
   var values = sh.getDataRange().getValues();
   if (values.length < 2) return [];
-  var head = values[0];
+  // ยึดลำดับคอลัมน์จากโค้ด (HEADERS) เป็นหลัก กันหัวตารางในชีตไม่ตรงลำดับ -> ข้อมูลเลื่อนช่อง
+  var head = HEADERS[name] || values[0];
   var out = [];
   for (var r = 1; r < values.length; r++) {
     var row = values[r];
@@ -170,6 +171,15 @@ function setupSheets() {
     users.appendRow(['nurse', 'nurse123', 'พยาบาลวิชาชีพ', 'staff', 'yes']);
   }
   return 'สร้างชีตเรียบร้อย: Patients, Visits, Appointments, Users';
+}
+
+/* ---------- ซ่อมหัวตารางทุกชีตให้ตรงลำดับ HEADERS (รันเองถ้าต้องการ) ---------- */
+function syncHeaders() {
+  ['Patients','Visits','Appointments','Users','Inventory'].forEach(function(name){
+    var sh = getSheet(name);
+    sh.getRange(1, 1, 1, HEADERS[name].length).setValues([HEADERS[name]]);
+  });
+  return 'ปรับหัวตารางให้ตรงลำดับแล้ว';
 }
 
 /* ---------- Login (ตรวจสอบผู้ใช้จากชีต Users) ---------- */
