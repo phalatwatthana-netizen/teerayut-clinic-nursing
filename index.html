@@ -217,7 +217,10 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-hidden">
                         <div class="p-4 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2 bg-gray-50/50">
-                            <h3 class="font-semibold text-brand-blueDark flex items-center"><i class="ph-fill ph-clock-countdown text-brand-teal mr-2 text-lg"></i> คิวให้บริการ</h3>
+                            <div>
+                                <h3 class="font-semibold text-brand-blueDark flex items-center"><i class="ph-fill ph-clock-countdown text-brand-teal mr-2 text-lg"></i> คิวให้บริการ</h3>
+                                <p id="dashDateLabel" class="text-xs text-brand-teal font-medium mt-0.5 ml-7"></p>
+                            </div>
                             <div class="flex items-center gap-2">
                                 <input type="date" id="dashDate" onchange="renderDashboard()" class="px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-brand-blueMain">
                                 <button onclick="dashDateToday()" class="text-xs bg-brand-bluePale/30 text-brand-blueDark px-2.5 py-1.5 rounded-lg hover:bg-brand-bluePale/50">วันนี้</button>
@@ -699,10 +702,13 @@
     const money = n => (Number(n)||0).toLocaleString('th-TH',{minimumFractionDigits:2, maximumFractionDigits:2});
     const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) : '-';
     const fmtDateTH = d => d ? new Date(d).toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'2-digit'}) : '-';
+    const fmtDateThFull = d => d ? new Date(d).toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}) : '-';
+    /* ตัดให้เหลือ YYYY-MM-DD (เผื่อชีตส่งค่าวันที่มาเป็น datetime/ISO เต็ม) */
+    const dateKey = d => { if(!d) return ''; const s=String(d); if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10); const t=new Date(d); return isNaN(t)?s.slice(0,10):t.toLocaleDateString('en-CA'); };
     function age(bd){ if(!bd) return '-'; const d=new Date(bd), n=new Date(); let a=n.getFullYear()-d.getFullYear(); if(n.getMonth()<d.getMonth()||(n.getMonth()===d.getMonth()&&n.getDate()<d.getDate()))a--; return a; }
     const patientByHN = hn => State.patients.find(p=>p.hn===hn);
     const pname = p => p ? `${p.prefix||''}${p.firstName||''} ${p.lastName||''}`.trim() : '-';
-    const todayVisits = () => State.visits.filter(v=>v.date===todayISO());
+    const todayVisits = () => State.visits.filter(v=>dateKey(v.date)===todayISO());
     function nextHN(){ let mx=0; State.patients.forEach(p=>{const n=parseInt(String(p.hn).replace(/\D/g,''),10); if(n>mx)mx=n;}); return 'HN'+String(mx+1).padStart(5,'0'); }
     function nextVN(){ const d=todayISO().replace(/-/g,''); let mx=0; State.visits.forEach(v=>{ if(String(v.vn).startsWith('V'+d)){ const n=parseInt(String(v.vn).slice(9),10); if(n>mx)mx=n; }}); return 'V'+d+String(mx+1).padStart(3,'0'); }
     function statusBadge(s){ return `<span class="px-2 py-1 text-xs font-medium rounded-full ${STATUS_STYLE[s]||'text-gray-600 bg-gray-100'}">${esc(s)}</span>`; }
@@ -761,11 +767,11 @@
         if($('#dashDate') && !$('#dashDate').value) $('#dashDate').value = todayISO();
         const selDate = ($('#dashDate') && $('#dashDate').value) || todayISO();
         const isToday = selDate===todayISO();
-        const dv = State.visits.filter(v=>v.date===selDate);
+        const dv = State.visits.filter(v=>dateKey(v.date)===selDate);
+        if($('#dashDateLabel')) $('#dashDateLabel').textContent = (isToday?'วันนี้ · ':'') + fmtDateThFull(selDate);
         const income = dv.filter(v=>v.status===STATUS.DONE).reduce((s,v)=>s+(Number(v.total)||0),0);
-        const apptSel = State.appointments.filter(a=>a.date===selDate);
         const tv = todayVisits();
-        const apptToday = State.appointments.filter(a=>a.date===todayISO());
+        const apptToday = State.appointments.filter(a=>dateKey(a.date)===todayISO());
         const kpis = [
             { ic:'ph-users', col:'blueMain', label:'ผู้รับบริการวันนี้', val:tv.length },
             { ic:'ph-calendar-check', col:'teal', label:'นัดหมายวันนี้', val:apptToday.length },
