@@ -285,10 +285,26 @@
                         </div>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 p-6">
-                        <form id="patientForm" onsubmit="savePatient(event)">
+                        <form id="patientForm" onsubmit="savePatient(event)" class="relative">
                             <input type="hidden" id="editHn" value="">
-                            <h4 class="text-brand-blueDark font-semibold border-b border-gray-100 pb-2 mb-4 flex items-center"><i class="ph-fill ph-user mr-2 text-lg"></i> ข้อมูลส่วนบุคคล</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+                            <!-- กล่องถ่าย/แนบรูปผู้รับบริการ (มุมขวาบน) -->
+                            <div class="flex justify-center md:block md:absolute md:top-0 md:right-0 mb-4 md:mb-0 z-10">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-28 h-36 rounded-lg border-2 border-dashed border-brand-bluePale bg-brand-bg/60 overflow-hidden flex items-center justify-center shadow-sm">
+                                        <img id="photoPreview" alt="รูปผู้รับบริการ" class="w-full h-full object-cover hidden">
+                                        <div id="photoPlaceholder" class="text-center text-gray-400 px-1"><i class="ph ph-user-focus text-3xl"></i><p class="text-xs mt-1">รูปผู้รับบริการ</p></div>
+                                    </div>
+                                    <label class="mt-2 cursor-pointer text-xs bg-brand-blueMain text-white px-3 py-1.5 rounded-lg hover:bg-brand-teal transition-colors flex items-center shadow-sm">
+                                        <i class="ph ph-camera mr-1 text-base"></i> ถ่าย/เลือกรูป
+                                        <input type="file" id="photoInput" accept="image/*" capture="user" class="hidden" onchange="onPhotoSelected(this)">
+                                    </label>
+                                    <button type="button" id="photoClear" onclick="clearPhoto()" class="mt-1 text-xs text-red-500 hover:underline hidden"><i class="ph ph-trash"></i> ลบรูป</button>
+                                </div>
+                            </div>
+
+                            <h4 class="text-brand-blueDark font-semibold border-b border-gray-100 pb-2 mb-4 flex items-center md:pr-36"><i class="ph-fill ph-user mr-2 text-lg"></i> ข้อมูลส่วนบุคคล</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 md:pr-36">
                                 <div><label class="block text-xs font-medium text-gray-600 mb-1">เลขบัตรประชาชน <span class="text-red-500">*</span></label>
                                     <input type="text" id="cid" maxlength="13" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50"></div>
                                 <div><label class="block text-xs font-medium text-gray-600 mb-1">คำนำหน้า <span class="text-red-500">*</span></label>
@@ -862,6 +878,7 @@
     async function openPatientForm(hn){
         navTo('patients');
         $('#patientForm').reset(); $('#patientFile').value=''; $('#existingFile').classList.add('hidden');
+        resetPhotoBox();
         populateBirthDateSelects();
         if(hn){
             const p = patientByHN(hn)||{};
@@ -872,6 +889,7 @@
             ADDR_TEXT_FIELDS.forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
             $('#pdpa').checked=true;
             if(p.fileUrl){ const e=$('#existingFile'); e.classList.remove('hidden'); e.innerHTML=`<i class="ph ph-paperclip"></i> มีเอกสารแนบแล้ว — <a href="${esc(p.fileUrl)}" target="_blank" class="underline">เปิดดู</a>`; }
+            if(p.photoUrl){ const img=$('#photoPreview'); img.src=driveThumb(p.photoUrl); img.classList.remove('hidden'); $('#photoPlaceholder').classList.add('hidden'); }
             togglePatientForm(true);
             await loadThaiAddress(); setAddressFromPatient(p);
         } else {
@@ -897,26 +915,46 @@
             disease:$('#disease').value.trim(), allergy:$('#allergy').value.trim(), emContact:$('#emContact').value.trim(), emPhone:$('#emPhone').value.trim(),
             createdAt: (editHn && patientByHN(editHn)?.createdAt) || nowISO()
         };
-        const existing = patientByHN(editHn); if(existing && existing.fileUrl) p.fileUrl = existing.fileUrl;
+        const existing = patientByHN(editHn);
+        if(existing && existing.fileUrl) p.fileUrl = existing.fileUrl;
+        if(existing && existing.photoUrl) p.photoUrl = existing.photoUrl;
         const file = $('#patientFile').files[0];
-        const finish = async ()=>{
-            try{
-                const res = await Store.savePatient(p);
-                if(res.hn) p.hn = res.hn; if(res.fileUrl) p.fileUrl = res.fileUrl;
-                const i = State.patients.findIndex(x=>x.hn===p.hn); if(i>=0) State.patients[i]=p; else State.patients.push(p);
-                Store.localSave();
-                showToast(`บันทึกสำเร็จ! รหัส: ${p.hn}`);
-                togglePatientForm(false); renderPatientsTable();
-            } catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message,'error'); }
-            finally { btn.innerHTML=orig; btn.disabled=false; }
-        };
-        if(file){
-            if(file.size > 5*1024*1024){ showToast('ไฟล์ใหญ่เกิน 5MB','error'); btn.innerHTML=orig; btn.disabled=false; return; }
-            const reader = new FileReader();
-            reader.onload = e => { p.fileBase64 = e.target.result.split(',')[1]; p.fileName=file.name; p.fileMimeType=file.type; finish(); };
-            reader.readAsDataURL(file);
-        } else finish();
+        const photo = $('#photoInput').files[0];
+        try{
+            if(file){
+                if(file.size > 5*1024*1024) throw new Error('ไฟล์เอกสารใหญ่เกิน 5MB');
+                p.fileBase64 = await readFileB64(file); p.fileName=file.name; p.fileMimeType=file.type;
+            }
+            if(photo){
+                if(photo.size > 8*1024*1024) throw new Error('รูปภาพใหญ่เกิน 8MB');
+                p.photoBase64 = await readFileB64(photo); p.photoName=photo.name||'photo.jpg'; p.photoMimeType=photo.type||'image/jpeg';
+            }
+            const res = await Store.savePatient(p);
+            if(res.hn) p.hn = res.hn; if(res.fileUrl) p.fileUrl = res.fileUrl; if(res.photoUrl) p.photoUrl = res.photoUrl;
+            delete p.fileBase64; delete p.fileName; delete p.fileMimeType;
+            delete p.photoBase64; delete p.photoName; delete p.photoMimeType;
+            const i = State.patients.findIndex(x=>x.hn===p.hn); if(i>=0) State.patients[i]=p; else State.patients.push(p);
+            Store.localSave();
+            showToast(`บันทึกสำเร็จ! รหัส: ${p.hn}`);
+            togglePatientForm(false); renderPatientsTable();
+        } catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message,'error'); }
+        finally { btn.innerHTML=orig; btn.disabled=false; }
     }
+    const readFileB64 = f => new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=e=>resolve(e.target.result.split(',')[1]); r.onerror=()=>reject(new Error('อ่านไฟล์ไม่สำเร็จ')); r.readAsDataURL(f); });
+    /* แปลงลิงก์ Google Drive เป็นลิงก์รูปย่อสำหรับแสดงผล */
+    const driveThumb = url => { const m=String(url||'').match(/[-\w]{25,}/); return m ? `https://drive.google.com/thumbnail?id=${m[0]}&sz=w400` : url; };
+    /* ---------- รูปผู้รับบริการ ---------- */
+    function onPhotoSelected(input){
+        const f=input.files[0]; if(!f) return;
+        const r=new FileReader();
+        r.onload=e=>{ const img=$('#photoPreview'); img.src=e.target.result; img.classList.remove('hidden'); $('#photoPlaceholder').classList.add('hidden'); $('#photoClear').classList.remove('hidden'); };
+        r.readAsDataURL(f);
+    }
+    function clearPhoto(){
+        $('#photoInput').value=''; const img=$('#photoPreview'); img.src=''; img.classList.add('hidden');
+        $('#photoPlaceholder').classList.remove('hidden'); $('#photoClear').classList.add('hidden');
+    }
+    function resetPhotoBox(){ clearPhoto(); }
     async function sendToTriage(hn){
         const p = patientByHN(hn); if(!p) return;
         const open = todayVisits().find(v=>v.hn===hn && ![STATUS.DONE,STATUS.REFER].includes(v.status));
