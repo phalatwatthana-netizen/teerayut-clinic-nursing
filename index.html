@@ -1375,7 +1375,7 @@
             {ic:'ph-x-circle',col:'teal',label:'หมดสต๊อก',val:out}
         ];
         $('#invKpi').innerHTML=kpis.map(k=>`<div class="bg-white p-4 rounded-xl shadow-sm border border-brand-bluePale/20 flex items-center"><div class="w-10 h-10 rounded-full bg-brand-${k.col}/20 text-brand-${k.col} flex items-center justify-center text-xl mr-3 shrink-0"><i class="ph-fill ${k.ic}"></i></div><div><p class="text-xs text-gray-500">${k.label}</p><p class="text-xl font-bold text-gray-800">${k.val}</p></div></div>`).join('');
-        const seedBtn=$('#invSeedBtn'); if(seedBtn) seedBtn.classList.toggle('hidden', totalItems>0);
+        const seedBtn=$('#invSeedBtn'); if(seedBtn){ const miss=INVENTORY_SEED.filter(s=>!invByCode(s.code)).length; seedBtn.classList.toggle('hidden', miss===0); seedBtn.innerHTML=`<i class="ph ph-download-simple mr-2 text-lg"></i> นำเข้ารายการเริ่มต้น${totalItems?` (ขาด ${miss})`:''}`; }
         $('#invTableBody').innerHTML = list.length ? list.map(it=>{
             const st=Number(it.stock)||0, mn=Number(it.minStock||0);
             const cls = st<=0 ? 'text-red-600 bg-red-50' : (st<=mn ? 'text-yellow-700 bg-yellow-50' : 'text-green-700 bg-green-50');
