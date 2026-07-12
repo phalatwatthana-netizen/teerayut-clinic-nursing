@@ -1,0 +1,13 @@
+{
+  "name": "thirayut-card-agent",
+  "version": "1.0.0",
+  "description": "โปรแกรมอ่านบัตรประชาชนไทย (USB PC/SC) สำหรับธีรยุทธคลินิก",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js"
+  },
+  "dependencies": {
+    "pcsclite": "^1.0.1",
+    "iconv-lite": "^0.6.3"
+  }
+}

@@ -295,8 +295,11 @@
                                         <img id="photoPreview" alt="รูปผู้รับบริการ" class="w-full h-full object-cover hidden">
                                         <div id="photoPlaceholder" class="text-center text-gray-400 px-1"><i class="ph ph-user-focus text-3xl"></i><p class="text-xs mt-1">รูปผู้รับบริการ</p></div>
                                     </div>
-                                    <label class="mt-2 cursor-pointer text-xs bg-brand-blueMain text-white px-3 py-1.5 rounded-lg hover:bg-brand-teal transition-colors flex items-center shadow-sm">
-                                        <i class="ph ph-camera mr-1 text-base"></i> ถ่าย/เลือกรูป
+                                    <button type="button" onclick="openCamera()" class="mt-2 text-xs bg-brand-greenMain text-white px-3 py-1.5 rounded-lg hover:bg-brand-greenDark transition-colors flex items-center shadow-sm">
+                                        <i class="ph ph-video-camera mr-1 text-base"></i> เปิดกล้อง (USB)
+                                    </button>
+                                    <label class="mt-1.5 cursor-pointer text-xs bg-brand-blueMain text-white px-3 py-1.5 rounded-lg hover:bg-brand-teal transition-colors flex items-center shadow-sm">
+                                        <i class="ph ph-image mr-1 text-base"></i> เลือกไฟล์รูป
                                         <input type="file" id="photoInput" accept="image/*" capture="user" class="hidden" onchange="onPhotoSelected(this)">
                                     </label>
                                     <button type="button" id="photoClear" onclick="clearPhoto()" class="mt-1 text-xs text-red-500 hover:underline hidden"><i class="ph ph-trash"></i> ลบรูป</button>
@@ -305,8 +308,11 @@
 
                             <h4 class="text-brand-blueDark font-semibold border-b border-gray-100 pb-2 mb-4 flex items-center md:pr-36"><i class="ph-fill ph-user mr-2 text-lg"></i> ข้อมูลส่วนบุคคล</h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 md:pr-36">
-                                <div><label class="block text-xs font-medium text-gray-600 mb-1">เลขบัตรประชาชน <span class="text-red-500">*</span></label>
-                                    <input type="text" id="cid" maxlength="13" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50"></div>
+                                <div class="lg:col-span-2"><label class="block text-xs font-medium text-gray-600 mb-1">เลขบัตรประชาชน <span class="text-red-500">*</span></label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="cid" maxlength="13" required class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                                        <button type="button" onclick="readIdCard()" title="อ่านข้อมูลจากเครื่องอ่านบัตรประชาชน (USB)" class="shrink-0 px-3 py-2 bg-brand-teal text-white rounded-lg text-xs font-medium hover:bg-brand-blueDark transition-colors flex items-center shadow-sm"><i class="ph ph-identification-card mr-1 text-base"></i> อ่านบัตร</button>
+                                    </div></div>
                                 <div><label class="block text-xs font-medium text-gray-600 mb-1">คำนำหน้า <span class="text-red-500">*</span></label>
                                     <select id="prefix" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50">
                                         <option value="">เลือก...</option><option value="นาย">นาย</option><option value="นาง">นาง</option><option value="นางสาว">นางสาว</option><option value="ด.ช.">เด็กชาย (ด.ช.)</option><option value="ด.ญ.">เด็กหญิง (ด.ญ.)</option>
@@ -599,6 +605,24 @@
 
         </div>
     </main>
+
+    <!-- Camera Modal (USB webcam ถ่ายสด) -->
+    <div id="cameraModal" class="fixed inset-0 bg-black/70 z-50 hidden items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-gray-100"><h3 class="font-semibold text-brand-blueDark flex items-center"><i class="ph ph-video-camera mr-2"></i> ถ่ายภาพผู้รับบริการ</h3><button onclick="closeCamera()" class="text-gray-400 hover:text-gray-700 text-xl"><i class="ph ph-x"></i></button></div>
+            <div class="p-4">
+                <select id="cameraSelect" onchange="startCamera()" class="w-full mb-3 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain hidden"></select>
+                <div class="relative bg-black rounded-lg overflow-hidden flex items-center justify-center" style="aspect-ratio:4/3">
+                    <video id="cameraVideo" autoplay playsinline muted class="w-full h-full object-contain"></video>
+                </div>
+                <p id="cameraErr" class="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mt-2 hidden"></p>
+                <div class="flex justify-center gap-3 mt-4">
+                    <button onclick="closeCamera()" class="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">ยกเลิก</button>
+                    <button onclick="capturePhoto()" class="px-6 py-2 bg-brand-greenMain hover:bg-brand-greenDark text-white rounded-lg text-sm font-medium flex items-center shadow-sm"><i class="ph ph-camera mr-2 text-lg"></i> จับภาพ</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Generic Modal -->
     <div id="modal" class="fixed inset-0 bg-black/50 z-40 hidden items-start justify-center p-4 overflow-y-auto no-print">
@@ -919,15 +943,13 @@
         if(existing && existing.fileUrl) p.fileUrl = existing.fileUrl;
         if(existing && existing.photoUrl) p.photoUrl = existing.photoUrl;
         const file = $('#patientFile').files[0];
-        const photo = $('#photoInput').files[0];
         try{
             if(file){
                 if(file.size > 5*1024*1024) throw new Error('ไฟล์เอกสารใหญ่เกิน 5MB');
                 p.fileBase64 = await readFileB64(file); p.fileName=file.name; p.fileMimeType=file.type;
             }
-            if(photo){
-                if(photo.size > 8*1024*1024) throw new Error('รูปภาพใหญ่เกิน 8MB');
-                p.photoBase64 = await readFileB64(photo); p.photoName=photo.name||'photo.jpg'; p.photoMimeType=photo.type||'image/jpeg';
+            if(pendingPhoto){
+                p.photoBase64 = pendingPhoto.base64; p.photoName = pendingPhoto.name; p.photoMimeType = pendingPhoto.mimeType;
             }
             const res = await Store.savePatient(p);
             if(res.hn) p.hn = res.hn; if(res.fileUrl) p.fileUrl = res.fileUrl; if(res.photoUrl) p.photoUrl = res.photoUrl;
@@ -943,18 +965,99 @@
     const readFileB64 = f => new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=e=>resolve(e.target.result.split(',')[1]); r.onerror=()=>reject(new Error('อ่านไฟล์ไม่สำเร็จ')); r.readAsDataURL(f); });
     /* แปลงลิงก์ Google Drive เป็นลิงก์รูปย่อสำหรับแสดงผล */
     const driveThumb = url => { const m=String(url||'').match(/[-\w]{25,}/); return m ? `https://drive.google.com/thumbnail?id=${m[0]}&sz=w400` : url; };
-    /* ---------- รูปผู้รับบริการ ---------- */
+    /* ---------- รูปผู้รับบริการ (ไฟล์ / กล้อง USB) ---------- */
+    let pendingPhoto = null;   // { base64, name, mimeType }
+    function setPendingPhoto(dataUrl, name, mimeType){
+        pendingPhoto = { base64: dataUrl.split(',')[1], name: name||'photo.jpg', mimeType: mimeType||'image/jpeg' };
+        const img=$('#photoPreview'); img.src=dataUrl; img.classList.remove('hidden');
+        $('#photoPlaceholder').classList.add('hidden'); $('#photoClear').classList.remove('hidden');
+    }
     function onPhotoSelected(input){
         const f=input.files[0]; if(!f) return;
+        if(f.size > 8*1024*1024){ showToast('รูปภาพใหญ่เกิน 8MB','error'); input.value=''; return; }
         const r=new FileReader();
-        r.onload=e=>{ const img=$('#photoPreview'); img.src=e.target.result; img.classList.remove('hidden'); $('#photoPlaceholder').classList.add('hidden'); $('#photoClear').classList.remove('hidden'); };
+        r.onload=e=>setPendingPhoto(e.target.result, f.name, f.type);
         r.readAsDataURL(f);
     }
     function clearPhoto(){
-        $('#photoInput').value=''; const img=$('#photoPreview'); img.src=''; img.classList.add('hidden');
+        pendingPhoto=null; $('#photoInput').value='';
+        const img=$('#photoPreview'); img.src=''; img.classList.add('hidden');
         $('#photoPlaceholder').classList.remove('hidden'); $('#photoClear').classList.add('hidden');
     }
     function resetPhotoBox(){ clearPhoto(); }
+
+    /* ---------- กล้อง USB (getUserMedia) ---------- */
+    let cameraStream = null;
+    async function openCamera(){
+        $('#cameraErr').classList.add('hidden');
+        $('#cameraModal').classList.remove('hidden'); $('#cameraModal').classList.add('flex');
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ showCameraErr(new Error('เบราว์เซอร์นี้ไม่รองรับกล้อง')); return; }
+        try{ await startCamera(); await listCameras(); }catch(e){ showCameraErr(e); }
+    }
+    async function listCameras(){
+        try{
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const cams = devices.filter(d=>d.kind==='videoinput');
+            const sel=$('#cameraSelect');
+            const cur = sel.value;
+            sel.innerHTML = cams.map((c,i)=>`<option value="${esc(c.deviceId)}">${esc(c.label||('กล้อง '+(i+1)))}</option>`).join('');
+            if(cur) sel.value=cur;
+            sel.classList.toggle('hidden', cams.length<2);
+        }catch(e){ /* เงียบ */ }
+    }
+    async function startCamera(){
+        stopCamera();
+        const id=$('#cameraSelect').value;
+        const constraints={ video: id?{deviceId:{exact:id}}:{width:{ideal:1280},height:{ideal:960},facingMode:'user'}, audio:false };
+        try{
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            $('#cameraVideo').srcObject = cameraStream;
+            $('#cameraErr').classList.add('hidden');
+        }catch(e){ showCameraErr(e); }
+    }
+    function showCameraErr(e){ const el=$('#cameraErr'); el.textContent='เปิดกล้องไม่ได้: '+(e.message||e.name||e)+' (ตรวจการอนุญาตกล้อง/สาย USB)'; el.classList.remove('hidden'); }
+    function stopCamera(){ if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; } const v=$('#cameraVideo'); if(v) v.srcObject=null; }
+    function closeCamera(){ stopCamera(); $('#cameraModal').classList.add('hidden'); $('#cameraModal').classList.remove('flex'); }
+    function capturePhoto(){
+        const v=$('#cameraVideo');
+        if(!v.videoWidth){ showCameraErr(new Error('กล้องยังไม่พร้อม รอสักครู่')); return; }
+        const canvas=document.createElement('canvas'); canvas.width=v.videoWidth; canvas.height=v.videoHeight;
+        canvas.getContext('2d').drawImage(v,0,0,canvas.width,canvas.height);
+        setPendingPhoto(canvas.toDataURL('image/jpeg',0.9), 'camera_'+Date.now()+'.jpg', 'image/jpeg');
+        closeCamera(); showToast('จับภาพเรียบร้อย');
+    }
+
+    /* ---------- เครื่องอ่านบัตรประชาชน USB (ผ่าน local agent) ----------
+       ต้องรันโปรแกรม card-agent ในเครื่อง (ดูโฟลเดอร์ card-agent/) แล้วเปิด
+       เว็บนี้จะเรียกอ่านข้อมูลจาก http://localhost:8765/read มากรอกฟอร์มให้ */
+    const ID_CARD_AGENT_URL = 'http://localhost:8765/read';
+    async function readIdCard(){
+        showToast('กำลังอ่านบัตร... เสียบบัตรที่เครื่องอ่าน','info');
+        try{
+            const ctrl = new AbortController(); const to=setTimeout(()=>ctrl.abort(), 15000);
+            const r = await fetch(ID_CARD_AGENT_URL, { signal: ctrl.signal });
+            clearTimeout(to);
+            const d = await r.json();
+            if(d.status && d.status!=='success') throw new Error(d.message||'อ่านบัตรไม่สำเร็จ');
+            fillFromIdCard(d);
+            showToast('อ่านบัตรสำเร็จ — ตรวจสอบข้อมูลก่อนบันทึก');
+        }catch(e){
+            const msg = (e.name==='AbortError') ? 'หมดเวลา — ตรวจว่าเสียบบัตรแล้ว'
+                : 'เชื่อมต่อเครื่องอ่านบัตรไม่ได้ — ยังไม่ได้เปิดโปรแกรม card-agent ในเครื่องนี้';
+            showToast(msg,'error');
+        }
+    }
+    /* เติมข้อมูลจากบัตรลงฟอร์ม (รองรับทั้งภาษาไทยและโครงสร้างมาตรฐาน) */
+    function fillFromIdCard(d){
+        if(d.cid) $('#cid').value=d.cid;
+        if(d.prefix){ const opt=[...$('#prefix').options].find(o=>o.value===d.prefix); if(opt) $('#prefix').value=d.prefix; }
+        if(d.firstName) $('#firstName').value=d.firstName;
+        if(d.lastName) $('#lastName').value=d.lastName;
+        if(d.gender){ const g=String(d.gender); $('#gender').value = (g==='1'||g==='ชาย')?'ชาย':(g==='2'||g==='หญิง')?'หญิง':''; }
+        if(d.birthDate){ setBirthDateFromISO(d.birthDate); }
+        if(d.address){ $('#addr_no').value=d.address; }  // ที่อยู่รวมจากบัตร ใส่ช่องบ้านเลขที่/รายละเอียด
+        if(d.photoBase64){ setPendingPhoto('data:image/jpeg;base64,'+d.photoBase64, 'idcard_photo.jpg', 'image/jpeg'); }
+    }
     async function sendToTriage(hn){
         const p = patientByHN(hn); if(!p) return;
         const open = todayVisits().find(v=>v.hn===hn && ![STATUS.DONE,STATUS.REFER].includes(v.status));

@@ -18,7 +18,7 @@ var SHEET_USERS = 'Users';
 var DRIVE_FOLDER = 'ThirayutClinic_Files';
 
 var HEADERS = {
-  Patients: ['hn','cid','prefix','firstName','lastName','birthDate','gender','phone','race','nationality','maritalStatus','address','disease','allergy','emContact','emPhone','fileUrl','photoUrl','createdAt'],
+  Patients: ['hn','cid','prefix','firstName','lastName','birthDate','gender','phone','race','nationality','maritalStatus','address','disease','allergy','emContact','emPhone','fileUrl','createdAt'],
   Visits: ['vn','hn','date','status','cc','pi','ph','pe','bp_sys','bp_dia','bt','pr','weight','height','bmi','dx','treatment','lab','meds_json','medTotal','serviceFee','otherFee','total','paid','payMethod','referTo','referReason','followUpDate','followUpNote','createdAt','triageAt','examAt','dispenseAt','doneAt','referAt'],
   Appointments: ['id','hn','name','date','time','type','status','createdAt'],
   Users: ['username','password','name','role','active']
@@ -184,56 +184,32 @@ function login(data) {
   return { status: 'success', user: { username: u.username, name: u.name || u.username, role: u.role || 'staff' } };
 }
 
-/* ---------- Patient save with optional Drive upload ----------
-   ไฟล์ทั้งหมดเก็บใน Drive แยกโฟลเดอร์ตาม HN */
+/* ---------- Patient save with optional Drive upload ---------- */
 function savePatient(data) {
-  var hn = data.hn || 'unknown';
-
-  // เอกสารแนบ (บัตร ปชช./ใบส่งตัว)
+  // handle file upload to Drive (if provided)
   if (data.fileBase64 && data.fileName) {
     try {
-      var folder = getPatientFolder(hn);
-      var blob = Utilities.newBlob(Utilities.base64Decode(data.fileBase64),
-        data.fileMimeType || 'application/octet-stream', hn + '_doc_' + data.fileName);
+      var folder = getDriveFolder();
+      var bytes = Utilities.base64Decode(data.fileBase64);
+      var blob = Utilities.newBlob(bytes, data.fileMimeType || 'application/octet-stream',
+        (data.hn || 'file') + '_' + data.fileName);
       var file = folder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       data.fileUrl = file.getUrl();
-    } catch (err) { /* ไม่ให้ล้มทั้งการบันทึก */ }
+    } catch (err) {
+      // ถ้าอัปโหลดไม่สำเร็จ ยังบันทึกข้อมูลผู้ป่วยต่อไป
+    }
   }
-
-  // รูปผู้รับบริการ
-  if (data.photoBase64) {
-    try {
-      var pfolder = getPatientFolder(hn);
-      var pname = data.photoName || 'photo.jpg';
-      var pblob = Utilities.newBlob(Utilities.base64Decode(data.photoBase64),
-        data.photoMimeType || 'image/jpeg', hn + '_photo_' + pname);
-      var pfile = pfolder.createFile(pblob);
-      pfile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      data.photoUrl = pfile.getUrl();
-    } catch (err) { /* ไม่ให้ล้มทั้งการบันทึก */ }
-  }
-
   // strip file payload before writing to sheet
   delete data.fileBase64; delete data.fileName; delete data.fileMimeType;
-  delete data.photoBase64; delete data.photoName; delete data.photoMimeType;
 
   var res = upsert(SHEET_PATIENTS, data);
   res.fileUrl = data.fileUrl || '';
-  res.photoUrl = data.photoUrl || '';
   return res;
 }
 
-/* โฟลเดอร์รากของคลินิก */
 function getDriveFolder() {
   var it = DriveApp.getFoldersByName(DRIVE_FOLDER);
   if (it.hasNext()) return it.next();
   return DriveApp.createFolder(DRIVE_FOLDER);
-}
-
-/* โฟลเดอร์ย่อยแยกตาม HN (อยู่ภายใต้โฟลเดอร์รากคลินิก) */
-function getPatientFolder(hn) {
-  var root = getDriveFolder();
-  var it = root.getFoldersByName(String(hn));
-  return it.hasNext() ? it.next() : root.createFolder(String(hn));
 }
