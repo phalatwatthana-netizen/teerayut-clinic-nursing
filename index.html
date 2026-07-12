@@ -667,6 +667,22 @@
         </div>
     </div>
 
+    <!-- Record Preview (พรีวิวเวชระเบียน A5 แนวนอน) -->
+    <div id="recordPreview" class="fixed inset-0 bg-black/60 z-50 hidden flex-col items-center p-3 sm:p-6 overflow-y-auto no-print">
+        <div class="w-full max-w-[820px] flex items-center justify-between mb-3 text-white">
+            <h3 class="font-semibold flex items-center"><i class="ph ph-file-text mr-2 text-lg"></i> พรีวิวเวชระเบียน (A5 แนวนอน)</h3>
+            <div class="flex gap-2">
+                <button onclick="printRecordFromPreview()" class="bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow"><i class="ph ph-printer mr-2"></i> พิมพ์</button>
+                <button onclick="saveRecordPdfFromPreview(this)" class="bg-brand-teal hover:bg-brand-blueDark text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow"><i class="ph ph-file-pdf mr-2"></i> บันทึก PDF</button>
+                <button onclick="closeRecordPreview()" class="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg text-sm flex items-center"><i class="ph ph-x"></i></button>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-2xl overflow-auto max-w-full">
+            <div id="recordPreviewSheet" style="width:756px"></div>
+        </div>
+        <p id="previewPdfResult" class="hidden text-xs bg-green-600 text-white rounded-lg px-3 py-2 mt-3"></p>
+    </div>
+
     <!-- Generic Modal -->
     <div id="modal" class="fixed inset-0 bg-black/50 z-40 hidden items-start justify-center p-4 overflow-y-auto no-print">
         <div class="bg-white rounded-2xl w-full max-w-lg my-8 shadow-2xl">
@@ -886,8 +902,7 @@
                 </div>
                 <div id="pdfResult" class="hidden text-xs bg-green-50 text-green-700 rounded-lg px-3 py-2"></div>
                 <div class="flex flex-wrap justify-end gap-2 border-t border-gray-100 pt-3">
-                    <button onclick="printVisitRecord('${v.vn}')" class="px-4 py-2 border border-brand-blueMain text-brand-blueMain rounded-lg text-sm font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-printer mr-1"></i> พิมพ์เวชระเบียน</button>
-                    <button onclick="saveRecordPdf('${v.vn}', this)" class="px-4 py-2 border border-brand-teal text-brand-teal rounded-lg text-sm font-medium hover:bg-teal-50 flex items-center"><i class="ph ph-file-pdf mr-1"></i> บันทึก PDF ลงไดรฟ์</button>
+                    <button onclick="openRecordPreview('${v.vn}')" class="px-4 py-2 border border-brand-blueMain text-brand-blueMain rounded-lg text-sm font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-eye mr-1"></i> พรีวิว / พิมพ์เวชระเบียน</button>
                     <button onclick="openVisitEdit('${v.vn}')" class="px-4 py-2 border border-brand-greenMain text-brand-greenDark rounded-lg text-sm font-medium hover:bg-brand-greenLight/10 flex items-center"><i class="ph ph-pencil-simple mr-1"></i> แก้ไขข้อมูล</button>
                     <span onclick="closeModal()">${routeBtn}</span>
                 </div>
@@ -939,6 +954,27 @@
         </div>`;
     }
     function printVisitRecord(vn){ const v=visitByVN(vn); if(!v) return; printHTML(buildRecordHtml(v)); }
+    let previewVN = null;
+    function openRecordPreview(vn){
+        const v=visitByVN(vn); if(!v) return; previewVN=vn;
+        $('#recordPreviewSheet').innerHTML = buildRecordHtml(v);
+        $('#previewPdfResult').classList.add('hidden');
+        const el=$('#recordPreview'); el.classList.remove('hidden'); el.classList.add('flex');
+    }
+    function closeRecordPreview(){ const el=$('#recordPreview'); el.classList.add('hidden'); el.classList.remove('flex'); }
+    function printRecordFromPreview(){ if(previewVN) printVisitRecord(previewVN); }
+    async function saveRecordPdfFromPreview(btn){
+        const v=visitByVN(previewVN); if(!v) return;
+        if(!Store.online()){ showToast('บันทึก PDF ต้องเชื่อมต่อ Google (โหมดออนไลน์)','error'); return; }
+        const orig=btn.innerHTML; btn.innerHTML='<i class="ph ph-spinner animate-spin mr-2"></i> กำลังบันทึก...'; btn.disabled=true;
+        try{
+            const res = await Store.post('saveVisitPdf', { hn:v.hn, vn:v.vn, html:buildRecordHtml(v) });
+            const box=$('#previewPdfResult'); box.classList.remove('hidden');
+            box.innerHTML = `✓ บันทึก PDF ลงไดรฟ์แล้ว (โฟลเดอร์ ${esc(v.hn)}) — <a href="${esc(res.url||'#')}" target="_blank" class="underline font-medium">เปิดดูไฟล์</a>`;
+            showToast('บันทึก PDF ลง Google Drive แล้ว');
+        }catch(e){ showToast('บันทึก PDF ไม่สำเร็จ: '+e.message,'error'); }
+        finally{ btn.innerHTML=orig; btn.disabled=false; }
+    }
     async function saveRecordPdf(vn, btn){
         const v=visitByVN(vn); if(!v) return;
         if(!Store.online()){ showToast('บันทึก PDF ต้องเชื่อมต่อ Google (โหมดออนไลน์)','error'); return; }
