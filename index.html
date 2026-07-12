@@ -884,11 +884,68 @@
                     <div><b class="text-brand-blueDark">การรักษา:</b> ${esc(v.treatment||'-')}</div>
                     <div><b class="text-brand-blueDark">ยา:</b><ul class="list-disc ml-5 mt-1">${meds}</ul></div>
                 </div>
+                <div id="pdfResult" class="hidden text-xs bg-green-50 text-green-700 rounded-lg px-3 py-2"></div>
                 <div class="flex flex-wrap justify-end gap-2 border-t border-gray-100 pt-3">
-                    <button onclick="openVisitEdit('${v.vn}')" class="px-4 py-2 border border-brand-greenMain text-brand-greenDark rounded-lg text-sm font-medium hover:bg-brand-greenLight/10 flex items-center"><i class="ph ph-pencil-simple mr-1"></i> แก้ไขข้อมูลการรับบริการ</button>
+                    <button onclick="printVisitRecord('${v.vn}')" class="px-4 py-2 border border-brand-blueMain text-brand-blueMain rounded-lg text-sm font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-printer mr-1"></i> พิมพ์เวชระเบียน</button>
+                    <button onclick="saveRecordPdf('${v.vn}', this)" class="px-4 py-2 border border-brand-teal text-brand-teal rounded-lg text-sm font-medium hover:bg-teal-50 flex items-center"><i class="ph ph-file-pdf mr-1"></i> บันทึก PDF ลงไดรฟ์</button>
+                    <button onclick="openVisitEdit('${v.vn}')" class="px-4 py-2 border border-brand-greenMain text-brand-greenDark rounded-lg text-sm font-medium hover:bg-brand-greenLight/10 flex items-center"><i class="ph ph-pencil-simple mr-1"></i> แก้ไขข้อมูล</button>
                     <span onclick="closeModal()">${routeBtn}</span>
                 </div>
             </div>`);
+    }
+    /* สร้าง HTML เวชระเบียนสำหรับพิมพ์/บันทึก PDF */
+    function buildRecordHtml(v){
+        const p = patientByHN(v.hn)||{};
+        const meds = (v.meds||[]).length ? v.meds.map(m=>`<tr><td>${esc(m.name)}</td><td style="text-align:center">${m.qty||''}</td></tr>`).join('') : '<tr><td colspan="2" style="color:#888">— ไม่มีรายการยา —</td></tr>';
+        const row = (l,val)=>`<tr><td style="width:150px;color:#555;vertical-align:top">${l}</td><td>${esc(val||'-')}</td></tr>`;
+        return `<div style="font-family:'Noto Sans Thai',sans-serif;max-width:720px;margin:auto;color:#222;font-size:13px">
+            <div style="text-align:center;border-bottom:2px solid #2792E8;padding-bottom:8px;margin-bottom:10px">
+                <h2 style="color:#2792E8;margin:0">✚ ${CLINIC.name}</h2>
+                <p style="color:#666;font-size:12px;margin:2px 0">เวชระเบียนผู้รับบริการ (Medical Record)</p>
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+                ${row('HN / VN', esc(v.hn)+' / '+esc(v.vn))}
+                ${row('วันที่รับบริการ', fmtDateThFull(v.date)+' '+fmtTime(v.createdAt))}
+                ${row('ชื่อ-สกุล', pname(p))}
+                ${row('อายุ / เพศ', age(p.birthDate)+' ปี / '+(p.gender||'-'))}
+                ${row('เลขบัตร ปชช.', p.cid)}
+                ${row('โทรศัพท์', p.phone)}
+                ${row('ที่อยู่', p.address)}
+                ${row('ประวัติแพ้ยา', p.allergy||'ไม่มี')}
+            </table>
+            <h3 style="color:#148A8E;border-bottom:1px solid #ddd;font-size:14px;margin:12px 0 4px">การตรวจรักษา</h3>
+            <table style="width:100%;border-collapse:collapse">
+                ${row('สัญญาณชีพ', `BP ${v.bp_sys||'-'}/${v.bp_dia||'-'} mmHg · BT ${v.bt||'-'}°C · PR ${v.pr||'-'}/min · น้ำหนัก ${v.weight||'-'} kg · สูง ${v.height||'-'} cm · BMI ${v.bmi||'-'}`)}
+                ${row('อาการสำคัญ (CC)', v.cc)}
+                ${row('ประวัติปัจจุบัน (PI)', v.pi)}
+                ${row('ประวัติอดีต (PH)', v.ph)}
+                ${row('ตรวจร่างกาย (PE)', v.pe)}
+                ${row('การวินิจฉัย (Dx)', v.dx)}
+                ${row('การรักษา/หัตถการ', v.treatment)}
+                ${row('Lab/ผลตรวจ', v.lab)}
+                ${row('นัดครั้งถัดไป', v.followUpDate?(fmtDateThFull(v.followUpDate)+' '+(v.followUpNote||'')):'-')}
+            </table>
+            <h3 style="color:#148A8E;border-bottom:1px solid #ddd;font-size:14px;margin:12px 0 4px">รายการยา / เวชภัณฑ์</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <tr style="color:#555"><th style="text-align:left;border-bottom:1px solid #eee">ชื่อยา/วิธีใช้</th><th style="border-bottom:1px solid #eee;width:80px">จำนวน</th></tr>
+                ${meds}
+            </table>
+            <p style="text-align:right;margin-top:40px">ลงชื่อ ......................................... ผู้ให้บริการ</p>
+            <p style="text-align:right;color:#888;font-size:11px">พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')}</p>
+        </div>`;
+    }
+    function printVisitRecord(vn){ const v=visitByVN(vn); if(!v) return; printHTML(buildRecordHtml(v)); }
+    async function saveRecordPdf(vn, btn){
+        const v=visitByVN(vn); if(!v) return;
+        if(!Store.online()){ showToast('บันทึก PDF ต้องเชื่อมต่อ Google (โหมดออนไลน์)','error'); return; }
+        const orig=btn.innerHTML; btn.innerHTML='<i class="ph ph-spinner animate-spin mr-1"></i> กำลังบันทึก...'; btn.disabled=true;
+        try{
+            const res = await Store.post('saveVisitPdf', { hn:v.hn, vn:v.vn, html:buildRecordHtml(v) });
+            const box=$('#pdfResult');
+            if(box){ box.classList.remove('hidden'); box.innerHTML = `<i class="ph ph-check-circle"></i> บันทึก PDF ลงไดรฟ์แล้ว (โฟลเดอร์ ${esc(v.hn)}) — <a href="${esc(res.url||'#')}" target="_blank" class="underline font-medium">เปิดดูไฟล์</a>`; }
+            showToast('บันทึก PDF ลง Google Drive แล้ว');
+        }catch(e){ showToast('บันทึก PDF ไม่สำเร็จ: '+e.message,'error'); }
+        finally{ btn.innerHTML=orig; btn.disabled=false; }
     }
     /* แก้ไขข้อมูลการรับบริการ (สัญญาณชีพ/อาการ/วินิจฉัย/นัด) — ยกเว้นข้อมูลห้องบัตร */
     function openVisitEdit(vn){

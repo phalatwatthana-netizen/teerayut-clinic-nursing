@@ -50,6 +50,7 @@ function doPost(e) {
     if (action === 'deleteAppointment') return json(deleteRecord(SHEET_APPTS, data.id));
     if (action === 'saveInventory')     return json(upsert(SHEET_INV, data));
     if (action === 'deleteInventory')   return json(deleteRecord(SHEET_INV, data.code));
+    if (action === 'saveVisitPdf')      return json(saveVisitPdf(data));
     return json({ status: 'error', message: 'unknown action: ' + action });
   } catch (err) {
     return json({ status: 'error', message: String(err) });
@@ -231,6 +232,19 @@ function savePatient(data) {
 }
 
 /* โฟลเดอร์รากของคลินิก */
+/* ---------- บันทึกเวชระเบียนเป็น PDF ลง Drive (แยกโฟลเดอร์ HN) ---------- */
+function saveVisitPdf(data) {
+  var hn = data.hn || 'unknown';
+  var vn = data.vn || 'visit';
+  var html = data.html || '<p>-</p>';
+  var folder = getPatientFolder(hn);
+  var pdf = Utilities.newBlob(html, 'text/html', vn + '.html').getAs('application/pdf')
+              .setName(hn + '_' + vn + '_record.pdf');
+  var file = folder.createFile(pdf);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return { status: 'success', url: file.getUrl() };
+}
+
 function getDriveFolder() {
   var it = DriveApp.getFoldersByName(DRIVE_FOLDER);
   if (it.hasNext()) return it.next();
