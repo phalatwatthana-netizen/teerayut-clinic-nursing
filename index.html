@@ -10,7 +10,7 @@
     <!-- Phosphor Icons (CDN) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Google Fonts: Noto Sans Thai -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- ข้อมูลเขตการปกครองไทย (ฝังในโปรเจกต์ ไม่ต้องพึ่ง CDN ภายนอก) -->
     <script src="thai-address.js"></script>
 
@@ -689,7 +689,7 @@
         [STATUS.PHARM]:'text-purple-700 bg-purple-50', [STATUS.BILL]:'text-brand-teal bg-teal-50',
         [STATUS.DONE]:'text-green-700 bg-green-50', [STATUS.REFER]:'text-red-700 bg-red-50'
     };
-    const CLINIC = { name:'ธีรยุทธคลินิกการพยาบาลและการผดุงครรภ์', sub:'บริการพยาบาล • ผดุงครรภ์ • ฝากครรภ์' };
+    const CLINIC = { name:'ธีรยุทธคลินิกการพยาบาลและการผดุงครรภ์', sub:'บริการพยาบาล • ผดุงครรภ์ • ฝากครรภ์', address:'94 ม.2 ต.ท่าทอง อ.สวรรคโลก จ.สุโขทัย 64110', phone:'082-1604902' };
 
     /* ---------- ตั้งค่าเริ่มต้น: ทำออนไลน์ทั้งระบบอัตโนมัติ ----------
        วาง URL /exec ของ Google Apps Script Web App ตรงนี้ 1 ครั้ง
@@ -893,45 +893,49 @@
                 </div>
             </div>`);
     }
-    /* สร้าง HTML เวชระเบียนสำหรับพิมพ์/บันทึก PDF */
+    /* สร้าง HTML เวชระเบียน A5 แนวนอน (ตามแบบฟอร์มคลินิก) สำหรับพิมพ์/บันทึก PDF */
     function buildRecordHtml(v){
         const p = patientByHN(v.hn)||{};
-        const meds = (v.meds||[]).length ? v.meds.map(m=>`<tr><td>${esc(m.name)}</td><td style="text-align:center">${m.qty||''}</td></tr>`).join('') : '<tr><td colspan="2" style="color:#888">— ไม่มีรายการยา —</td></tr>';
-        const row = (l,val)=>`<tr><td style="width:150px;color:#555;vertical-align:top">${l}</td><td>${esc(val||'-')}</td></tr>`;
-        return `<div style="font-family:'Noto Sans Thai',sans-serif;max-width:720px;margin:auto;color:#222;font-size:13px">
-            <div style="text-align:center;border-bottom:2px solid #2792E8;padding-bottom:8px;margin-bottom:10px">
-                <h2 style="color:#2792E8;margin:0">✚ ${CLINIC.name}</h2>
-                <p style="color:#666;font-size:12px;margin:2px 0">เวชระเบียนผู้รับบริการ (Medical Record)</p>
+        const NAVY='#0f3d91';
+        const boxes = (str,n,w) => { str=String(str||''); let h=''; for(let i=0;i<n;i++){ h+=`<span style="display:inline-block;width:${w||16}px;height:20px;line-height:20px;border:1px solid ${NAVY};text-align:center;font-size:13px;margin-right:-1px;vertical-align:middle">${esc(str[i]||'')}</span>`; } return h; };
+        const fill = (val,minw) => `<span style="border-bottom:1px dotted #333;display:inline-block;min-width:${minw||60}px;padding:0 4px;font-weight:500">${esc(val||'')}</span>`;
+        const chk = on => `<span style="display:inline-block;width:12px;height:12px;border:1.5px solid ${NAVY};text-align:center;line-height:11px;font-size:11px;vertical-align:middle">${on?'✓':''}</span>`;
+        const L = (label,val,minw) => `<b style="color:${NAVY}">${label}</b> ${fill(val,minw)}`;
+        const bd = p.birthDate ? new Date(p.birthDate) : null;
+        const beDate = bd ? String(bd.getDate()).padStart(2,'0')+String(bd.getMonth()+1).padStart(2,'0')+String(bd.getFullYear()+543) : '';
+        const meds = (v.meds||[]).map(m=>esc(m.name)+(m.qty?(' ('+m.qty+')'):'')).join(', ');
+        return `<div style="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif;color:#111;font-size:16px;line-height:1.85;width:198mm;box-sizing:border-box;padding:2mm">
+            <style>@page{size:A5 landscape;margin:6mm;} *{box-sizing:border-box;}</style>
+            <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:6px">
+                <div style="flex:1;border:2px solid ${NAVY};border-radius:14px;text-align:center;padding:6px 10px">
+                    <div style="font-size:21px;font-weight:700;color:${NAVY};line-height:1.2">${CLINIC.name}</div>
+                    <div style="font-size:15px;font-weight:600;color:${NAVY}">${CLINIC.address}</div>
+                    <div style="font-size:15px;font-weight:600;color:${NAVY}">โทร.${CLINIC.phone}</div>
+                </div>
+                <div style="flex:0 0 306px;border:2px solid ${NAVY};border-radius:14px;padding:6px 10px">
+                    <div style="display:flex;align-items:center;margin-bottom:4px"><b style="color:${NAVY};font-size:18px;width:80px">HN.</b> ${fill(v.hn,150)}</div>
+                    <div style="display:flex;align-items:center;margin-bottom:4px"><b style="color:${NAVY};width:80px">บัตรประชาชน</b> <span>${boxes(p.cid,13,15)}</span></div>
+                    <div style="display:flex;align-items:center"><b style="color:${NAVY};width:80px">วัน/เดือน/ปี</b> <span>${boxes(beDate,8,16)}</span></div>
+                </div>
             </div>
-            <table style="width:100%;border-collapse:collapse">
-                ${row('HN / VN', esc(v.hn)+' / '+esc(v.vn))}
-                ${row('วันที่รับบริการ', fmtDateThFull(v.date)+' '+fmtTime(v.createdAt))}
-                ${row('ชื่อ-สกุล', pname(p))}
-                ${row('อายุ / เพศ', age(p.birthDate)+' ปี / '+(p.gender||'-'))}
-                ${row('เลขบัตร ปชช.', p.cid)}
-                ${row('โทรศัพท์', p.phone)}
-                ${row('ที่อยู่', p.address)}
-                ${row('ประวัติแพ้ยา', p.allergy||'ไม่มี')}
-            </table>
-            <h3 style="color:#148A8E;border-bottom:1px solid #ddd;font-size:14px;margin:12px 0 4px">การตรวจรักษา</h3>
-            <table style="width:100%;border-collapse:collapse">
-                ${row('สัญญาณชีพ', `BP ${v.bp_sys||'-'}/${v.bp_dia||'-'} mmHg · BT ${v.bt||'-'}°C · PR ${v.pr||'-'}/min · น้ำหนัก ${v.weight||'-'} kg · สูง ${v.height||'-'} cm · BMI ${v.bmi||'-'}`)}
-                ${row('อาการสำคัญ (CC)', v.cc)}
-                ${row('ประวัติปัจจุบัน (PI)', v.pi)}
-                ${row('ประวัติอดีต (PH)', v.ph)}
-                ${row('ตรวจร่างกาย (PE)', v.pe)}
-                ${row('การวินิจฉัย (Dx)', v.dx)}
-                ${row('การรักษา/หัตถการ', v.treatment)}
-                ${row('Lab/ผลตรวจ', v.lab)}
-                ${row('นัดครั้งถัดไป', v.followUpDate?(fmtDateThFull(v.followUpDate)+' '+(v.followUpNote||'')):'-')}
-            </table>
-            <h3 style="color:#148A8E;border-bottom:1px solid #ddd;font-size:14px;margin:12px 0 4px">รายการยา / เวชภัณฑ์</h3>
-            <table style="width:100%;border-collapse:collapse;font-size:12px">
-                <tr style="color:#555"><th style="text-align:left;border-bottom:1px solid #eee">ชื่อยา/วิธีใช้</th><th style="border-bottom:1px solid #eee;width:80px">จำนวน</th></tr>
-                ${meds}
-            </table>
-            <p style="text-align:right;margin-top:40px">ลงชื่อ ......................................... ผู้ให้บริการ</p>
-            <p style="text-align:right;color:#888;font-size:11px">พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')}</p>
+            <div style="padding:0 4px">
+                <div>${L('ชื่อ',p.firstName,110)} &nbsp; ${L('นามสกุล',p.lastName,110)} &nbsp; ${L('อายุ',age(p.birthDate),34)} <b style="color:${NAVY}">ปี</b> &nbsp; <b style="color:${NAVY}">เพศ</b> ${chk(p.gender==='ชาย')} ชาย ${chk(p.gender==='หญิง')} หญิง &nbsp; ${L('เบอร์โทรศัพท์',p.phone,100)}</div>
+                <div>${L('ที่อยู่',p.address,280)} &nbsp; ${L('เชื้อชาติ',p.race,50)} &nbsp; ${L('สถานภาพ',p.maritalStatus,50)} &nbsp; ${L('สัญชาติ',p.nationality,50)}</div>
+                <div>${L('ชื่อผู้ติดต่อในกรณีฉุกเฉิน',p.emContact,140)} &nbsp; ${L('เบอร์โทรศัพท์',p.emPhone,100)}</div>
+                <div>${L('โรคประจำตัว',p.disease,140)} &nbsp; ${L('แพ้ยา',p.allergy,140)} &nbsp; ${L('ยาที่รับประทาน','',140)}</div>
+            </div>
+            <div style="border:1.5px solid ${NAVY};border-radius:10px;padding:8px 12px;margin-top:6px">
+                <div style="margin-bottom:2px"><b style="color:${NAVY}">BP</b> ${fill(v.bp_sys,26)}/${fill(v.bp_dia,26)} <b style="color:${NAVY}">mmHg</b> &nbsp; <b style="color:${NAVY}">BT</b> ${fill(v.bt,32)}<b style="color:${NAVY}">°C</b> &nbsp; <b style="color:${NAVY}">PR</b> ${fill(v.pr,32)}<b style="color:${NAVY}">/min</b> &nbsp; <b style="color:${NAVY}">Weight</b> ${fill(v.weight,38)}<b style="color:${NAVY}">kg</b> &nbsp; <b style="color:${NAVY}">Height</b> ${fill(v.height,38)}<b style="color:${NAVY}">cm.</b> &nbsp; <b style="color:${NAVY}">Date</b> ${fill(fmtDateTH(v.date),64)}</div>
+                <div><b style="color:${NAVY}">CC :</b> ${fill(v.cc,600)}</div>
+                <div><b style="color:${NAVY}">PI :</b> ${fill(v.pi,600)}</div>
+                <div><b style="color:${NAVY}">PH :</b> ${fill(v.ph,600)}</div>
+                <div><b style="color:${NAVY}">PE :</b> ${fill(v.pe,600)}</div>
+                <div><b style="color:${NAVY}">Dx :</b> ${fill(v.dx,600)}</div>
+                <div><b style="color:${NAVY}">Rx :</b> ${fill(meds,600)}</div>
+                <div><b style="color:${NAVY}">Treatment :</b> ${fill(v.treatment,540)}</div>
+                <div><b style="color:${NAVY}">Follow Up :</b> ${fill(v.followUpDate?(fmtDateTH(v.followUpDate)+' '+(v.followUpNote||'')):'',520)}</div>
+                <div><b style="color:${NAVY}">Signature :</b> ${fill('',540)}</div>
+            </div>
         </div>`;
     }
     function printVisitRecord(vn){ const v=visitByVN(vn); if(!v) return; printHTML(buildRecordHtml(v)); }
@@ -1296,7 +1300,8 @@
             <span class="bg-brand-blueMain text-white text-xs font-semibold px-2.5 py-1 rounded-lg">${esc(p.hn||'-')}</span>
             <div><div class="font-semibold text-gray-800">${esc(pname(p))}</div>
             <div class="text-xs text-gray-500">${esc(p.gender||'-')} · ${age(p.birthDate)} ปี · ☎ ${esc(p.phone||'-')}${v?` · VN ${esc(v.vn)}`:''}</div></div>
-            ${ noAllergy ? '' : `<span class="ml-auto text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-lg"><i class="ph-fill ph-warning"></i> แพ้: ${esc(p.allergy)}</span>`}
+            ${ noAllergy ? '' : `<span class="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-lg"><i class="ph-fill ph-warning"></i> แพ้: ${esc(p.allergy)}</span>`}
+            ${ v ? `<button type="button" onclick="openVisitDetail('${esc(v.vn)}')" class="ml-auto text-xs bg-brand-teal text-white px-3 py-1.5 rounded-lg hover:bg-brand-blueDark flex items-center shrink-0"><i class="ph ph-file-text mr-1"></i> เวชระเบียน/พิมพ์</button>` : '' }
         </div>`;
     }
     function loadTriagePatient(){
