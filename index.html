@@ -216,8 +216,12 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-hidden">
-                        <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                            <h3 class="font-semibold text-brand-blueDark flex items-center"><i class="ph-fill ph-clock-countdown text-brand-teal mr-2 text-lg"></i> คิวให้บริการวันนี้</h3>
+                        <div class="p-4 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2 bg-gray-50/50">
+                            <h3 class="font-semibold text-brand-blueDark flex items-center"><i class="ph-fill ph-clock-countdown text-brand-teal mr-2 text-lg"></i> คิวให้บริการ</h3>
+                            <div class="flex items-center gap-2">
+                                <input type="date" id="dashDate" onchange="renderDashboard()" class="px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-brand-blueMain">
+                                <button onclick="dashDateToday()" class="text-xs bg-brand-bluePale/30 text-brand-blueDark px-2.5 py-1.5 rounded-lg hover:bg-brand-bluePale/50">วันนี้</button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
@@ -752,15 +756,21 @@
     }
 
     /* ============================================================ DASHBOARD */
+    function dashDateToday(){ $('#dashDate').value = todayISO(); renderDashboard(); }
     function renderDashboard(){
+        if($('#dashDate') && !$('#dashDate').value) $('#dashDate').value = todayISO();
+        const selDate = ($('#dashDate') && $('#dashDate').value) || todayISO();
+        const isToday = selDate===todayISO();
+        const dv = State.visits.filter(v=>v.date===selDate);
+        const income = dv.filter(v=>v.status===STATUS.DONE).reduce((s,v)=>s+(Number(v.total)||0),0);
+        const apptSel = State.appointments.filter(a=>a.date===selDate);
         const tv = todayVisits();
-        const income = tv.filter(v=>v.status===STATUS.DONE).reduce((s,v)=>s+(Number(v.total)||0),0);
         const apptToday = State.appointments.filter(a=>a.date===todayISO());
         const kpis = [
             { ic:'ph-users', col:'blueMain', label:'ผู้รับบริการวันนี้', val:tv.length },
             { ic:'ph-calendar-check', col:'teal', label:'นัดหมายวันนี้', val:apptToday.length },
             { ic:'ph-spinner-gap', col:'greenMain', label:'กำลังให้บริการ', val:tv.filter(v=>[STATUS.TRIAGE,STATUS.EXAM,STATUS.PHARM,STATUS.BILL].includes(v.status)).length },
-            { ic:'ph-coins', col:'greenLight', label:'รายได้วันนี้', val:money(income)+' ฿' }
+            { ic:'ph-coins', col:'greenLight', label:'รายได้วันนี้', val:money(tv.filter(v=>v.status===STATUS.DONE).reduce((s,v)=>s+(Number(v.total)||0),0))+' ฿' }
         ];
         $('#kpiCards').innerHTML = kpis.map(k=>`
             <div class="bg-white p-4 rounded-xl shadow-sm border border-brand-bluePale/20 flex items-center">
@@ -768,17 +778,18 @@
                 <div><p class="text-xs text-gray-500">${k.label}</p><p class="text-xl font-bold text-gray-800">${k.val}</p></div>
             </div>`).join('');
 
-        const rows = tv.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).map(v=>{
+        const rows = dv.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).map(v=>{
             const p = patientByHN(v.hn)||{};
-            return `<tr class="hover:bg-brand-bg/50">
+            return `<tr onclick="openVisitDetail('${v.vn}')" class="hover:bg-brand-bluePale/20 cursor-pointer transition-colors">
                 <td class="p-3 text-gray-600">${fmtTime(v.createdAt)}</td>
                 <td class="p-3 font-medium text-gray-800">${esc(pname(p))}</td>
                 <td class="p-3 text-gray-600">${esc(v.cc||'-')}</td>
                 <td class="p-3">${statusBadge(v.status)}</td>
-                <td class="p-3 text-right">${routeButton(v)}</td>
+                <td class="p-3 text-right" onclick="event.stopPropagation()">${routeButton(v)}</td>
             </tr>`;
         }).join('');
-        $('#dashQueueBody').innerHTML = rows || `<tr><td colspan="5" class="p-8 text-center text-gray-400"><i class="ph ph-tray text-3xl block mb-2"></i>ยังไม่มีผู้รับบริการวันนี้</td></tr>`;
+        const emptyMsg = isToday ? 'ยังไม่มีผู้รับบริการวันนี้' : `ไม่มีผู้รับบริการวันที่ ${fmtDateTH(selDate)}`;
+        $('#dashQueueBody').innerHTML = rows || `<tr><td colspan="5" class="p-8 text-center text-gray-400"><i class="ph ph-tray text-3xl block mb-2"></i>${emptyMsg}</td></tr>`;
 
         $('#dashAppointments').innerHTML = apptToday.length ? apptToday.map(a=>`
             <div class="flex items-start"><div class="w-2 h-2 mt-1.5 rounded-full bg-brand-teal mr-2 shrink-0"></div>
@@ -791,6 +802,37 @@
         return `<button onclick="goToStation('${m[0]}','${v.vn}')" class="text-xs bg-brand-blueMain/10 text-brand-blueMain px-3 py-1 rounded-lg hover:bg-brand-blueMain hover:text-white transition-colors">${m[1]} →</button>`;
     }
     function goToStation(station, vn){ State.current.vn = vn; navTo(station); }
+    /* ---------- รายละเอียดการมารับบริการ (คลิกจากคิวหน้าหลัก) ---------- */
+    function openVisitDetail(vn){
+        const v = visitByVN(vn); if(!v){ showToast('ไม่พบข้อมูล','error'); return; }
+        const p = patientByHN(v.hn)||{};
+        const meds = (v.meds||[]).length ? v.meds.map(m=>`<li>${esc(m.name)} ${m.qty?('× '+m.qty):''}</li>`).join('') : '<li class="text-gray-400">— ไม่มีรายการยา —</li>';
+        const routeBtn = routeButton(v).replace('text-xs','text-sm');
+        openModal('รายละเอียดการรับบริการ', `
+            <div class="space-y-3 text-sm">
+                <div class="flex items-center gap-3">
+                    ${p.photoUrl?`<img src="${esc(driveThumb(p.photoUrl))}" class="w-14 h-16 object-cover rounded-lg border border-gray-200">`:''}
+                    <div>
+                        <div class="font-semibold text-gray-800 text-base">${esc(pname(p))}</div>
+                        <div class="text-xs text-gray-500">${esc(v.hn)} · ${age(p.birthDate)} ปี · ${esc(p.gender||'-')} · ☎ ${esc(p.phone||'-')}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">VN ${esc(v.vn)} · ${fmtDateTH(v.date)} ${fmtTime(v.createdAt)}</div>
+                    </div>
+                </div>
+                ${(!p.allergy||p.allergy==='ไม่มี')?'':`<div class="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-lg inline-block"><i class="ph-fill ph-warning"></i> แพ้ยา: ${esc(p.allergy)}</div>`}
+                <div class="bg-brand-bg/50 rounded-lg p-3 space-y-1">
+                    <div><b class="text-brand-blueDark">สถานะ:</b> ${statusBadge(v.status)}</div>
+                    <div><b class="text-brand-blueDark">สัญญาณชีพ:</b> BP ${esc(v.bp_sys||'-')}/${esc(v.bp_dia||'-')} · BT ${esc(v.bt||'-')}°C · PR ${esc(v.pr||'-')} · BMI ${esc(v.bmi||'-')}</div>
+                    <div><b class="text-brand-blueDark">อาการ (CC):</b> ${esc(v.cc||'-')}</div>
+                    <div><b class="text-brand-blueDark">วินิจฉัย (Dx):</b> ${esc(v.dx||'-')}</div>
+                    <div><b class="text-brand-blueDark">การรักษา:</b> ${esc(v.treatment||'-')}</div>
+                    <div><b class="text-brand-blueDark">ยา:</b><ul class="list-disc ml-5 mt-1">${meds}</ul></div>
+                </div>
+                <div class="flex flex-wrap justify-end gap-2 border-t border-gray-100 pt-3">
+                    <button onclick="closeModal(); openPatientForm('${v.hn}')" class="px-4 py-2 border border-brand-blueMain text-brand-blueMain rounded-lg text-sm font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-pencil-simple mr-1"></i> แก้ไขข้อมูลผู้ป่วย</button>
+                    <span onclick="closeModal()">${routeBtn}</span>
+                </div>
+            </div>`);
+    }
 
     /* ---------- วันเกิด (ระบบไทย พ.ศ.) ---------- */
     const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
