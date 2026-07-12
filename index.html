@@ -150,6 +150,9 @@
             <button onclick="navTo('billing')" id="nav-billing" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
                 <i class="ph ph-receipt text-xl mr-3"></i> ค่าใช้จ่าย <span id="badge-billing" class="ml-auto text-xs bg-white/25 text-white px-1.5 rounded-full hidden">0</span>
             </button>
+            <button onclick="navTo('inventory')" id="nav-inventory" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-package text-xl mr-3"></i> คลังยา <span id="badge-inventory" class="ml-auto text-xs bg-red-500 text-white px-1.5 rounded-full hidden">0</span>
+            </button>
             <button onclick="navTo('reports')" id="nav-reports" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
                 <i class="ph ph-chart-line-up text-xl mr-3"></i> รายงานสรุป
             </button>
@@ -568,6 +571,39 @@
                 </div>
             </section>
 
+            <!-- ===== INVENTORY (คลังยา) ===== -->
+            <section id="section-inventory" class="app-section">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-brand-blueDark">คลังยา / เวชภัณฑ์</h3>
+                        <p class="text-sm text-gray-500">จัดการสต๊อกยา เพิ่ม/ตัดสต๊อก และตัดอัตโนมัติเมื่อจ่ายยาที่ห้องยา</p>
+                    </div>
+                    <div class="flex w-full md:w-auto gap-2 flex-wrap">
+                        <div class="relative flex-1 md:w-56">
+                            <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-lg"></i>
+                            <input type="text" id="invSearch" oninput="renderInventory()" placeholder="ค้นหา รหัส/ชื่อยา..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain">
+                        </div>
+                        <button onclick="openInvForm()" class="bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-plus mr-2 text-lg"></i> เพิ่มรายการ</button>
+                        <button onclick="importInventorySeed()" id="invSeedBtn" class="bg-brand-greenMain hover:bg-brand-greenDark text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-download-simple mr-2 text-lg"></i> นำเข้ารายการเริ่มต้น</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="invKpi"></div>
+                <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-brand-bg text-gray-600 text-xs uppercase border-b border-gray-200">
+                                    <th class="p-3 font-medium">รหัส</th><th class="p-3 font-medium">ชื่อยา/เวชภัณฑ์</th>
+                                    <th class="p-3 font-medium">หน่วย</th><th class="p-3 font-medium text-right">ราคา/หน่วย</th>
+                                    <th class="p-3 font-medium text-center">คงเหลือ</th><th class="p-3 font-medium text-right">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invTableBody" class="text-sm divide-y divide-gray-50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <!-- ===== REPORTS (รายงาน) ===== -->
             <section id="section-reports" class="app-section">
                 <div class="mb-6"><h3 class="text-xl font-bold text-brand-blueDark">รายงานสรุป</h3><p class="text-sm text-gray-500">ภาพรวมการให้บริการและรายได้</p></div>
@@ -661,7 +697,7 @@
     const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbykhJnniKpuPO1HzIOMn_HBViixcAwWH961Kw1HerVgSTz9vIgrpQksCbuuCKHwQ-6k/exec';
 
     /* ---------- State ---------- */
-    const State = { patients:[], visits:[], appointments:[], current:{} };
+    const State = { patients:[], visits:[], appointments:[], inventory:[], current:{} };
 
     /* ---------- API / Store ---------- */
     const Store = {
@@ -675,23 +711,27 @@
             if(Store.online()){
                 const r = await fetch(Store.url()+'?action=load&t='+Date.now());
                 const d = await r.json(); if(d.status==='error') throw new Error(d.message);
-                return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[] };
+                return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[], inventory:d.inventory||[] };
             }
             return {
                 patients: JSON.parse(localStorage.getItem('clinic_patients')||'[]'),
                 visits: JSON.parse(localStorage.getItem('clinic_visits')||'[]'),
-                appointments: JSON.parse(localStorage.getItem('clinic_appts')||'[]')
+                appointments: JSON.parse(localStorage.getItem('clinic_appts')||'[]'),
+                inventory: JSON.parse(localStorage.getItem('clinic_inventory')||'[]')
             };
         },
         localSave(){
             localStorage.setItem('clinic_patients', JSON.stringify(State.patients));
             localStorage.setItem('clinic_visits', JSON.stringify(State.visits));
             localStorage.setItem('clinic_appts', JSON.stringify(State.appointments));
+            localStorage.setItem('clinic_inventory', JSON.stringify(State.inventory));
         },
         async savePatient(p){ if(Store.online()) return Store.post('savePatient', p); Store.localSave(); return { status:'success', hn:p.hn }; },
         async saveVisit(v){ if(Store.online()) return Store.post('saveVisit', v); Store.localSave(); return { status:'success', vn:v.vn }; },
         async saveAppointment(a){ if(Store.online()) return Store.post('saveAppointment', a); Store.localSave(); return { status:'success', id:a.id }; },
-        async deleteAppointment(id){ if(Store.online()) return Store.post('deleteAppointment', {id}); Store.localSave(); return { status:'success' }; }
+        async deleteAppointment(id){ if(Store.online()) return Store.post('deleteAppointment', {id}); Store.localSave(); return { status:'success' }; },
+        async saveInventory(it){ if(Store.online()) return Store.post('saveInventory', it); Store.localSave(); return { status:'success', code:it.code }; },
+        async deleteInventory(code){ if(Store.online()) return Store.post('deleteInventory', {code}); Store.localSave(); return { status:'success' }; }
     };
 
     /* ---------- Utils ---------- */
@@ -739,7 +779,7 @@
     function closeModal(){ $('#modal').classList.add('hidden'); $('#modal').classList.remove('flex'); }
 
     /* ---------- Navigation ---------- */
-    const pageTitles = { dashboard:'หน้าหลัก (Dashboard)', patients:'ห้องบัตร (ทะเบียนผู้รับบริการ)', triage:'ห้องซักประวัติ (Vital Signs)', examination:'ห้องตรวจ (วินิจฉัย/สั่งยา)', pharmacy:'ห้องยา (จัดยา/จ่ายยา)', appointments:'ห้องนัด (ตารางนัดหมาย)', referral:'ห้องส่งต่อ (เอกสารส่งตัว)', billing:'ระบบค่าใช้จ่าย', reports:'รายงานสรุป', settings:'ตั้งค่า / เชื่อมต่อ' };
+    const pageTitles = { dashboard:'หน้าหลัก (Dashboard)', patients:'ห้องบัตร (ทะเบียนผู้รับบริการ)', triage:'ห้องซักประวัติ (Vital Signs)', examination:'ห้องตรวจ (วินิจฉัย/สั่งยา)', pharmacy:'ห้องยา (จัดยา/จ่ายยา)', appointments:'ห้องนัด (ตารางนัดหมาย)', referral:'ห้องส่งต่อ (เอกสารส่งตัว)', billing:'ระบบค่าใช้จ่าย', inventory:'คลังยา / เวชภัณฑ์', reports:'รายงานสรุป', settings:'ตั้งค่า / เชื่อมต่อ' };
     function navTo(sectionId){
         document.querySelectorAll('.app-section').forEach(s=>s.classList.remove('active'));
         const target = $('#section-'+sectionId); if(target) target.classList.add('active');
@@ -758,6 +798,7 @@
         else if(id==='appointments') renderAppointments();
         else if(id==='referral') renderReferral();
         else if(id==='billing') renderBillingQueue();
+        else if(id==='inventory') renderInventory();
         else if(id==='reports') renderReports();
         else if(id==='settings') renderSettings();
         updateBadges();
@@ -767,6 +808,8 @@
     function updateBadges(){
         const map = { triage:STATUS.TRIAGE, examination:STATUS.EXAM, pharmacy:STATUS.PHARM, billing:STATUS.BILL };
         Object.entries(map).forEach(([k,st])=>{ const n=todayVisits().filter(v=>v.status===st).length; const b=$('#badge-'+k); if(b){ b.textContent=n; b.classList.toggle('hidden', n===0); } });
+        const lowN = State.inventory.filter(it=>Number(it.stock)<=Number(it.minStock||0)).length;
+        const ib=$('#badge-inventory'); if(ib){ ib.textContent=lowN; ib.classList.toggle('hidden', lowN===0); }
     }
 
     /* ============================================================ DASHBOARD */
@@ -1302,9 +1345,202 @@
     }
     async function dispense(vn){
         const v=visitByVN(vn); if(!v) return; v.status=STATUS.BILL; v.dispenseAt=nowISO();
-        try{ await Store.saveVisit(v); Store.localSave(); showToast('จ่ายยาเรียบร้อย ส่งไปคิดเงิน'); State.current.vn=null; renderPharmacyQueue(); updateBadges(); }
+        try{
+            const n = await deductStockForVisit(v);   // ตัดสต๊อกอัตโนมัติตามรายการยา
+            await Store.saveVisit(v); Store.localSave();
+            showToast('จ่ายยาเรียบร้อย ส่งไปคิดเงิน'+(n?` · ตัดสต๊อก ${n} รายการ`:''));
+            State.current.vn=null; renderPharmacyQueue(); updateBadges();
+        }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
     }
+
+    /* ============================================================ INVENTORY (คลังยา) */
+    const invByCode = code => State.inventory.find(x=>x.code===code);
+    function nextInvCode(prefix){
+        let mx=0; State.inventory.forEach(it=>{ const m=String(it.code||'').match(new RegExp('^'+prefix+'(\\d+)$')); if(m){ const n=+m[1]; if(n>mx)mx=n; } });
+        return prefix+String(mx+1).padStart(3,'0');
+    }
+    function renderInventory(){
+        const q=($('#invSearch')?.value||'').toLowerCase().trim();
+        let list=State.inventory.slice().sort((a,b)=>String(a.code).localeCompare(String(b.code)));
+        if(q) list=list.filter(it=>[it.code,it.name].some(x=>String(x||'').toLowerCase().includes(q)));
+        const totalItems=State.inventory.length;
+        const stockValue=State.inventory.reduce((s,it)=>s+(Number(it.stock)||0)*(Number(it.price)||0),0);
+        const low=State.inventory.filter(it=>Number(it.stock)<=Number(it.minStock||0) && Number(it.stock)>0).length;
+        const out=State.inventory.filter(it=>Number(it.stock)<=0).length;
+        const kpis=[
+            {ic:'ph-package',col:'blueMain',label:'รายการทั้งหมด',val:totalItems},
+            {ic:'ph-coins',col:'greenMain',label:'มูลค่าคงคลัง',val:money(stockValue)+' ฿'},
+            {ic:'ph-warning',col:'greenLight',label:'ใกล้หมด',val:low},
+            {ic:'ph-x-circle',col:'teal',label:'หมดสต๊อก',val:out}
+        ];
+        $('#invKpi').innerHTML=kpis.map(k=>`<div class="bg-white p-4 rounded-xl shadow-sm border border-brand-bluePale/20 flex items-center"><div class="w-10 h-10 rounded-full bg-brand-${k.col}/20 text-brand-${k.col} flex items-center justify-center text-xl mr-3 shrink-0"><i class="ph-fill ${k.ic}"></i></div><div><p class="text-xs text-gray-500">${k.label}</p><p class="text-xl font-bold text-gray-800">${k.val}</p></div></div>`).join('');
+        const seedBtn=$('#invSeedBtn'); if(seedBtn) seedBtn.classList.toggle('hidden', totalItems>0);
+        $('#invTableBody').innerHTML = list.length ? list.map(it=>{
+            const st=Number(it.stock)||0, mn=Number(it.minStock||0);
+            const cls = st<=0 ? 'text-red-600 bg-red-50' : (st<=mn ? 'text-yellow-700 bg-yellow-50' : 'text-green-700 bg-green-50');
+            return `<tr class="hover:bg-brand-bg transition-colors">
+                <td class="p-3 font-mono text-brand-blueMain">${esc(it.code)}</td>
+                <td class="p-3 font-medium text-gray-800">${esc(it.name)}${it.category?` <span class="text-xs text-gray-400">· ${esc(it.category)}</span>`:''}</td>
+                <td class="p-3 text-gray-600">${esc(it.unit||'-')}</td>
+                <td class="p-3 text-right text-gray-600">${money(it.price)}</td>
+                <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${st}</span></td>
+                <td class="p-3 text-right whitespace-nowrap">
+                    <button onclick="openInvAdjust('${it.code}',1)" class="p-1.5 text-green-600 hover:bg-green-50 rounded" title="เพิ่มสต๊อก"><i class="ph ph-plus-circle text-lg"></i></button>
+                    <button onclick="openInvAdjust('${it.code}',-1)" class="p-1.5 text-orange-500 hover:bg-orange-50 rounded" title="ตัดสต๊อก"><i class="ph ph-minus-circle text-lg"></i></button>
+                    <button onclick="openInvForm('${it.code}')" class="p-1.5 text-gray-500 hover:text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="แก้ไข"><i class="ph ph-pencil-simple text-lg"></i></button>
+                    <button onclick="deleteInv('${it.code}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="ลบ"><i class="ph ph-trash text-lg"></i></button>
+                </td>
+            </tr>`;
+        }).join('') : `<tr><td colspan="6" class="p-8 text-center text-gray-400"><i class="ph ph-package text-3xl block mb-2"></i>${q?'ไม่พบรายการ':'ยังไม่มีรายการ — กด "นำเข้ารายการเริ่มต้น" หรือ "เพิ่มรายการ"'}</td></tr>`;
+    }
+    function openInvForm(code){
+        const it = code ? (invByCode(code)||{}) : {};
+        const cats=['ยา','เวชภัณฑ์','วัสดุสิ้นเปลือง','อื่นๆ'];
+        openModal(code?'แก้ไขรายการคลัง':'เพิ่มรายการคลัง', `
+            <form onsubmit="saveInv(event)" class="space-y-3 text-sm">
+                <input type="hidden" id="inv_orig" value="${esc(it.code||'')}">
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-xs text-gray-600 mb-1">รหัส</label><input id="inv_code" value="${esc(it.code||'')}" ${code?'readonly':''} placeholder="เว้นว่าง=สร้างอัตโนมัติ" class="w-full px-3 py-2 border border-gray-200 rounded-lg font-mono ${code?'bg-gray-100':''}"></div>
+                    <div><label class="block text-xs text-gray-600 mb-1">หมวด</label><select id="inv_cat" class="w-full px-3 py-2 border border-gray-200 rounded-lg">${cats.map(c=>`<option ${it.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
+                </div>
+                <div><label class="block text-xs text-gray-600 mb-1">ชื่อยา/เวชภัณฑ์ <span class="text-red-500">*</span></label><input id="inv_name" required value="${esc(it.name||'')}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div><label class="block text-xs text-gray-600 mb-1">หน่วย</label><input id="inv_unit" value="${esc(it.unit||'')}" placeholder="เม็ด/แผง/ขวด" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                    <div><label class="block text-xs text-gray-600 mb-1">ราคา/หน่วย</label><input id="inv_price" type="number" step="0.01" min="0" value="${it.price??''}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                    <div><label class="block text-xs text-gray-600 mb-1">คงเหลือ</label><input id="inv_stock" type="number" min="0" value="${it.stock??0}" ${code?'readonly':''} class="w-full px-3 py-2 border border-gray-200 rounded-lg ${code?'bg-gray-100':''}"></div>
+                </div>
+                <div><label class="block text-xs text-gray-600 mb-1">แจ้งเตือนเมื่อเหลือ ≤ (ขั้นต่ำ)</label><input id="inv_min" type="number" min="0" value="${it.minStock??0}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                ${code?'<p class="text-[11px] text-gray-400">* ปรับจำนวนคงเหลือใช้ปุ่มเพิ่ม/ตัดสต๊อกในตาราง</p>':''}
+                <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ยกเลิก</button><button type="submit" class="px-5 py-2 bg-brand-greenMain text-white rounded-lg font-medium">บันทึก</button></div>
+            </form>`);
+    }
+    async function saveInv(e){
+        e.preventDefault();
+        const orig=$('#inv_orig').value;
+        const cat=$('#inv_cat').value;
+        let code=$('#inv_code').value.trim();
+        if(!code) code = nextInvCode(cat==='ยา'?'YA':'MS');
+        if(!orig && invByCode(code)){ showToast('รหัสนี้มีอยู่แล้ว','error'); return; }
+        const it = orig ? invByCode(orig) : {};
+        Object.assign(it, {
+            code, category:cat, name:$('#inv_name').value.trim(), unit:$('#inv_unit').value.trim(),
+            price:Number($('#inv_price').value)||0,
+            stock: orig ? it.stock : (Number($('#inv_stock').value)||0),
+            minStock:Number($('#inv_min').value)||0, updatedAt:nowISO()
+        });
+        try{
+            await Store.saveInventory(it);
+            if(!orig) State.inventory.push(it);
+            Store.localSave(); closeModal(); showToast('บันทึกรายการแล้ว'); renderInventory(); updateBadges();
+        }catch(err){ showToast('บันทึกไม่สำเร็จ: '+err.message,'error'); }
+    }
+    function openInvAdjust(code, sign){
+        const it=invByCode(code); if(!it) return;
+        const isAdd=sign>0;
+        openModal((isAdd?'เพิ่มสต๊อก':'ตัดสต๊อก')+' — '+it.name, `
+            <form onsubmit="doInvAdjust(event,'${code}',${sign})" class="space-y-3 text-sm">
+                <div class="bg-brand-bg/50 rounded-lg p-3 flex justify-between"><span>คงเหลือปัจจุบัน</span><b class="text-brand-blueDark">${it.stock} ${esc(it.unit||'')}</b></div>
+                <div><label class="block text-xs text-gray-600 mb-1">จำนวนที่${isAdd?'รับเข้า':'ตัดออก'} <span class="text-red-500">*</span></label><input id="adj_qty" type="number" min="1" required autofocus class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <div><label class="block text-xs text-gray-600 mb-1">หมายเหตุ</label><input id="adj_note" placeholder="${isAdd?'เช่น รับของเข้า ล็อต...':'เช่น ยาหมดอายุ/แตกหัก'}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ยกเลิก</button><button type="submit" class="px-5 py-2 ${isAdd?'bg-brand-greenMain':'bg-orange-500'} text-white rounded-lg font-medium">${isAdd?'เพิ่มสต๊อก':'ตัดสต๊อก'}</button></div>
+            </form>`);
+    }
+    async function doInvAdjust(e, code, sign){
+        e.preventDefault();
+        const it=invByCode(code); if(!it) return;
+        const qty=Number($('#adj_qty').value)||0; if(qty<=0) return;
+        const newStock=(Number(it.stock)||0)+sign*qty;
+        if(newStock<0){ showToast('สต๊อกไม่พอ (คงเหลือ '+it.stock+')','error'); return; }
+        it.stock=newStock; it.updatedAt=nowISO();
+        try{ await Store.saveInventory(it); Store.localSave(); closeModal(); showToast((sign>0?'เพิ่ม':'ตัด')+'สต๊อกแล้ว: '+it.name+' → คงเหลือ '+newStock); renderInventory(); updateBadges(); }
+        catch(err){ showToast('ไม่สำเร็จ: '+err.message,'error'); }
+    }
+    async function deleteInv(code){
+        const it=invByCode(code); if(!it) return;
+        if(!confirm('ลบรายการ "'+it.name+'"?')) return;
+        try{ await Store.deleteInventory(code); State.inventory=State.inventory.filter(x=>x.code!==code); Store.localSave(); showToast('ลบรายการแล้ว'); renderInventory(); updateBadges(); }
+        catch(err){ showToast('ไม่สำเร็จ: '+err.message,'error'); }
+    }
+    /* ตัดสต๊อกอัตโนมัติจากรายการยาของ visit (เรียกตอนจ่ายยา) */
+    async function deductStockForVisit(v){
+        if(!v.meds || !v.meds.length || v.stockDeducted) return;
+        const norm = s => String(s||'').toLowerCase().replace(/\s+/g,'');
+        const changed=[];
+        v.meds.forEach(m=>{
+            const qty=Number(m.qty)||0; if(qty<=0) return;
+            const it = (m.code && invByCode(m.code)) || State.inventory.find(x=>norm(x.name)===norm(m.name)) || State.inventory.find(x=>norm(m.name).includes(norm(x.name)) && norm(x.name).length>3);
+            if(it){ it.stock=(Number(it.stock)||0)-qty; it.updatedAt=nowISO(); changed.push(it); }
+        });
+        v.stockDeducted=true;
+        for(const it of changed){ try{ await Store.saveInventory(it); }catch(e){} }
+        if(changed.length){ Store.localSave(); }
+        return changed.length;
+    }
+    async function importInventorySeed(){
+        if(State.inventory.length && !confirm('มีรายการอยู่แล้ว '+State.inventory.length+' รายการ — เพิ่มรายการเริ่มต้นต่อท้าย?')) return;
+        const seed=INVENTORY_SEED;
+        showToast('กำลังนำเข้า '+seed.length+' รายการ...','info');
+        let ok=0;
+        for(const s of seed){
+            if(invByCode(s.code)) continue;
+            const it={ code:s.code, name:s.name, unit:s.unit, price:s.price, stock:s.stock, minStock:Math.max(1,Math.ceil(s.stock*0.1)), category:s.cat, updatedAt:nowISO() };
+            try{ await Store.saveInventory(it); State.inventory.push(it); ok++; }catch(e){}
+        }
+        Store.localSave(); showToast('นำเข้าสำเร็จ '+ok+' รายการ'); renderInventory(); updateBadges();
+    }
+    /* ---------- รายการยาเริ่มต้น (จากใบราคาที่อัปโหลด) ---------- */
+    const INVENTORY_SEED = [
+        {code:'YA001',name:'อะม็อกซี่ 500 (ฟ้า-เทา) hk',unit:'TAB',price:1.19,stock:500,cat:'ยา'},
+        {code:'YA002',name:'โคร็อกซิน 300มก. (10เม็ด/แผง)',unit:'แผง',price:32.50,stock:10,cat:'ยา'},
+        {code:'YA003',name:'โอมีแคป 20มก. (10แคปซูล/แผง)',unit:'แผง',price:10.00,stock:10,cat:'ยา'},
+        {code:'YA004',name:'นอร์ฟล็อกซาซิน 400 (ชุมชน) 10เม็ด/แผง',unit:'แผง',price:18.00,stock:10,cat:'ยา'},
+        {code:'YA005',name:'โคโนวิด 200มก./แผง',unit:'แผง',price:19.50,stock:10,cat:'ยา'},
+        {code:'YA006',name:'ORS เกลือแร่แก้ท้องเสีย',unit:'ซอง',price:2.75,stock:100,cat:'ยา'},
+        {code:'YA007',name:'ฟล็อกซิโปร 500mg./แผง',unit:'แผง',price:21.50,stock:10,cat:'ยา'},
+        {code:'YA008',name:'บรอมเฮกซินเม็ด (10เม็ด/แผง)',unit:'แผง',price:6.00,stock:20,cat:'ยา'},
+        {code:'YA009',name:'ซินทาร์ 10เม็ด/แผง',unit:'แผง',price:6.50,stock:20,cat:'ยา'},
+        {code:'YA010',name:'เทอร์โบซิน 10เม็ด/แผง',unit:'แผง',price:25.00,stock:10,cat:'ยา'},
+        {code:'YA011',name:'ไวโอลิน 2มก. (1000เม็ด)',unit:'TAB',price:0.19,stock:1000,cat:'ยา'},
+        {code:'YA012',name:'ไฮดรอก 10มก. (1000เม็ด)',unit:'TAB',price:0.20,stock:1000,cat:'ยา'},
+        {code:'YA013',name:'ไดคล็อกซา 500มก (ฟ้า-ขาว) 10แคปซูล/แผง',unit:'แผง',price:24.00,stock:10,cat:'ยา'},
+        {code:'YA014',name:'ทีเอ ครีม 0.1% 5กรัม/หลอด',unit:'หลอด',price:16.50,stock:6,cat:'ยา'},
+        {code:'YA015',name:'เวสโกแนค 25มก (เหลือง)',unit:'TAB',price:0.16,stock:1000,cat:'ยา'},
+        {code:'YA016',name:'นาบิแซคเขียว (1000เม็ด)',unit:'TAB',price:0.43,stock:1000,cat:'ยา'},
+        {code:'YA017',name:'ไบโอคาล์ม 10เม็ด/แผง',unit:'แผง',price:11.50,stock:10,cat:'ยา'},
+        {code:'YA018',name:'โวลต้า อีมัลชั่นเจล 30กรัม/หลอด',unit:'หลอด',price:28.00,stock:6,cat:'ยา'},
+        {code:'YA019',name:'ซีบรามอล (เขียวรี) 1000เม็ด',unit:'TAB',price:0.30,stock:1000,cat:'ยา'},
+        {code:'YA020',name:'พารา 325 (เขียวรี)',unit:'TAB',price:0.28,stock:1000,cat:'ยา'},
+        {code:'YA021',name:'คลอเฟ 4มก (เหลือง) 1000เม็ด',unit:'TAB',price:0.09,stock:1000,cat:'ยา'},
+        {code:'YA022',name:'อินโด (ฟ้าขาว) แคปซูล 1000เม็ด',unit:'CAP',price:0.19,stock:1000,cat:'ยา'},
+        {code:'YA023',name:'บูเฟล็กซ์ 400 (10เม็ด/แผง)',unit:'แผง',price:11.00,stock:10,cat:'ยา'},
+        {code:'YA024',name:'เด็กโทนฉีด 1ml',unit:'AMP',price:5.50,stock:10,cat:'ยา'},
+        {code:'YA025',name:'คลอเฟฉีด ทีพี 1ML',unit:'AMP',price:4.30,stock:10,cat:'ยา'},
+        {code:'YA026',name:'กลูโคส 50ML TP',unit:'ขวด',price:35.00,stock:2,cat:'ยา'},
+        {code:'YA027',name:'HARTSORB 5MG 10\'S',unit:'แผง',price:13.50,stock:6,cat:'ยา'},
+        {code:'YA028',name:'โปลิร็อกซิน 150MG 10\'S',unit:'แผง',price:15.50,stock:10,cat:'ยา'},
+        {code:'MS001',name:'SYRINGE 5ML (TERUMO) SY5',unit:'กล่อง',price:148,stock:1,cat:'เวชภัณฑ์'},
+        {code:'MS002',name:'Antispa Injection (1x10Amp)',unit:'แผง',price:102,stock:1,cat:'เวชภัณฑ์'},
+        {code:'MS003',name:'B-COXIB 90MG 10\'S',unit:'แผง',price:44,stock:10,cat:'เวชภัณฑ์'},
+        {code:'MS004',name:'Catheter เหลือง NO.24 NIPRO M24',unit:'ชิ้น',price:11,stock:10,cat:'เวชภัณฑ์'},
+        {code:'MS005',name:'DEPO MONAT',unit:'VIAL',price:63,stock:5,cat:'เวชภัณฑ์'},
+        {code:'MS006',name:'DEPO-GESTIN 150MG 3ML',unit:'VIAL',price:15,stock:5,cat:'เวชภัณฑ์'},
+        {code:'MS007',name:'DEXTON dexa Inj. 1ml',unit:'แผง',price:42,stock:1,cat:'เวชภัณฑ์'},
+        {code:'MS008',name:'GALEPTIN 300mg B.L.H',unit:'แผง',price:22,stock:10,cat:'เวชภัณฑ์'},
+        {code:'MS009',name:'Heat balm 25gm',unit:'หลอด',price:20,stock:20,cat:'เวชภัณฑ์'},
+        {code:'MS010',name:'INFUSION SET IV สายให้น้ำเกลือ A.N.B',unit:'อัน',price:10.25,stock:10,cat:'เวชภัณฑ์'},
+        {code:'MS011',name:'MEL-OD 7.5MG PML',unit:'แผง',price:16,stock:10,cat:'เวชภัณฑ์'},
+        {code:'MS012',name:'Mepracid Injection (omeprazole)',unit:'VIAL',price:35,stock:10,cat:'เวชภัณฑ์'},
+        {code:'MS013',name:'MET-SIL Plasil INJ (1x10amp)',unit:'แผง',price:73,stock:1,cat:'เวชภัณฑ์'},
+        {code:'MS014',name:'MOTIVAN 1ml Dimen inj',unit:'แผง',price:53,stock:1,cat:'เวชภัณฑ์'},
+        {code:'MS015',name:'MUSLEXAC ส้ม (1x1000\'s)',unit:'กระป๋อง',price:320,stock:1,cat:'เวชภัณฑ์'},
+        {code:'MS016',name:'NEEDLE 20x1นิ้ว (NIPRO)',unit:'กล่อง',price:54,stock:1,cat:'เวชภัณฑ์'},
+        {code:'MS017',name:'NEEDLE 24x1นิ้ว (NIPRO)',unit:'กล่อง',price:53,stock:1,cat:'เวชภัณฑ์'},
+        {code:'MS018',name:'NSS 100ML (No set) ANB',unit:'ถุง',price:18,stock:10,cat:'เวชภัณฑ์'},
+        {code:'MS019',name:'ONSIA INJ 4mg/2ml',unit:'กล่อง',price:155,stock:2,cat:'เวชภัณฑ์'},
+        {code:'MS020',name:'SYRINGE 10ML (TERUMO) SY10',unit:'กล่อง',price:235,stock:1,cat:'เวชภัณฑ์'},
+        {code:'MS021',name:'TARJENA INJECTION (Diclo Inj)',unit:'แผง',price:41,stock:5,cat:'เวชภัณฑ์'}
+    ];
 
     /* ============================================================ BILLING */
     function renderBillingQueue(){
@@ -1574,7 +1810,7 @@
     function updateDate(){ const el=$('#currentDateDisplay'); if(el) el.innerText=new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }
     async function boot(){
         updateConnBox();
-        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; Store.localSave(); }
+        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; Store.localSave(); }
         catch(e){ showToast('โหลดข้อมูลไม่สำเร็จ: '+e.message,'error'); }
         const cur = document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard';
         renderView(cur); updateBadges();

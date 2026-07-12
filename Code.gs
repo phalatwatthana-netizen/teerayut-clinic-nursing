@@ -15,15 +15,17 @@ var SHEET_PATIENTS = 'Patients';
 var SHEET_VISITS = 'Visits';
 var SHEET_APPTS = 'Appointments';
 var SHEET_USERS = 'Users';
+var SHEET_INV = 'Inventory';
 var DRIVE_FOLDER = 'ThirayutClinic_Files';
 
 var HEADERS = {
   Patients: ['hn','cid','prefix','firstName','lastName','birthDate','gender','phone','race','nationality','maritalStatus','address','disease','allergy','emContact','emPhone','fileUrl','photoUrl','createdAt'],
   Visits: ['vn','hn','date','status','cc','pi','ph','pe','bp_sys','bp_dia','bt','pr','weight','height','bmi','dx','treatment','lab','meds_json','medTotal','serviceFee','otherFee','total','paid','payMethod','referTo','referReason','followUpDate','followUpNote','createdAt','triageAt','examAt','dispenseAt','doneAt','referAt'],
   Appointments: ['id','hn','name','date','time','type','status','createdAt'],
-  Users: ['username','password','name','role','active']
+  Users: ['username','password','name','role','active'],
+  Inventory: ['code','name','unit','price','stock','minStock','category','updatedAt']
 };
-var KEY = { Patients:'hn', Visits:'vn', Appointments:'id' };
+var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code' };
 
 /* ---------- HTTP entry points ---------- */
 function doGet(e) {
@@ -46,6 +48,8 @@ function doPost(e) {
     if (action === 'saveVisit')         return json(upsert(SHEET_VISITS, data));
     if (action === 'saveAppointment')   return json(upsert(SHEET_APPTS, data));
     if (action === 'deleteAppointment') return json(deleteRecord(SHEET_APPTS, data.id));
+    if (action === 'saveInventory')     return json(upsert(SHEET_INV, data));
+    if (action === 'deleteInventory')   return json(deleteRecord(SHEET_INV, data.code));
     return json({ status: 'error', message: 'unknown action: ' + action });
   } catch (err) {
     return json({ status: 'error', message: String(err) });
@@ -95,7 +99,8 @@ function loadAll() {
     status: 'success',
     patients: readAll(SHEET_PATIENTS),
     visits: readAll(SHEET_VISITS),
-    appointments: readAll(SHEET_APPTS)
+    appointments: readAll(SHEET_APPTS),
+    inventory: readAll(SHEET_INV)
   };
 }
 
@@ -156,6 +161,7 @@ function setupSheets() {
   getSheet(SHEET_PATIENTS);
   getSheet(SHEET_VISITS);
   getSheet(SHEET_APPTS);
+  getSheet(SHEET_INV);
   var users = getSheet(SHEET_USERS);
   if (users.getLastRow() < 2) {
     // username, password, name, role, active
