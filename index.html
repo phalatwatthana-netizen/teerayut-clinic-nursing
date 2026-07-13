@@ -1386,7 +1386,7 @@
     function loadTriagePatient(){
         const vn = $('#triagePatientSelect').value; State.current.vn = vn;
         if(!vn){ $('#triageForm-wrap').classList.add('hidden'); $('#triageEmpty').classList.remove('hidden'); return; }
-        const v = visitByVN(vn); const p = patientByHN(v.hn)||{};
+        const v = visitByVN(vn); if(!v){ $('#triageForm-wrap').classList.add('hidden'); $('#triageEmpty').classList.remove('hidden'); return; } const p = patientByHN(v.hn)||{};
         $('#triageEmpty').classList.add('hidden'); $('#triageForm-wrap').classList.remove('hidden');
         $('#triagePatientStrip').innerHTML = patientStrip(p, v);
         ['bp_sys','bp_dia','bt','pr','weight','height','bmi','cc','pi','ph','pe'].forEach(f=>{ if($('#'+f)) $('#'+f).value = v[f]||''; });
@@ -1405,8 +1405,12 @@
         const v = visitByVN(State.current.vn); if(!v){ showToast('ไม่พบข้อมูล visit','error'); return; }
         const btn=event.target.querySelector('button[type="submit"]'); const orig=btn.innerHTML;
         btn.innerHTML='<i class="ph ph-spinner animate-spin mr-2"></i> กำลังบันทึก...'; btn.disabled=true;
-        Object.assign(v, { bp_sys:$('#bp_sys').value, bp_dia:$('#bp_dia').value, bt:$('#bt').value, pr:$('#pr').value, weight:$('#weight').value, height:$('#height').value, bmi:$('#bmi').value, cc:$('#cc').value.trim(), pi:$('#pi').value.trim(), ph:$('#ph').value.trim(), pe:$('#pe').value.trim(), status:STATUS.EXAM, triageAt:nowISO() });
-        try{ await Store.saveVisit(v); Store.localSave(); showToast('บันทึกซักประวัติแล้ว ส่งห้องตรวจ'); State.current.vn=null; renderTriageQueue(); updateBadges(); }
+        const patch = { bp_sys:$('#bp_sys').value, bp_dia:$('#bp_dia').value, bt:$('#bt').value, pr:$('#pr').value, weight:$('#weight').value, height:$('#height').value, bmi:$('#bmi').value, cc:$('#cc').value.trim(), pi:$('#pi').value.trim(), ph:$('#ph').value.trim(), pe:$('#pe').value.trim(), status:STATUS.EXAM, triageAt:nowISO() };
+        try{
+            await Store.saveVisit(Object.assign({}, v, patch));   // บันทึกก่อน
+            Object.assign(v, patch);                              // เปลี่ยนสถานะเฉพาะเมื่อสำเร็จ
+            Store.localSave(); showToast('บันทึกซักประวัติแล้ว ส่งห้องตรวจ'); State.current.vn=null; renderTriageQueue(); updateBadges();
+        }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
         finally{ btn.innerHTML=orig; btn.disabled=false; }
     }
@@ -1454,8 +1458,12 @@
         const btn=event.target.querySelector('button[type="submit"]'); const orig=btn.innerHTML;
         btn.innerHTML='<i class="ph ph-spinner animate-spin mr-2"></i> กำลังบันทึก...'; btn.disabled=true;
         const meds=collectMeds(); const medTotal=meds.reduce((s,m)=>s+m.qty*m.price,0);
-        Object.assign(v, { dx:$('#dx').value.trim(), treatment:$('#treatment').value.trim(), lab:$('#lab').value.trim(), meds, medTotal, followUpDate:$('#followUpDate').value, followUpNote:$('#followUpNote').value.trim(), status:STATUS.PHARM, examAt:nowISO() });
-        try{ await Store.saveVisit(v); Store.localSave(); showToast('บันทึกการตรวจแล้ว ส่งห้องยา'); State.current.vn=null; renderExamQueue(); updateBadges(); }
+        const patch = { dx:$('#dx').value.trim(), treatment:$('#treatment').value.trim(), lab:$('#lab').value.trim(), meds, medTotal, followUpDate:$('#followUpDate').value, followUpNote:$('#followUpNote').value.trim(), status:STATUS.PHARM, examAt:nowISO() };
+        try{
+            await Store.saveVisit(Object.assign({}, v, patch));
+            Object.assign(v, patch);
+            Store.localSave(); showToast('บันทึกการตรวจแล้ว ส่งห้องยา'); State.current.vn=null; renderExamQueue(); updateBadges();
+        }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
         finally{ btn.innerHTML=orig; btn.disabled=false; }
     }
@@ -1485,10 +1493,13 @@
             </div>`;
     }
     async function dispense(vn){
-        const v=visitByVN(vn); if(!v) return; v.status=STATUS.BILL; v.dispenseAt=nowISO();
+        const v=visitByVN(vn); if(!v) return;
+        const patch = { status:STATUS.BILL, dispenseAt:nowISO() };
         try{
-            const n = await deductStockForVisit(v);   // ตัดสต๊อกอัตโนมัติตามรายการยา
-            await Store.saveVisit(v); Store.localSave();
+            await Store.saveVisit(Object.assign({}, v, patch));   // บันทึกก่อน
+            Object.assign(v, patch);                              // เปลี่ยนสถานะเมื่อสำเร็จ
+            const n = await deductStockForVisit(v);               // ตัดสต๊อกหลังบันทึกสำเร็จ
+            Store.localSave();
             showToast('จ่ายยาเรียบร้อย ส่งไปคิดเงิน'+(n?` · ตัดสต๊อก ${n} รายการ`:''));
             State.current.vn=null; renderPharmacyQueue(); updateBadges();
         }
@@ -1723,8 +1734,12 @@
     async function completeBilling(vn){
         const v=visitByVN(vn); if(!v) return;
         const fee=Number($('#b_fee').value)||0, other=Number($('#b_other').value)||0, total=(Number(v.medTotal)||0)+fee+other;
-        Object.assign(v, { serviceFee:fee, otherFee:other, total, paid:total, payMethod:$('#b_pay').value, status:STATUS.DONE, doneAt:nowISO() });
-        try{ await Store.saveVisit(v); Store.localSave(); showToast('รับชำระเงินเรียบร้อย ✓'); printReceipt(vn); State.current.vn=null; renderBillingQueue(); updateBadges(); }
+        const patch = { serviceFee:fee, otherFee:other, total, paid:total, payMethod:$('#b_pay').value, status:STATUS.DONE, doneAt:nowISO() };
+        try{
+            await Store.saveVisit(Object.assign({}, v, patch));
+            Object.assign(v, patch);
+            Store.localSave(); showToast('รับชำระเงินเรียบร้อย ✓'); printReceipt(vn); State.current.vn=null; renderBillingQueue(); updateBadges();
+        }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
     }
 
