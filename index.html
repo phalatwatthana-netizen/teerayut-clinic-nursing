@@ -919,7 +919,7 @@
         const bd = p.birthDate ? new Date(p.birthDate) : null;
         const beDate = bd ? String(bd.getDate()).padStart(2,'0')+String(bd.getMonth()+1).padStart(2,'0')+String(bd.getFullYear()+543) : '';
         const meds = (v.meds||[]).map(m=>esc(m.name)+(m.qty?(' ('+m.qty+')'):'')).join(', ');
-        return `<div style="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif;color:#111;font-size:15px;line-height:1.7;width:100%;box-sizing:border-box">
+        return `<div class="a5fit" style="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif;color:#111;font-size:15px;line-height:1.7;width:100%;box-sizing:border-box;transform-origin:top left">
             <style>@page{size:A5 landscape;margin:6mm;} *{box-sizing:border-box;}</style>
             <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:6px">
                 <div style="flex:1;border:2px solid ${NAVY};border-radius:14px;text-align:center;padding:6px 10px">
@@ -953,13 +953,43 @@
             </div>
         </div>`;
     }
-    function printVisitRecord(vn){ const v=visitByVN(vn); if(!v) return; printHTML(buildRecordHtml(v)); }
+    const MM = 96/25.4; // px ต่อ mm (96dpi)
+    /* ย่อเนื้อหา .a5fit ให้พอดีความสูงหน้า A5 แนวนอน (พื้นที่ ~136mm หลังหักขอบ 6mm) */
+    function fitA5(scope){
+        const fit = scope.querySelector('.a5fit'); if(!fit) return;
+        fit.style.transform='none';
+        const avail = 136*MM;              // ความสูงพื้นที่พิมพ์
+        const h = fit.scrollHeight;
+        const k = h>avail ? Math.max(0.4, avail/h) : 1;
+        fit.style.transform = `scale(${k})`;
+    }
+    /* คืน HTML เวชระเบียนที่ฝังอัตราย่อไว้แล้ว (สำหรับ PDF ที่ไม่รัน JS) */
+    function buildRecordHtmlFitted(v){
+        const html = buildRecordHtml(v);
+        const tmp=document.createElement('div');
+        tmp.style.cssText='position:absolute;left:-10000px;top:0;width:210mm;padding:6mm;box-sizing:border-box';
+        tmp.innerHTML=html; document.body.appendChild(tmp);
+        const fit=tmp.querySelector('.a5fit'); const h=fit?fit.scrollHeight:0; const avail=136*MM;
+        const k = h>avail ? Math.max(0.4, avail/h) : 1;
+        document.body.removeChild(tmp);
+        return k<1 ? html.replace('transform-origin:top left', 'transform:scale('+k.toFixed(3)+');transform-origin:top left') : html;
+    }
+    function printVisitRecord(vn){
+        const v=visitByVN(vn); if(!v) return;
+        const pa=$('#print-area');
+        pa.classList.remove('hidden'); pa.style.position='absolute'; pa.style.left='-10000px'; pa.style.top='0'; pa.style.width='210mm';
+        pa.innerHTML = buildRecordHtml(v);
+        fitA5(pa);
+        window.print();
+        setTimeout(()=>{ pa.classList.add('hidden'); pa.style.position=''; pa.style.left=''; pa.style.width=''; }, 500);
+    }
     let previewVN = null;
     function openRecordPreview(vn){
         const v=visitByVN(vn); if(!v) return; previewVN=vn;
         $('#recordPreviewSheet').innerHTML = `<div style="width:210mm;height:148mm;background:#fff;padding:6mm;box-sizing:border-box;overflow:hidden">${buildRecordHtml(v)}</div>`;
         $('#previewPdfResult').classList.add('hidden');
         const el=$('#recordPreview'); el.classList.remove('hidden'); el.classList.add('flex');
+        requestAnimationFrame(()=>fitA5($('#recordPreviewSheet')));
     }
     function closeRecordPreview(){ const el=$('#recordPreview'); el.classList.add('hidden'); el.classList.remove('flex'); }
     function printRecordFromPreview(){ if(previewVN) printVisitRecord(previewVN); }
@@ -968,7 +998,7 @@
         if(!Store.online()){ showToast('บันทึก PDF ต้องเชื่อมต่อ Google (โหมดออนไลน์)','error'); return; }
         const orig=btn.innerHTML; btn.innerHTML='<i class="ph ph-spinner animate-spin mr-2"></i> กำลังบันทึก...'; btn.disabled=true;
         try{
-            const res = await Store.post('saveVisitPdf', { hn:v.hn, vn:v.vn, html:buildRecordHtml(v) });
+            const res = await Store.post('saveVisitPdf', { hn:v.hn, vn:v.vn, html:buildRecordHtmlFitted(v) });
             const box=$('#previewPdfResult'); box.classList.remove('hidden');
             box.innerHTML = `✓ บันทึก PDF ลงไดรฟ์แล้ว (โฟลเดอร์ ${esc(v.hn)}) — <a href="${esc(res.url||'#')}" target="_blank" class="underline font-medium">เปิดดูไฟล์</a>`;
             showToast('บันทึก PDF ลง Google Drive แล้ว');
@@ -980,7 +1010,7 @@
         if(!Store.online()){ showToast('บันทึก PDF ต้องเชื่อมต่อ Google (โหมดออนไลน์)','error'); return; }
         const orig=btn.innerHTML; btn.innerHTML='<i class="ph ph-spinner animate-spin mr-1"></i> กำลังบันทึก...'; btn.disabled=true;
         try{
-            const res = await Store.post('saveVisitPdf', { hn:v.hn, vn:v.vn, html:buildRecordHtml(v) });
+            const res = await Store.post('saveVisitPdf', { hn:v.hn, vn:v.vn, html:buildRecordHtmlFitted(v) });
             const box=$('#pdfResult');
             if(box){ box.classList.remove('hidden'); box.innerHTML = `<i class="ph ph-check-circle"></i> บันทึก PDF ลงไดรฟ์แล้ว (โฟลเดอร์ ${esc(v.hn)}) — <a href="${esc(res.url||'#')}" target="_blank" class="underline font-medium">เปิดดูไฟล์</a>`; }
             showToast('บันทึก PDF ลง Google Drive แล้ว');
