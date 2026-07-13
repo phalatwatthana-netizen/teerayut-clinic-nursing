@@ -26,6 +26,8 @@ var HEADERS = {
   Inventory: ['code','name','unit','price','stock','minStock','category','updatedAt']
 };
 var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code' };
+/* คอลัมน์ที่ต้องเก็บเป็นข้อความ (กัน Google Sheets ตัดเลข 0 นำหน้า) */
+var TEXT_COLS = { Patients:['cid','phone','emPhone'], Users:['username','password'], Inventory:['code'] };
 
 /* ---------- HTTP entry points ---------- */
 function doGet(e) {
@@ -170,7 +172,8 @@ function setupSheets() {
     users.appendRow(['admin', 'clinic123', 'ผู้ดูแลระบบ', 'admin', 'yes']);
     users.appendRow(['nurse', 'nurse123', 'พยาบาลวิชาชีพ', 'staff', 'yes']);
   }
-  return 'สร้างชีตเรียบร้อย: Patients, Visits, Appointments, Users';
+  applyTextFormats();
+  return 'สร้างชีตเรียบร้อย: Patients, Visits, Appointments, Users, Inventory';
 }
 
 /* ---------- ซ่อมหัวตารางทุกชีตให้ตรงลำดับ HEADERS (รันเองถ้าต้องการ) ---------- */
@@ -179,7 +182,20 @@ function syncHeaders() {
     var sh = getSheet(name);
     sh.getRange(1, 1, 1, HEADERS[name].length).setValues([HEADERS[name]]);
   });
-  return 'ปรับหัวตารางให้ตรงลำดับแล้ว';
+  applyTextFormats();
+  return 'ปรับหัวตาราง + ตั้งคอลัมน์ข้อความ (กันเลข 0 หาย) แล้ว';
+}
+
+/* ตั้งรูปแบบคอลัมน์ที่ต้องเป็นข้อความ (เบอร์โทร/บัตร ปชช./รหัส) */
+function applyTextFormats() {
+  Object.keys(TEXT_COLS).forEach(function(name){
+    var sh = getSheet(name);
+    var rows = Math.max(sh.getMaxRows() - 1, 1);
+    TEXT_COLS[name].forEach(function(col){
+      var idx = HEADERS[name].indexOf(col);
+      if (idx >= 0) sh.getRange(2, idx + 1, rows, 1).setNumberFormat('@');
+    });
+  });
 }
 
 /* ---------- Login (ตรวจสอบผู้ใช้จากชีต Users) ---------- */
