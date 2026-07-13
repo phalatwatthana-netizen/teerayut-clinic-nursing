@@ -720,8 +720,21 @@
         url(){ const saved=localStorage.getItem('clinic_api_url'); return (saved!==null?saved:DEFAULT_API_URL) || ''; },
         online(){ return !!Store.url(); },
         async post(action, data){
-            const r = await fetch(Store.url(), { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action, data }) });
-            const d = await r.json(); if(d.status==='error') throw new Error(d.message||'error'); return d;
+            let lastErr;
+            for(let attempt=0; attempt<2; attempt++){
+                const ctrl = new AbortController();
+                const to = setTimeout(()=>ctrl.abort(), 25000);   // กันค้าง: ยกเลิกถ้าเกิน 25 วิ
+                try{
+                    const r = await fetch(Store.url(), { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action, data }), signal: ctrl.signal });
+                    clearTimeout(to);
+                    const d = await r.json(); if(d.status==='error') throw new Error(d.message||'error'); return d;
+                }catch(e){
+                    clearTimeout(to); lastErr = e;
+                    if(e.name==='AbortError'){ lastErr = new Error('เซิร์ฟเวอร์ตอบช้า/หมดเวลา ลองใหม่'); }
+                    if(attempt===0) await new Promise(r=>setTimeout(r,1200)); // retry 1 ครั้ง
+                }
+            }
+            throw lastErr;
         },
         async load(){
             if(Store.online()){
