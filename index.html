@@ -1566,11 +1566,17 @@
             : `<p class="text-sm text-gray-400 text-center py-6">ไม่พบข้อมูลตรงกับ "${esc(q)}"</p>`;
     }
     function dxPickGroup(g){ const s=$('#dxSearch'); if(s){ s.value=g; renderDxResults(g); } }
+    const dxHas = d => d && d.avail && d.avail!=='' && d.avail!=='-' && d.avail!=='ไม่มี';
     function dxDrugCard(i){
         const d=DIAGNOSIS_MASTER[i]; if(!d) return '';
         const line=(l,v)=> v?`<div><b class="text-gray-500">${l}:</b> ${esc(v)}</div>`:'';
-        return `<div class="border border-gray-200 rounded-lg p-2.5 text-xs space-y-1">
-            <div class="flex justify-between items-start gap-2"><span class="font-semibold text-gray-800">${esc(d.name)}</span>${d.grp?`<span class="text-[10px] text-brand-teal bg-teal-50 px-1.5 py-0.5 rounded shrink-0">${esc(d.grp)}</span>`:''}</div>
+        const has=dxHas(d);
+        return `<div class="border ${has?'border-brand-greenMain/50':'border-gray-200'} rounded-lg p-2.5 text-xs space-y-1">
+            <div class="flex justify-between items-start gap-2">
+                <span class="font-semibold text-gray-800">${esc(d.name)}${has?' <span class="text-[10px] text-green-700 bg-green-50 px-1.5 py-0.5 rounded">✓ มีในคลินิก</span>':''}</span>
+                ${d.grp?`<span class="text-[10px] text-brand-teal bg-teal-50 px-1.5 py-0.5 rounded shrink-0">${esc(d.grp)}</span>`:''}
+            </div>
+            ${has&&(d.trade||d.strength||d.price)?`<div class="text-brand-blueDark">${esc(d.trade||'')} ${esc(d.strength||'')} ${d.price?('· '+esc(d.price)+' ฿'):''}</div>`:''}
             ${line('ข้อบ่งใช้', d.ind)}
             ${line('ขนาดยา', d.dose)}
             ${line('วิธีใช้ (Sig)', d.sig)}
@@ -1592,7 +1598,8 @@
     }
     function dxAddMed(i){
         const d=DIAGNOSIS_MASTER[i]; if(!d) return;
-        addMedRow({ name:d.name, dose:(d.dose||'').split(/oral|ต่อ|โดย/)[0].trim().slice(0,20), sig:d.sig, qty:'', price:'' });
+        const price=(String(d.price||'').match(/[\d.]+/)||[''])[0];
+        addMedRow({ name:d.name, dose:(d.strength||(d.dose||'').split(/oral|ต่อ|โดย/)[0].trim()).slice(0,20), sig:d.sig, qty:'', price });
         const rows=document.querySelectorAll('#medList .grid'); const last=rows[rows.length-1];
         if(last) medPick(last.querySelector('.med-name'));
         showToast('เพิ่ม '+d.name+' ลงรายการยาแล้ว');
