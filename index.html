@@ -588,6 +588,7 @@
                         </div>
                         <button onclick="openInvForm()" class="bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-plus mr-2 text-lg"></i> เพิ่มรายการ</button>
                         <button onclick="importInventorySeed()" id="invSeedBtn" class="bg-brand-greenMain hover:bg-brand-greenDark text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-download-simple mr-2 text-lg"></i> นำเข้ารายการเริ่มต้น</button>
+                        <button onclick="importReceipt()" class="bg-brand-teal hover:bg-brand-blueDark text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-receipt mr-2 text-lg"></i> นำเข้าใบส่งของ 14/07</button>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="invKpi"></div>
@@ -1739,6 +1740,35 @@
             try{ await Store.saveInventory(it); State.inventory.push(it); ok++; }catch(e){}
         }
         Store.localSave(); showToast('นำเข้าสำเร็จ '+ok+' รายการ'); renderInventory(); updateBadges();
+    }
+    /* ---------- นำเข้าจากใบส่งสินค้า 14/07/2026 (อัปเดตยาเก่า + เพิ่มใหม่ คิดราคาต่อหน่วยย่อย) ---------- */
+    const RECEIPT_20260714 = [
+        {code:'P-5693',match:'dimen',name:'Dimen Phamamine (เมารถ) CR',unit:'เม็ด',price:0.25,stock:200,cat:'ยา',note:'แผงละ 2.50 · 10เม็ด/แผง (รับ 20 แผง) 14/07/69'},
+        {code:'P-6434',match:'amitriptyline',name:'Amitriptyline 25mg GPO (T25)',unit:'เม็ด',price:0.70,stock:100,cat:'ยา',note:'แผงละ 7.00 · 10เม็ด/แผง (รับ 10 แผง) 14/07/69'},
+        {code:'P-5666',match:'antispa',name:'Antispa Injection',unit:'amp',price:10.20,stock:10,cat:'ยาฉีด',note:'แผงละ 102 · 10 amp/แผง (รับ 1 แผง) 14/07/69'},
+        {code:'P-7501',match:'b-coxib',name:'B-COXIB 90mg (10S)',unit:'เม็ด',price:4.40,stock:210,cat:'ยา',note:'แผงละ 44 · 10เม็ด/แผง (รับ 21 แผง) 14/07/69'},
+        {code:'P-7000',match:'cencopan',name:'CENCOPAN S 10mg CR',unit:'เม็ด',price:1.15,stock:200,cat:'ยา',note:'แผงละ 11.50 · 10เม็ด/แผง (รับ 20 แผง) 14/07/69'},
+        {code:'P-5608',match:'dexton',name:'DEXTON dexa Inj 1ml',unit:'amp',price:8.40,stock:10,cat:'ยาฉีด',note:'แผงละ 42 · 5 amp/แผง (รับ 2 แผง) 14/07/69'},
+        {code:'P-5569',match:'heat balm',name:'Heat balm 25gm',unit:'หลอด',price:20,stock:20,cat:'เวชภัณฑ์',note:'หลอดละ 20 (รับ 20 หลอด) 14/07/69'},
+        {code:'P-7068',match:'mel-od',name:'MEL-OD 7.5mg PML',unit:'เม็ด',price:1.60,stock:200,cat:'ยา',note:'แผงละ 16 · 10เม็ด/แผง (รับ 20 แผง) 14/07/69'},
+        {code:'P-6128',match:'nasin',name:'NASIN (Naproxen)',unit:'เม็ด',price:0.95,stock:250,cat:'ยา',note:'แผงละ 9.50 · 10เม็ด/แผง (รับ 25 แผง) 14/07/69'},
+        {code:'P-3009',match:'paramol',name:'PARAMOL INJ TP',unit:'amp',price:7.50,stock:30,cat:'ยาฉีด',note:'แผงละ 75 · 10 amp/แผง (รับ 3 แผง) 14/07/69'},
+        {code:'P-6043',match:'tramadil',name:'Tramadil Inj (สามัคคี)',unit:'amp',price:9.70,stock:20,cat:'ยาฉีด',note:'แผงละ 97 · 10 amp/แผง (รับ 2 แผง) 14/07/69'},
+        {code:'P-7637',match:'vesperidone',name:'Vesperidone (Dom Vesco)',unit:'เม็ด',price:0.22,stock:200,cat:'ยา',note:'แผงละ 2.20 · 10เม็ด/แผง (รับ 20 แผง) 14/07/69'},
+        {code:'P-5558',match:'vita-c',name:'Vita-C 25mg (ส้ม)',unit:'ซอง',price:4.80,stock:30,cat:'ยา',note:'ซองละ 4.80 (รับ 30 ซอง) 14/07/69'}
+    ];
+    async function importReceipt(){
+        if(!confirm('นำเข้าใบส่งของ 14/07/2026 (13 รายการ)?\nยาชื่อตรงกับที่มี = อัปเดตราคา+เพิ่มสต๊อก · ยาใหม่ = เพิ่มเข้าคลัง')) return;
+        const norm=s=>String(s||'').toLowerCase().replace(/\s+/g,'');
+        showToast('กำลังนำเข้าใบส่งของ...','info');
+        let upd=0, add=0;
+        for(const r of RECEIPT_20260714){
+            let it = State.inventory.find(x=>norm(x.name).includes(norm(r.match)) || (x.code===r.code));
+            if(it){ it.price=r.price; it.unit=r.unit; it.stock=(Number(it.stock)||0)+r.stock; it.note=r.note; it.updatedAt=nowISO(); upd++; }
+            else { it={ code:r.code, name:r.name, unit:r.unit, price:r.price, stock:r.stock, minStock:Math.max(5,Math.ceil(r.stock*0.1)), category:r.cat, note:r.note, updatedAt:nowISO() }; State.inventory.push(it); add++; }
+            try{ await Store.saveInventory(it); }catch(e){}
+        }
+        Store.localSave(); showToast(`นำเข้าเสร็จ: อัปเดต ${upd} · เพิ่มใหม่ ${add} รายการ`); renderInventory(); updateBadges();
     }
     /* ---------- รายการยาเริ่มต้น (จากใบราคาที่อัปโหลด) ---------- */
     const INVENTORY_SEED = [
