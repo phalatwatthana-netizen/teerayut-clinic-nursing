@@ -476,8 +476,8 @@
                             <div id="examVitals" class="bg-brand-bg/40 p-3 rounded-lg text-xs text-gray-600 mb-4"></div>
                             <form id="examForm" onsubmit="saveExam(event)">
                                 <div class="space-y-3">
-                                    <div><div class="flex justify-between items-center mb-1"><label class="block text-xs font-bold text-brand-greenDark">Dx — การวินิจฉัย <span class="text-red-500">*</span></label><button type="button" onclick="openDxHelper()" class="text-xs bg-brand-teal text-white px-2.5 py-1 rounded-lg hover:bg-brand-blueDark flex items-center"><i class="ph ph-stethoscope mr-1"></i> ตัวช่วยวินิจฉัย</button></div><input type="text" id="dx" required class="w-full px-3 py-2 border border-brand-greenLight/50 rounded-lg text-sm focus:outline-none focus:border-brand-greenMain bg-brand-greenLight/10"></div>
-                                    <div><label class="block text-xs font-bold text-brand-greenDark mb-1">Treatment — การพยาบาล/หัตถการ</label><input type="text" id="treatment" class="w-full px-3 py-2 border border-brand-greenLight/50 rounded-lg text-sm focus:outline-none focus:border-brand-greenMain bg-brand-greenLight/10"></div>
+                                    <div><div class="flex justify-between items-center mb-1"><label class="block text-xs font-bold text-brand-greenDark">Dx — การวินิจฉัย <span class="text-red-500">*</span></label><div class="flex gap-1.5"><button type="button" onclick="openDxHelper()" class="text-xs bg-brand-teal text-white px-2.5 py-1 rounded-lg hover:bg-brand-blueDark flex items-center"><i class="ph ph-stethoscope mr-1"></i> ตัวช่วยวินิจฉัย</button><button type="button" onclick="addDxRow()" class="text-xs bg-brand-greenMain text-white px-2.5 py-1 rounded-lg hover:bg-brand-greenDark"><i class="ph ph-plus"></i> เพิ่ม</button></div></div><div id="dxList" class="space-y-2"></div></div>
+                                    <div><div class="flex justify-between items-center mb-1"><label class="block text-xs font-bold text-brand-greenDark">Treatment — การพยาบาล/หัตถการ</label><button type="button" onclick="addTxRow()" class="text-xs bg-brand-greenMain text-white px-2.5 py-1 rounded-lg hover:bg-brand-greenDark"><i class="ph ph-plus"></i> เพิ่ม</button></div><div id="txList" class="space-y-2"></div></div>
                                     <div><label class="block text-xs font-bold text-brand-blueDark mb-1">Lab / ผลตรวจ (ถ้ามี)</label><input type="text" id="lab" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50"></div>
                                 </div>
 
@@ -1441,11 +1441,23 @@
         $('#examEmpty').classList.add('hidden'); $('#examForm-wrap').classList.remove('hidden');
         $('#examPatientStrip').innerHTML = patientStrip(p, v);
         $('#examVitals').innerHTML = `<b class="text-brand-blueDark">สัญญาณชีพ:</b> BP ${esc(v.bp_sys||'-')}/${esc(v.bp_dia||'-')} · BT ${esc(v.bt||'-')}°C · PR ${esc(v.pr||'-')} · BMI ${esc(v.bmi||'-')} &nbsp;|&nbsp; <b class="text-brand-blueDark">CC:</b> ${esc(v.cc||'-')}${v.pi?` · <b>PI:</b> ${esc(v.pi)}`:''}`;
-        $('#dx').value=v.dx||''; $('#treatment').value=v.treatment||''; $('#lab').value=v.lab||''; $('#followUpDate').value=v.followUpDate||''; $('#followUpNote').value=v.followUpNote||'';
+        fillDxTx('dxList', addDxRow, v.dx); fillDxTx('txList', addTxRow, v.treatment);
+        $('#lab').value=v.lab||''; $('#followUpDate').value=v.followUpDate||''; $('#followUpNote').value=v.followUpNote||'';
         fillInvDrugList();
         $('#medList').innerHTML=''; (v.meds&&v.meds.length?v.meds:[{}]).forEach(m=>addMedRow(m));
     }
     function renderExamQueueList(){ const list=todayVisits().filter(v=>v.status===STATUS.EXAM); $('#examQueue').innerHTML = list.length?list.map(v=>queueItem(v)).join(''):emptyQueue(); }
+    /* ---------- Dx / Treatment เพิ่มได้ไม่จำกัด ---------- */
+    function addListRow(listId, cls, val, ph){
+        const row=document.createElement('div'); row.className='flex gap-2 items-center';
+        row.innerHTML = `<input class="${cls} flex-1 px-3 py-2 border border-brand-greenLight/50 rounded-lg text-sm focus:outline-none focus:border-brand-greenMain bg-brand-greenLight/10" placeholder="${ph||''}" value="${esc(val||'')}">
+            <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:bg-red-50 rounded p-1.5 shrink-0"><i class="ph ph-x"></i></button>`;
+        $('#'+listId).appendChild(row);
+    }
+    function addDxRow(val){ addListRow('dxList','dx-item', val, 'การวินิจฉัย'); }
+    function addTxRow(val){ addListRow('txList','tx-item', val, 'การพยาบาล/หัตถการ'); }
+    function collectList(cls){ return [...document.querySelectorAll('.'+cls)].map(i=>i.value.trim()).filter(Boolean).join('; '); }
+    function fillDxTx(listId, addFn, str){ $('#'+listId).innerHTML=''; const parts=String(str||'').split(/\s*;\s*|\n/).filter(Boolean); if(parts.length) parts.forEach(p=>addFn(p)); else addFn(''); }
     function fillInvDrugList(){ const el=$('#invDrugList'); if(el) el.innerHTML = State.inventory.map(it=>`<option value="${esc(it.name)}">${esc(it.code)} · ${esc(it.unit||'')} · ${money(it.price)}฿ (เหลือ ${it.stock})</option>`).join(''); }
     function addMedRow(m={}){
         const row = document.createElement('div'); row.className='grid grid-cols-12 gap-2 items-center';
@@ -1473,8 +1485,10 @@
         const v=visitByVN(State.current.vn); if(!v) return;
         const btn=event.target.querySelector('button[type="submit"]'); const orig=btn.innerHTML;
         btn.innerHTML='<i class="ph ph-spinner animate-spin mr-2"></i> กำลังบันทึก...'; btn.disabled=true;
+        const dx=collectList('dx-item'), treatment=collectList('tx-item');
+        if(!dx){ showToast('กรุณาระบุการวินิจฉัย (Dx)','error'); btn.innerHTML=orig; btn.disabled=false; return; }
         const meds=collectMeds(); const medTotal=meds.reduce((s,m)=>s+m.qty*m.price,0);
-        const patch = { dx:$('#dx').value.trim(), treatment:$('#treatment').value.trim(), lab:$('#lab').value.trim(), meds, medTotal, followUpDate:$('#followUpDate').value, followUpNote:$('#followUpNote').value.trim(), status:STATUS.PHARM, examAt:nowISO() };
+        const patch = { dx, treatment, lab:$('#lab').value.trim(), meds, medTotal, followUpDate:$('#followUpDate').value, followUpNote:$('#followUpNote').value.trim(), status:STATUS.PHARM, examAt:nowISO() };
         try{
             await Store.saveVisit(Object.assign({}, v, patch));
             Object.assign(v, patch);
@@ -1570,7 +1584,12 @@
             </div>
         </div>`;
     }
-    function dxSetDx(grp){ const cur=$('#dx'); if(cur && grp){ cur.value = grp; showToast('ใส่การวินิจฉัยแล้ว'); } }
+    function dxSetDx(grp){
+        if(!grp) return;
+        const empty=[...document.querySelectorAll('.dx-item')].find(i=>!i.value.trim());
+        if(empty) empty.value=grp; else addDxRow(grp);
+        showToast('ใส่การวินิจฉัยแล้ว');
+    }
     function dxAddMed(i){
         const d=DIAGNOSIS_MASTER[i]; if(!d) return;
         addMedRow({ name:d.name, dose:(d.dose||'').split(/oral|ต่อ|โดย/)[0].trim().slice(0,20), sig:d.sig, qty:'', price:'' });
