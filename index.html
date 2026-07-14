@@ -13,6 +13,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- ข้อมูลเขตการปกครองไทย (ฝังในโปรเจกต์ ไม่ต้องพึ่ง CDN ภายนอก) -->
     <script src="thai-address.js"></script>
+    <!-- ฐานข้อมูลตัวช่วยวินิจฉัย (Master 172 รายการ + กลุ่มอาการ) -->
+    <script src="diagnosis-data.js"></script>
 
     <!-- Color Palette ตามภาพต้นแบบ (MOP Palette) -->
     <script>
@@ -474,7 +476,7 @@
                             <div id="examVitals" class="bg-brand-bg/40 p-3 rounded-lg text-xs text-gray-600 mb-4"></div>
                             <form id="examForm" onsubmit="saveExam(event)">
                                 <div class="space-y-3">
-                                    <div><label class="block text-xs font-bold text-brand-greenDark mb-1">Dx — การวินิจฉัย <span class="text-red-500">*</span></label><input type="text" id="dx" required class="w-full px-3 py-2 border border-brand-greenLight/50 rounded-lg text-sm focus:outline-none focus:border-brand-greenMain bg-brand-greenLight/10"></div>
+                                    <div><div class="flex justify-between items-center mb-1"><label class="block text-xs font-bold text-brand-greenDark">Dx — การวินิจฉัย <span class="text-red-500">*</span></label><button type="button" onclick="openDxHelper()" class="text-xs bg-brand-teal text-white px-2.5 py-1 rounded-lg hover:bg-brand-blueDark flex items-center"><i class="ph ph-stethoscope mr-1"></i> ตัวช่วยวินิจฉัย</button></div><input type="text" id="dx" required class="w-full px-3 py-2 border border-brand-greenLight/50 rounded-lg text-sm focus:outline-none focus:border-brand-greenMain bg-brand-greenLight/10"></div>
                                     <div><label class="block text-xs font-bold text-brand-greenDark mb-1">Treatment — การพยาบาล/หัตถการ</label><input type="text" id="treatment" class="w-full px-3 py-2 border border-brand-greenLight/50 rounded-lg text-sm focus:outline-none focus:border-brand-greenMain bg-brand-greenLight/10"></div>
                                     <div><label class="block text-xs font-bold text-brand-blueDark mb-1">Lab / ผลตรวจ (ถ้ามี)</label><input type="text" id="lab" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50"></div>
                                 </div>
@@ -1518,6 +1520,79 @@
             State.current.vn=null; renderPharmacyQueue(); updateBadges();
         }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
+    }
+
+    /* ============================================================ ตัวช่วยวินิจฉัย (Dx Helper) */
+    const dxNorm = s => String(s||'').toLowerCase().replace(/\s+/g,'');
+    function openDxHelper(){
+        if(!window.SYMPTOM_GROUPS || !window.DIAGNOSIS_MASTER){ showToast('ยังไม่ได้โหลดฐานข้อมูลวินิจฉัย (โหลดหน้าใหม่)','error'); return; }
+        openModal('ตัวช่วยวินิจฉัย & แนะนำยา', `
+            <div class="space-y-3">
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-gray-400"></i>
+                    <input id="dxSearch" oninput="renderDxResults(this.value)" placeholder="พิมพ์อาการ / ชื่อยา / ICD-10 เช่น ปวดหัว, ท้องเสีย, ความดัน" class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain" autofocus>
+                </div>
+                <p class="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-2 py-1"><i class="ph-fill ph-warning"></i> เอกสารช่วยงาน ไม่ใช่การวินิจฉัยแทนแพทย์ — ต้องประเมินผู้ป่วยจริงและตรวจฉลากยาเสมอ</p>
+                <div id="dxResults" class="max-h-[55vh] overflow-y-auto space-y-2 pr-1"></div>
+            </div>`);
+        renderDxResults('');
+    }
+    function renderDxResults(q){
+        const box=$('#dxResults'); if(!box) return;
+        const nq=dxNorm(q);
+        if(!nq){
+            box.innerHTML = `<p class="text-xs text-gray-500 font-medium">เลือกกลุ่มอาการ (${SYMPTOM_GROUPS.length}) :</p>` +
+                SYMPTOM_GROUPS.map((g,i)=>`<button onclick="showDxGroup(${i})" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-brand-teal hover:bg-brand-bg text-sm flex justify-between items-center"><span class="font-medium text-gray-800">${esc(g.grp)}</span><span class="text-[11px] text-brand-teal font-mono">${esc(g.icd)}</span></button>`).join('');
+            return;
+        }
+        const groups = SYMPTOM_GROUPS.filter(g=>dxNorm(g.grp+g.icd).includes(nq));
+        const drugs = DIAGNOSIS_MASTER.filter(d=>dxNorm(d.name+d.grp+d.icd+d.ind).includes(nq)).slice(0,40);
+        box.innerHTML =
+            (groups.length?`<p class="text-xs text-gray-500 font-medium">กลุ่มอาการ</p>`+groups.map(g=>{const i=SYMPTOM_GROUPS.indexOf(g);return `<button onclick="showDxGroup(${i})" class="w-full text-left p-2.5 rounded-lg border border-gray-200 hover:border-brand-teal hover:bg-brand-bg text-sm flex justify-between items-center"><span class="font-medium text-gray-800">${esc(g.grp)}</span><span class="text-[11px] text-brand-teal font-mono">${esc(g.icd)}</span></button>`;}).join(''):'') +
+            (drugs.length?`<p class="text-xs text-gray-500 font-medium mt-2">รายการยา (${drugs.length})</p>`+drugs.map(d=>dxDrugCard(DIAGNOSIS_MASTER.indexOf(d))).join(''):'') +
+            (!groups.length&&!drugs.length?`<p class="text-sm text-gray-400 text-center py-6">ไม่พบข้อมูลตรงกับ "${esc(q)}"</p>`:'');
+    }
+    function showDxGroup(i){
+        const g=SYMPTOM_GROUPS[i]; if(!g) return;
+        const related=DIAGNOSIS_MASTER.map((d,idx)=>({d,idx})).filter(x=>dxNorm(x.d.grp).includes(dxNorm(g.grp.split(/[\/—-]/)[0]))||dxNorm(g.drugs).includes(dxNorm(x.d.name)));
+        const box=$('#dxResults');
+        box.innerHTML = `
+            <button onclick="renderDxResults($('#dxSearch').value)" class="text-xs text-brand-blueMain mb-1"><i class="ph ph-arrow-left"></i> กลับ</button>
+            <div class="border border-brand-teal/40 rounded-xl p-3 space-y-2">
+                <div class="flex justify-between items-start"><h4 class="font-bold text-brand-blueDark">${esc(g.grp)}</h4><span class="text-xs font-mono text-brand-teal shrink-0">${esc(g.icd)}</span></div>
+                <div class="text-xs"><b class="text-gray-600">จุดประเมินก่อนจ่าย:</b> ${esc(g.assess)}</div>
+                <div class="text-xs text-red-700 bg-red-50 rounded-lg p-2"><b><i class="ph-fill ph-warning"></i> Red flags / ส่งต่อ:</b> ${esc(g.red)}</div>
+                <button onclick="dxSetDx('${esc(g.grp)}','${esc(g.icd)}')" class="text-xs bg-brand-greenMain text-white px-3 py-1.5 rounded-lg hover:bg-brand-greenDark"><i class="ph ph-check mr-1"></i> ใช้เป็นการวินิจฉัย (Dx)</button>
+            </div>
+            <p class="text-xs text-gray-500 font-medium mt-2">ยาที่เชื่อมโยง</p>
+            ${ related.length ? related.slice(0,25).map(x=>dxDrugCard(x.idx)).join('') : `<p class="text-xs text-gray-400">— ดูรายการยาแนะนำ: ${esc(g.drugs)} —</p>` }`;
+    }
+    function dxDrugCard(i){
+        const d=DIAGNOSIS_MASTER[i]; if(!d) return '';
+        return `<div class="border border-gray-200 rounded-lg p-2.5 text-xs space-y-1">
+            <div class="flex justify-between items-start gap-2"><span class="font-semibold text-gray-800">${esc(d.name)}</span><span class="font-mono text-[10px] text-brand-teal shrink-0">${esc(d.icd)}</span></div>
+            <div><b class="text-gray-500">ข้อบ่งใช้:</b> ${esc(d.ind)}</div>
+            <div><b class="text-gray-500">ขนาด:</b> ${esc(d.dose)}</div>
+            <div><b class="text-gray-500">วิธีใช้:</b> ${esc(d.sig)}</div>
+            ${d.red?`<div class="text-red-700"><b>⚠ Red flags:</b> ${esc(d.red)}</div>`:''}
+            ${d.contra?`<div class="text-orange-700"><b>ข้อห้าม/ระวัง:</b> ${esc(d.contra)}</div>`:''}
+            <div class="flex gap-2 pt-1">
+                <button onclick="dxAddMed(${i})" class="bg-brand-blueMain text-white px-2.5 py-1 rounded-lg hover:bg-brand-teal"><i class="ph ph-plus"></i> เพิ่มลงรายการยา</button>
+                <button onclick="dxSetDx('${esc(d.grp)}','${esc(d.icd)}')" class="border border-brand-greenMain text-brand-greenDark px-2.5 py-1 rounded-lg hover:bg-brand-greenLight/10">ตั้งเป็น Dx</button>
+            </div>
+        </div>`;
+    }
+    function dxSetDx(grp, icd){
+        const cur=$('#dx'); if(cur){ cur.value = (icd?icd+' ':'') + grp; }
+        showToast('ใส่การวินิจฉัยแล้ว');
+    }
+    function dxAddMed(i){
+        const d=DIAGNOSIS_MASTER[i]; if(!d) return;
+        addMedRow({ name:d.name, dose:(d.dose||'').split('oral')[0].trim().slice(0,20), sig:d.sig, qty:'', price:'' });
+        // ลองจับคู่ราคาจากคลัง
+        const rows=document.querySelectorAll('#medList .grid'); const last=rows[rows.length-1];
+        if(last) medPick(last.querySelector('.med-name'));
+        showToast('เพิ่ม '+d.name+' ลงรายการยาแล้ว');
     }
 
     /* ============================================================ INVENTORY (คลังยา) */
