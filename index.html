@@ -58,6 +58,8 @@
 
         @keyframes slideInRight { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
         .toast-enter { animation: slideInRight 0.3s ease-out forwards; }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.9) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .pop-in { animation: popIn 0.2s cubic-bezier(0.16,1,0.3,1); }
 
         @media print {
             body * { visibility: hidden; }
@@ -689,6 +691,21 @@
         <p id="previewPdfResult" class="hidden text-xs bg-green-600 text-white rounded-lg px-3 py-2 mt-3"></p>
     </div>
 
+    <!-- Confirm Dialog (กลางจอ) -->
+    <div id="confirmModal" class="fixed inset-0 z-[70] hidden items-center justify-center p-4 bg-black/50 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden pop-in">
+            <div class="p-6 text-center">
+                <div id="confirmIcon" class="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-4xl mb-3"></div>
+                <h3 id="confirmTitle" class="text-lg font-bold text-brand-blueDark mb-1"></h3>
+                <p id="confirmMsg" class="text-sm text-gray-600 leading-relaxed"></p>
+            </div>
+            <div class="flex gap-2 px-6 pb-6">
+                <button id="confirmCancel" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors">ยกเลิก</button>
+                <button id="confirmOk" class="flex-1 px-4 py-2.5 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm">ตกลง</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Generic Modal -->
     <div id="modal" class="fixed inset-0 bg-black/50 z-40 hidden items-start justify-center p-4 overflow-y-auto no-print">
         <div class="bg-white rounded-2xl w-full max-w-lg my-8 shadow-2xl">
@@ -813,6 +830,27 @@
     /* ---------- Modal ---------- */
     function openModal(title, html){ $('#modalTitle').textContent=title; $('#modalBody').innerHTML=html; $('#modal').classList.remove('hidden'); $('#modal').classList.add('flex'); }
     function closeModal(){ $('#modal').classList.add('hidden'); $('#modal').classList.remove('flex'); }
+    /* ---------- Confirm Dialog กลางจอ (แทน confirm ของเบราว์เซอร์) ---------- */
+    function confirmDialog(message, opts={}){
+        return new Promise(resolve=>{
+            const o=$('#confirmModal'), card=o.querySelector('.pop-in');
+            $('#confirmTitle').textContent = opts.title || 'ยืนยันการทำรายการ';
+            $('#confirmMsg').innerHTML = esc(message).replace(/\n/g,'<br>');
+            const ok=$('#confirmOk'), cancel=$('#confirmCancel'), icon=$('#confirmIcon');
+            ok.textContent = opts.okText || 'ตกลง';
+            cancel.textContent = opts.cancelText || 'ยกเลิก';
+            const danger = !!opts.danger;
+            ok.className = `flex-1 px-4 py-2.5 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm ${danger?'bg-red-500 hover:bg-red-600':'bg-brand-blueMain hover:bg-brand-teal'}`;
+            icon.className = `w-16 h-16 mx-auto rounded-full flex items-center justify-center text-4xl mb-3 ${danger?'bg-red-50 text-red-500':'bg-brand-bluePale/30 text-brand-blueMain'}`;
+            icon.innerHTML = `<i class="ph-fill ${opts.icon || (danger?'ph-trash':'ph-question')}"></i>`;
+            o.classList.remove('hidden'); o.classList.add('flex');
+            if(card){ card.classList.remove('pop-in'); void card.offsetWidth; card.classList.add('pop-in'); }
+            const done=val=>{ o.classList.add('hidden'); o.classList.remove('flex'); ok.onclick=null; cancel.onclick=null; o.onclick=null; resolve(val); };
+            ok.onclick=()=>done(true);
+            cancel.onclick=()=>done(false);
+            o.onclick=e=>{ if(e.target===o) done(false); };
+        });
+    }
 
     /* ---------- Navigation ---------- */
     const pageTitles = { dashboard:'หน้าหลัก (Dashboard)', patients:'ห้องบัตร (ทะเบียนผู้รับบริการ)', triage:'ห้องซักประวัติ (Vital Signs)', examination:'ห้องตรวจ (วินิจฉัย/สั่งยา)', pharmacy:'ห้องยา (จัดยา/จ่ายยา)', appointments:'ห้องนัด (ตารางนัดหมาย)', referral:'ห้องส่งต่อ (เอกสารส่งตัว)', billing:'ระบบค่าใช้จ่าย', inventory:'คลังยา / เวชภัณฑ์', reports:'รายงานสรุป', settings:'ตั้งค่า / เชื่อมต่อ' };
@@ -898,7 +936,7 @@
     /* ส่ง visit กลับห้องซักประวัติ */
     async function sendBackToTriage(vn){
         const v=visitByVN(vn); if(!v) return;
-        if(!confirm('ส่งผู้ป่วยกลับห้องซักประวัติ?')) return;
+        if(!await confirmDialog('ส่งผู้ป่วยกลับห้องซักประวัติเพื่อวัดสัญญาณชีพ/แก้ไขใหม่?', {title:'ส่งกลับห้องซักประวัติ', okText:'ส่งกลับ', icon:'ph-arrow-u-up-left'})) return;
         const patch={ status:STATUS.TRIAGE };
         try{
             await Store.saveVisit(Object.assign({}, v, patch));
@@ -910,7 +948,7 @@
     /* ลบ visit (ประวัติการรับบริการวันนั้น) */
     async function deleteVisitRec(vn){
         const v=visitByVN(vn); if(!v) return;
-        if(!confirm('ลบประวัติการรับบริการนี้ (VN '+vn+') ?\nการลบนี้ถาวร ไม่กระทบทะเบียนผู้ป่วยในห้องบัตร')) return;
+        if(!await confirmDialog('ลบประวัติการรับบริการนี้ (VN '+vn+')?\nการลบนี้ถาวร ไม่กระทบทะเบียนผู้ป่วยในห้องบัตร', {title:'ลบประวัติการรับบริการ', okText:'ลบ', danger:true})) return;
         try{
             await Store.deleteVisit(vn);
             State.visits = State.visits.filter(x=>x.vn!==vn); Store.localSave();
@@ -1681,7 +1719,7 @@
         return '';
     }
     async function autoMatchDb(){
-        if(!confirm('จับคู่ชื่อฐานข้อมูลอัตโนมัติให้รายการที่ยังไม่มี? (ตรวจแก้ทีหลังได้)')) return;
+        if(!await confirmDialog('จับคู่ชื่อฐานข้อมูลอัตโนมัติให้รายการที่ยังไม่มี? (ตรวจแก้ทีหลังได้)', {title:'จับคู่ชื่อฐานข้อมูล', okText:'จับคู่', icon:'ph-link'})) return;
         showToast('กำลังจับคู่...','info');
         let ok=0;
         for(const it of State.inventory){
@@ -1795,7 +1833,7 @@
     }
     async function deleteInv(code){
         const it=invByCode(code); if(!it) return;
-        if(!confirm('ลบรายการ "'+it.name+'"?')) return;
+        if(!await confirmDialog('ลบรายการ "'+it.name+'" ออกจากคลัง?', {title:'ลบรายการคลัง', okText:'ลบ', danger:true})) return;
         try{ await Store.deleteInventory(code); State.inventory=State.inventory.filter(x=>x.code!==code); Store.localSave(); showToast('ลบรายการแล้ว'); renderInventory(); updateBadges(); }
         catch(err){ showToast('ไม่สำเร็จ: '+err.message,'error'); }
     }
@@ -1815,7 +1853,7 @@
         return changed.length;
     }
     async function importInventorySeed(){
-        if(State.inventory.length && !confirm('มีรายการอยู่แล้ว '+State.inventory.length+' รายการ — เพิ่มรายการเริ่มต้นต่อท้าย?')) return;
+        if(State.inventory.length && !await confirmDialog('มีรายการอยู่แล้ว '+State.inventory.length+' รายการ — เพิ่มรายการเริ่มต้นต่อท้าย?', {title:'นำเข้ารายการเริ่มต้น', okText:'นำเข้า', icon:'ph-download-simple'})) return;
         const seed=INVENTORY_SEED;
         showToast('กำลังนำเข้า '+seed.length+' รายการ...','info');
         let ok=0;
@@ -1843,7 +1881,7 @@
         {code:'P-5558',match:'vita-c',name:'Vita-C 25mg (ส้ม)',unit:'ซอง',price:4.80,stock:30,cat:'ยา',note:'ซองละ 4.80 (รับ 30 ซอง) 14/07/69'}
     ];
     async function importReceipt(){
-        if(!confirm('นำเข้าใบส่งของ 14/07/2026 (13 รายการ)?\nยาชื่อตรงกับที่มี = อัปเดตราคา+เพิ่มสต๊อก · ยาใหม่ = เพิ่มเข้าคลัง')) return;
+        if(!await confirmDialog('นำเข้าใบส่งของ 14/07/2026 (13 รายการ)?\nยาชื่อตรงกับที่มี = อัปเดตราคา+เพิ่มสต๊อก · ยาใหม่ = เพิ่มเข้าคลัง', {title:'นำเข้าใบส่งของ', okText:'นำเข้า', icon:'ph-receipt'})) return;
         const norm=s=>String(s||'').toLowerCase().replace(/\s+/g,'');
         showToast('กำลังนำเข้าใบส่งของ...','info');
         let upd=0, add=0;
@@ -1991,7 +2029,7 @@
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
     }
     async function deleteAppt(id){
-        if(!confirm('ลบนัดหมายนี้?')) return;
+        if(!await confirmDialog('ลบนัดหมายนี้?', {title:'ลบนัดหมาย', okText:'ลบ', danger:true})) return;
         try{ await Store.deleteAppointment(id); State.appointments=State.appointments.filter(a=>a.id!==id); Store.localSave(); showToast('ลบนัดหมายแล้ว'); renderAppointments(); }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
     }
@@ -2091,7 +2129,7 @@
     }
     async function saveApiUrl(){
         const url=$('#apiUrl').value.trim();
-        if(url && !/^https:\/\/script\.google\.com\/.+\/exec/.test(url)){ if(!confirm('URL อาจไม่ถูกต้อง (ควรลงท้าย /exec) บันทึกต่อหรือไม่?')) return; }
+        if(url && !/^https:\/\/script\.google\.com\/.+\/exec/.test(url)){ if(!await confirmDialog('URL อาจไม่ถูกต้อง (ควรลงท้าย /exec) บันทึกต่อหรือไม่?', {title:'ตรวจสอบ URL', okText:'บันทึกต่อ'})) return; }
         localStorage.setItem('clinic_api_url', url);
         showToast('กำลังเชื่อมต่อ...', 'info');
         try{ await boot(); showToast('เชื่อมต่อสำเร็จ! โหลดข้อมูลแล้ว'); }
@@ -2105,12 +2143,12 @@
     }
     function importData(input){
         const f=input.files[0]; if(!f) return; const r=new FileReader();
-        r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!confirm('นำเข้าจะเขียนทับข้อมูลในเครื่อง ดำเนินการต่อ?')) return;
+        r.onload=async()=>{ try{ const d=JSON.parse(r.result); if(!await confirmDialog('นำเข้าจะเขียนทับข้อมูลในเครื่อง ดำเนินการต่อ?', {title:'นำเข้าข้อมูล', okText:'นำเข้า', danger:true})) return;
             State.patients=d.patients||[]; State.visits=d.visits||[]; State.appointments=d.appointments||[]; Store.localSave(); showToast('นำเข้าข้อมูลสำเร็จ'); navTo('dashboard'); }
             catch(e){ showToast('ไฟล์ไม่ถูกต้อง','error'); } };
         r.readAsText(f);
     }
-    function resetData(){ if(!confirm('ล้างข้อมูลในเครื่องทั้งหมด? (ไม่กระทบ Google Sheets)')) return; localStorage.removeItem('clinic_patients'); localStorage.removeItem('clinic_visits'); localStorage.removeItem('clinic_appts'); boot(); showToast('ล้างข้อมูลแล้ว'); }
+    async function resetData(){ if(!await confirmDialog('ล้างข้อมูลในเครื่องทั้งหมด? (ไม่กระทบ Google Sheets)', {title:'ล้างข้อมูลในเครื่อง', okText:'ล้างข้อมูล', danger:true})) return; localStorage.removeItem('clinic_patients'); localStorage.removeItem('clinic_visits'); localStorage.removeItem('clinic_appts'); localStorage.removeItem('clinic_inventory'); boot(); showToast('ล้างข้อมูลแล้ว'); }
 
     /* ============================================================ AUTH / LOGIN */
     const Auth = {
@@ -2170,8 +2208,8 @@
         if(!user) return;
         const el=$('#userName'); if(el) el.textContent = user.name || user.username || 'ผู้ใช้งาน';
     }
-    function logout(){
-        if(!confirm('ออกจากระบบ?')) return;
+    async function logout(){
+        if(!await confirmDialog('ออกจากระบบ?', {title:'ออกจากระบบ', okText:'ออกจากระบบ', icon:'ph-sign-out'})) return;
         Auth.clear();
         showLogin();
     }
