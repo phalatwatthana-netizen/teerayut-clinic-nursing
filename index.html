@@ -1617,7 +1617,7 @@
     function dxAddMed(i){
         const d=DIAGNOSIS_MASTER[i]; if(!d) return;
         const price=(String(d.price||'').match(/[\d.]+/)||[''])[0];
-        addMedRow({ name:d.name, dose:(d.strength||(d.dose||'').split(/oral|ต่อ|โดย/)[0].trim()).slice(0,20), sig:d.sig, qty:'', price });
+        addMedRow({ name:(d.label||d.name), dose:(d.strength||(d.dose||'').split(/oral|ต่อ|โดย/)[0].trim()).slice(0,20), sig:d.sig, qty:'', price });
         const rows=document.querySelectorAll('#medList .grid'); const last=rows[rows.length-1];
         if(last) medPick(last.querySelector('.med-name'));
         showToast('เพิ่ม '+d.name+' ลงรายการยาแล้ว');
