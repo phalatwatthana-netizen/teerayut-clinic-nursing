@@ -1990,7 +1990,16 @@
         try{
             await Store.saveVisit(Object.assign({}, v, patch));
             Object.assign(v, patch);
-            Store.localSave(); showToast('รับชำระเงินเรียบร้อย ✓'); printReceipt(vn); State.current.vn=null; renderBillingQueue(); updateBadges();
+            Store.localSave(); showToast('รับชำระเงินเรียบร้อย ✓'); printReceipt(vn);
+            State.current.vn=null; renderBillingQueue(); updateBadges();
+            // แจ้งเตือนบันทึกเวชระเบียนทุกคน (ก่อนเสร็จสิ้น)
+            const p=patientByHN(v.hn)||{};
+            if(await confirmDialog('บันทึกเวชระเบียนของ '+pname(p)+' เก็บลง Google Drive ไหม? (แนะนำให้เก็บทุกคน)', {title:'📋 บันทึกเวชระเบียน', okText:'บันทึก PDF', cancelText:'ข้าม', icon:'ph-file-pdf'})){
+                if(Store.online()){
+                    try{ const res=await Store.post('saveVisitPdf', { hn:v.hn, vn:v.vn, html:buildRecordHtmlFitted(v) }); showToast('บันทึกเวชระเบียนลงไดรฟ์แล้ว (โฟลเดอร์ '+v.hn+')'); }
+                    catch(e){ showToast('บันทึก PDF ไม่สำเร็จ: '+e.message,'error'); }
+                } else { openRecordPreview(vn); }
+            }
         }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
     }
