@@ -1417,7 +1417,11 @@
             <div><div class="font-semibold text-gray-800">${esc(pname(p))}</div>
             <div class="text-xs text-gray-500">${esc(p.gender||'-')} · ${age(p.birthDate)} ปี · ☎ ${esc(p.phone||'-')}${v?` · VN ${esc(v.vn)}`:''}</div></div>
             ${ noAllergy ? '' : `<span class="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-lg"><i class="ph-fill ph-warning"></i> แพ้: ${esc(p.allergy)}</span>`}
-            ${ v ? `<button type="button" onclick="openVisitDetail('${esc(v.vn)}')" class="ml-auto text-xs bg-brand-teal text-white px-3 py-1.5 rounded-lg hover:bg-brand-blueDark flex items-center shrink-0"><i class="ph ph-file-text mr-1"></i> เวชระเบียน/พิมพ์</button>` : '' }
+            ${ v ? `<div class="ml-auto flex flex-wrap gap-1.5 shrink-0">
+                <button type="button" onclick="openVisitDetail('${esc(v.vn)}')" class="text-xs bg-brand-teal text-white px-3 py-1.5 rounded-lg hover:bg-brand-blueDark flex items-center"><i class="ph ph-file-text mr-1"></i> เวชระเบียน/พิมพ์</button>
+                ${ v.status!==STATUS.TRIAGE ? `<button type="button" onclick="sendBackToTriage('${esc(v.vn)}')" class="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 flex items-center"><i class="ph ph-arrow-u-up-left mr-1"></i> ส่งกลับซักประวัติ</button>` : '' }
+                <button type="button" onclick="deleteVisitRec('${esc(v.vn)}')" class="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 flex items-center"><i class="ph ph-trash mr-1"></i> ลบ visit</button>
+            </div>` : '' }
         </div>`;
     }
     function loadTriagePatient(){
