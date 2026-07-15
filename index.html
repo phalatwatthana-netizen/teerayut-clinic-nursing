@@ -1469,7 +1469,13 @@
         const fn = { [STATUS.EXAM]:'loadExam', [STATUS.PHARM]:'loadPharmacy', [STATUS.BILL]:'loadBilling' }[v.status] || 'loadExam';
         return `<div onclick="${fn}('${v.vn}')" class="p-3 cursor-pointer ${active} transition-colors">
             <div class="flex justify-between items-center"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span><span class="text-xs text-gray-400">${fmtTime(v.createdAt)}</span></div>
-            <div class="text-xs text-gray-500">${esc(v.hn)} · ${esc(v.cc||'-')}</div>
+            <div class="flex justify-between items-center">
+                <div class="text-xs text-gray-500">${esc(v.hn)} · ${esc(v.cc||'-')}</div>
+                <div class="flex gap-1 shrink-0" onclick="event.stopPropagation()">
+                    ${ v.status!==STATUS.TRIAGE ? `<button type="button" onclick="sendBackToTriage('${esc(v.vn)}')" title="ส่งกลับซักประวัติ" class="p-1 text-orange-500 hover:bg-orange-50 rounded"><i class="ph ph-arrow-u-up-left"></i></button>` : '' }
+                    <button type="button" onclick="deleteVisitRec('${esc(v.vn)}')" title="ลบ visit" class="p-1 text-red-500 hover:bg-red-50 rounded"><i class="ph ph-trash"></i></button>
+                </div>
+            </div>
         </div>`;
     }
     const emptyQueue = () => `<div class="p-8 text-center text-gray-400 text-sm"><i class="ph ph-tray text-2xl block mb-1"></i>ไม่มีคิว</div>`;
