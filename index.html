@@ -1568,11 +1568,13 @@
     }
     function dxPickGroup(g){ const s=$('#dxSearch'); if(s){ s.value=g; renderDxResults(g); } }
     const dxHas = d => d && d.avail && d.avail!=='' && d.avail!=='-' && d.avail!=='ไม่มี';
+    const dxPending = d => d && String(d.note||'').includes('รอวิชาชีพตรวจสอบ');
     function dxDrugCard(i){
         const d=DIAGNOSIS_MASTER[i]; if(!d) return '';
         const line=(l,v)=> v?`<div><b class="text-gray-500">${l}:</b> ${esc(v)}</div>`:'';
-        const has=dxHas(d);
-        return `<div class="border ${has?'border-brand-greenMain/50':'border-gray-200'} rounded-lg p-2.5 text-xs space-y-1">
+        const has=dxHas(d); const pending=dxPending(d);
+        return `<div class="border ${pending?'border-amber-400 bg-amber-50/40':has?'border-brand-greenMain/50':'border-gray-200'} rounded-lg p-2.5 text-xs space-y-1">
+            ${pending?`<div class="text-[11px] font-bold text-amber-800 bg-amber-100 rounded px-2 py-1 flex items-center"><i class="ph-fill ph-warning-circle mr-1"></i> รอวิชาชีพตรวจสอบก่อนใช้ (ข้อมูลร่าง)</div>`:''}
             <div class="flex justify-between items-start gap-2">
                 <span class="font-semibold text-gray-800">${esc(d.name)}${has?' <span class="text-[10px] text-green-700 bg-green-50 px-1.5 py-0.5 rounded">✓ มีในคลินิก</span>':''}</span>
                 ${d.grp?`<span class="text-[10px] text-brand-teal bg-teal-50 px-1.5 py-0.5 rounded shrink-0">${esc(d.grp)}</span>`:''}
