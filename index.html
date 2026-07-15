@@ -589,6 +589,7 @@
                         <button onclick="openInvForm()" class="bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-plus mr-2 text-lg"></i> เพิ่มรายการ</button>
                         <button onclick="importInventorySeed()" id="invSeedBtn" class="bg-brand-greenMain hover:bg-brand-greenDark text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-download-simple mr-2 text-lg"></i> นำเข้ารายการเริ่มต้น</button>
                         <button onclick="importReceipt()" class="bg-brand-teal hover:bg-brand-blueDark text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-receipt mr-2 text-lg"></i> นำเข้าใบส่งของ 14/07</button>
+                        <button onclick="autoMatchDb()" class="bg-brand-blueDark hover:bg-brand-teal text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-link mr-2 text-lg"></i> จับคู่ชื่อฐานข้อมูล</button>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="invKpi"></div>
@@ -1624,6 +1625,31 @@
 
     /* ============================================================ INVENTORY (คลังยา) */
     const invByCode = code => State.inventory.find(x=>x.code===code);
+    /* หาชื่อยา/รายการในฐานข้อมูลที่เป็นตัวยาเดียวกันกับรายการในคลัง */
+    function bestDbMatch(inv){
+        if(!window.DIAGNOSIS_MASTER) return '';
+        const n = dxNorm(inv.name);
+        // 1) เทียบชื่อการค้าในฐานข้อมูล
+        for(const d of DIAGNOSIS_MASTER){ if(d.trade){ const t=dxNorm(d.trade); if(t.length>3 && (n.includes(t)||t.includes(n))) return d.name; } }
+        // 2) เทียบคำภาษาอังกฤษหลัก (>=4 ตัวอักษร) ในชื่อยา/ชื่อการค้า
+        const tokens = (inv.name.match(/[A-Za-z]{4,}/g)||[]).map(s=>s.toLowerCase());
+        for(const tk of tokens){ for(const d of DIAGNOSIS_MASTER){ if(dxNorm(d.name).includes(tk)||dxNorm(d.trade).includes(tk)) return d.name; } }
+        // 3) เทียบคำไทยยาว (>=4 อักษร) ในชื่อยา/ชื่อการค้า
+        const th=(inv.name.match(/[฀-๿]{4,}/g)||[]);
+        for(const w of th){ const nw=dxNorm(w); for(const d of DIAGNOSIS_MASTER){ if(dxNorm(d.name).includes(nw)||dxNorm(d.trade).includes(nw)) return d.name; } }
+        return '';
+    }
+    async function autoMatchDb(){
+        if(!confirm('จับคู่ชื่อฐานข้อมูลอัตโนมัติให้รายการที่ยังไม่มี? (ตรวจแก้ทีหลังได้)')) return;
+        showToast('กำลังจับคู่...','info');
+        let ok=0;
+        for(const it of State.inventory){
+            if(it.dbName) continue;
+            const m=bestDbMatch(it);
+            if(m){ it.dbName=m; it.updatedAt=nowISO(); try{ await Store.saveInventory(it); ok++; }catch(e){} }
+        }
+        Store.localSave(); showToast(`จับคู่สำเร็จ ${ok} รายการ (ตรวจแก้ที่ปุ่มแก้ไขได้)`); renderInventory();
+    }
     function nextInvCode(prefix){
         let mx=0; State.inventory.forEach(it=>{ const m=String(it.code||'').match(new RegExp('^'+prefix+'(\\d+)$')); if(m){ const n=+m[1]; if(n>mx)mx=n; } });
         return prefix+String(mx+1).padStart(3,'0');
