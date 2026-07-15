@@ -765,6 +765,7 @@
         async saveVisit(v){ if(Store.online()) return Store.post('saveVisit', v); Store.localSave(); return { status:'success', vn:v.vn }; },
         async saveAppointment(a){ if(Store.online()) return Store.post('saveAppointment', a); Store.localSave(); return { status:'success', id:a.id }; },
         async deleteAppointment(id){ if(Store.online()) return Store.post('deleteAppointment', {id}); Store.localSave(); return { status:'success' }; },
+        async deleteVisit(vn){ if(Store.online()) return Store.post('deleteVisit', {vn}); Store.localSave(); return { status:'success' }; },
         async saveInventory(it){ if(Store.online()) return Store.post('saveInventory', it); Store.localSave(); return { status:'success', code:it.code }; },
         async deleteInventory(code){ if(Store.online()) return Store.post('deleteInventory', {code}); Store.localSave(); return { status:'success' }; }
     };
@@ -894,6 +895,29 @@
         return `<button onclick="goToStation('${m[0]}','${v.vn}')" class="text-xs bg-brand-blueMain/10 text-brand-blueMain px-3 py-1 rounded-lg hover:bg-brand-blueMain hover:text-white transition-colors">${m[1]} →</button>`;
     }
     function goToStation(station, vn){ State.current.vn = vn; navTo(station); }
+    /* ส่ง visit กลับห้องซักประวัติ */
+    async function sendBackToTriage(vn){
+        const v=visitByVN(vn); if(!v) return;
+        if(!confirm('ส่งผู้ป่วยกลับห้องซักประวัติ?')) return;
+        const patch={ status:STATUS.TRIAGE };
+        try{
+            await Store.saveVisit(Object.assign({}, v, patch));
+            Object.assign(v, patch); Store.localSave();
+            showToast('ส่งกลับห้องซักประวัติแล้ว'); closeModal();
+            State.current.vn=null; renderView(document.querySelector('.app-section.active')?.id?.replace('section-','')||'dashboard'); updateBadges();
+        }catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
+    }
+    /* ลบ visit (ประวัติการรับบริการวันนั้น) */
+    async function deleteVisitRec(vn){
+        const v=visitByVN(vn); if(!v) return;
+        if(!confirm('ลบประวัติการรับบริการนี้ (VN '+vn+') ?\nการลบนี้ถาวร ไม่กระทบทะเบียนผู้ป่วยในห้องบัตร')) return;
+        try{
+            await Store.deleteVisit(vn);
+            State.visits = State.visits.filter(x=>x.vn!==vn); Store.localSave();
+            showToast('ลบประวัติการรับบริการแล้ว'); closeModal();
+            State.current.vn=null; renderView(document.querySelector('.app-section.active')?.id?.replace('section-','')||'dashboard'); updateBadges();
+        }catch(e){ showToast('ลบไม่สำเร็จ: '+e.message,'error'); }
+    }
     /* ---------- รายละเอียดการมารับบริการ (คลิกจากคิวหน้าหลัก) ---------- */
     function openVisitDetail(vn){
         const v = visitByVN(vn); if(!v){ showToast('ไม่พบข้อมูล','error'); return; }
@@ -920,10 +944,17 @@
                     <div><b class="text-brand-blueDark">ยา:</b><ul class="list-disc ml-5 mt-1">${meds}</ul></div>
                 </div>
                 <div id="pdfResult" class="hidden text-xs bg-green-50 text-green-700 rounded-lg px-3 py-2"></div>
-                <div class="flex flex-wrap justify-end gap-2 border-t border-gray-100 pt-3">
-                    <button onclick="openRecordPreview('${v.vn}')" class="px-4 py-2 border border-brand-blueMain text-brand-blueMain rounded-lg text-sm font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-eye mr-1"></i> พรีวิว / พิมพ์เวชระเบียน</button>
-                    <button onclick="openVisitEdit('${v.vn}')" class="px-4 py-2 border border-brand-greenMain text-brand-greenDark rounded-lg text-sm font-medium hover:bg-brand-greenLight/10 flex items-center"><i class="ph ph-pencil-simple mr-1"></i> แก้ไขข้อมูล</button>
-                    <span onclick="closeModal()">${routeBtn}</span>
+                <div id="pdfResult2" class="hidden"></div>
+                <div class="flex flex-wrap justify-between gap-2 border-t border-gray-100 pt-3">
+                    <div class="flex gap-2">
+                        ${v.status!==STATUS.TRIAGE?`<button onclick="sendBackToTriage('${v.vn}')" class="px-3 py-2 border border-orange-400 text-orange-600 rounded-lg text-xs font-medium hover:bg-orange-50 flex items-center"><i class="ph ph-arrow-u-up-left mr-1"></i> ส่งกลับซักประวัติ</button>`:''}
+                        <button onclick="deleteVisitRec('${v.vn}')" class="px-3 py-2 border border-red-300 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 flex items-center"><i class="ph ph-trash mr-1"></i> ลบ visit</button>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="openRecordPreview('${v.vn}')" class="px-3 py-2 border border-brand-blueMain text-brand-blueMain rounded-lg text-xs font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-eye mr-1"></i> พรีวิว/พิมพ์</button>
+                        <button onclick="openVisitEdit('${v.vn}')" class="px-3 py-2 border border-brand-greenMain text-brand-greenDark rounded-lg text-xs font-medium hover:bg-brand-greenLight/10 flex items-center"><i class="ph ph-pencil-simple mr-1"></i> แก้ไข</button>
+                        <span onclick="closeModal()">${routeBtn}</span>
+                    </div>
                 </div>
             </div>`);
     }

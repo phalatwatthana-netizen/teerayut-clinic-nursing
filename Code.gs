@@ -48,6 +48,7 @@ function doPost(e) {
     if (action === 'login')             return json(login(data));
     if (action === 'savePatient')       return json(savePatient(data));
     if (action === 'saveVisit')         return json(upsert(SHEET_VISITS, data));
+    if (action === 'deleteVisit')       return json(deleteRecord(SHEET_VISITS, data.vn));
     if (action === 'saveAppointment')   return json(upsert(SHEET_APPTS, data));
     if (action === 'deleteAppointment') return json(deleteRecord(SHEET_APPTS, data.id));
     if (action === 'saveInventory')     return json(upsert(SHEET_INV, data));
