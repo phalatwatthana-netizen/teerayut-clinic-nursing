@@ -484,7 +484,7 @@
                                 <div class="mt-5">
                                     <div class="flex justify-between items-center mb-2"><label class="text-xs font-bold text-brand-blueDark"><i class="ph-fill ph-pill mr-1"></i> รายการยา / เวชภัณฑ์</label>
                                         <button type="button" onclick="addMedRow()" class="text-xs bg-brand-bluePale/30 text-brand-blueDark px-2 py-1 rounded-lg hover:bg-brand-bluePale/50"><i class="ph ph-plus"></i> เพิ่มยา</button></div>
-                                    <div class="grid grid-cols-12 gap-2 text-xs text-gray-500 font-medium px-1 mb-1"><span class="col-span-4">ชื่อยา</span><span class="col-span-2">ขนาด</span><span class="col-span-3">วิธีใช้</span><span class="col-span-1 text-center">จำนวน</span><span class="col-span-1 text-center">ราคา</span><span class="col-span-1"></span></div>
+                                    <div class="grid grid-cols-12 gap-2 text-xs text-gray-500 font-medium px-1 mb-1"><span class="col-span-3">ชื่อยา</span><span class="col-span-2">ขนาด</span><span class="col-span-3">วิธีใช้</span><span class="col-span-1 text-center">วัน</span><span class="col-span-1 text-center">จำนวน</span><span class="col-span-1 text-center">ราคา</span><span class="col-span-1"></span></div>
                                     <div id="medList" class="space-y-2"></div>
                                     <datalist id="invDrugList"></datalist>
                                 </div>
@@ -1463,13 +1463,25 @@
     function addMedRow(m={}){
         const row = document.createElement('div'); row.className='grid grid-cols-12 gap-2 items-center';
         row.innerHTML = `
-            <input class="med-name col-span-4 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain" list="invDrugList" onchange="medPick(this)" placeholder="เลือก/พิมพ์ชื่อยา" value="${esc(m.name||'')}" data-code="${esc(m.code||'')}">
+            <input class="med-name col-span-3 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain" list="invDrugList" onchange="medPick(this)" placeholder="เลือก/พิมพ์ชื่อยา" value="${esc(m.name||'')}" data-code="${esc(m.code||'')}">
             <input class="med-dose col-span-2 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain" placeholder="500mg" value="${esc(m.dose||'')}">
-            <input class="med-sig col-span-3 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain" placeholder="1x3 pc" value="${esc(m.sig||'')}">
+            <input class="med-sig col-span-3 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain" oninput="medCalcQty(this)" placeholder="1x3 pc" value="${esc(m.sig||'')}">
+            <input class="med-days col-span-1 px-1 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:border-brand-blueMain" type="number" min="0" oninput="medCalcQty(this)" placeholder="วัน" value="${m.days??''}">
             <input class="med-qty col-span-1 px-1 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:border-brand-blueMain" type="number" min="0" placeholder="0" value="${m.qty??''}">
             <input class="med-price col-span-1 px-1 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:border-brand-blueMain" type="number" min="0" step="0.01" placeholder="0" value="${m.price??''}">
             <button type="button" onclick="this.parentNode.remove()" class="col-span-1 text-red-500 hover:bg-red-50 rounded py-1.5"><i class="ph ph-x"></i></button>`;
         $('#medList').appendChild(row);
+    }
+    /* คำนวณจำนวน = (เม็ด/ครั้ง × ครั้ง/วัน จากวิธีใช้) × จำนวนวัน */
+    function medCalcQty(el){
+        const row=el.closest('.grid'); if(!row) return;
+        const sig=row.querySelector('.med-sig').value;
+        const days=Number(row.querySelector('.med-days').value)||0;
+        const nums=(sig.match(/\d+(\.\d+)?/g)||[]).map(Number);
+        let perDay=0;
+        if(nums.length>=2) perDay=nums[0]*nums[1];
+        else if(nums.length===1) perDay=nums[0];
+        if(perDay>0 && days>0) row.querySelector('.med-qty').value = Math.round(perDay*days*100)/100;
     }
     /* เลือกยาจากคลัง -> เติมรหัส/ราคา/หน่วยอัตโนมัติ */
     function medPick(input){
@@ -1480,7 +1492,7 @@
         const price=row.querySelector('.med-price'); if(!price.value) price.value = it.price;
         const dose=row.querySelector('.med-dose'); if(!dose.value && it.unit) dose.placeholder = it.unit;
     }
-    function collectMeds(){ return [...document.querySelectorAll('#medList .grid')].map(r=>({ name:r.querySelector('.med-name').value.trim(), code:r.querySelector('.med-name').dataset.code||'', dose:r.querySelector('.med-dose').value.trim(), sig:r.querySelector('.med-sig').value.trim(), qty:Number(r.querySelector('.med-qty').value)||0, price:Number(r.querySelector('.med-price').value)||0 })).filter(m=>m.name); }
+    function collectMeds(){ return [...document.querySelectorAll('#medList .grid')].map(r=>({ name:r.querySelector('.med-name').value.trim(), code:r.querySelector('.med-name').dataset.code||'', dose:r.querySelector('.med-dose').value.trim(), sig:r.querySelector('.med-sig').value.trim(), days:Number(r.querySelector('.med-days').value)||0, qty:Number(r.querySelector('.med-qty').value)||0, price:Number(r.querySelector('.med-price').value)||0 })).filter(m=>m.name); }
     async function saveExam(event){
         event.preventDefault();
         const v=visitByVN(State.current.vn); if(!v) return;
