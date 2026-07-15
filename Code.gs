@@ -23,7 +23,7 @@ var HEADERS = {
   Visits: ['vn','hn','date','status','cc','pi','ph','pe','bp_sys','bp_dia','bt','pr','weight','height','bmi','dx','treatment','lab','meds_json','medTotal','serviceFee','otherFee','total','paid','payMethod','referTo','referReason','followUpDate','followUpNote','createdAt','triageAt','examAt','dispenseAt','doneAt','referAt'],
   Appointments: ['id','hn','name','date','time','type','status','createdAt'],
   Users: ['username','password','name','role','active'],
-  Inventory: ['code','name','unit','price','stock','minStock','category','updatedAt']
+  Inventory: ['code','name','dbName','unit','price','stock','minStock','category','updatedAt']
 };
 var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code' };
 /* คอลัมน์ที่ต้องเก็บเป็นข้อความ (กัน Google Sheets ตัดเลข 0 นำหน้า) */

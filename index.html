@@ -598,6 +598,7 @@
                             <thead>
                                 <tr class="bg-brand-bg text-gray-600 text-xs uppercase border-b border-gray-200">
                                     <th class="p-3 font-medium">รหัส</th><th class="p-3 font-medium">ชื่อยา/เวชภัณฑ์</th>
+                                    <th class="p-3 font-medium">ชื่อในฐานข้อมูล</th>
                                     <th class="p-3 font-medium">หน่วย</th><th class="p-3 font-medium text-right">ราคา/หน่วย</th>
                                     <th class="p-3 font-medium text-center">คงเหลือ</th><th class="p-3 font-medium text-right">จัดการ</th>
                                 </tr>
@@ -1649,6 +1650,7 @@
             return `<tr class="hover:bg-brand-bg transition-colors">
                 <td class="p-3 font-mono text-brand-blueMain">${esc(it.code)}</td>
                 <td class="p-3 font-medium text-gray-800">${esc(it.name)}${it.category?` <span class="text-xs text-gray-400">· ${esc(it.category)}</span>`:''}</td>
+                <td class="p-3 text-brand-teal text-xs">${it.dbName?esc(it.dbName):'<span class="text-gray-300">—</span>'}</td>
                 <td class="p-3 text-gray-600">${esc(it.unit||'-')}</td>
                 <td class="p-3 text-right text-gray-600">${money(it.price)}</td>
                 <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${st}</span></td>
@@ -1659,7 +1661,7 @@
                     <button onclick="deleteInv('${it.code}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="ลบ"><i class="ph ph-trash text-lg"></i></button>
                 </td>
             </tr>`;
-        }).join('') : `<tr><td colspan="6" class="p-8 text-center text-gray-400"><i class="ph ph-package text-3xl block mb-2"></i>${q?'ไม่พบรายการ':'ยังไม่มีรายการ — กด "นำเข้ารายการเริ่มต้น" หรือ "เพิ่มรายการ"'}</td></tr>`;
+        }).join('') : `<tr><td colspan="7" class="p-8 text-center text-gray-400"><i class="ph ph-package text-3xl block mb-2"></i>${q?'ไม่พบรายการ':'ยังไม่มีรายการ — กด "นำเข้ารายการเริ่มต้น" หรือ "เพิ่มรายการ"'}</td></tr>`;
     }
     function openInvForm(code){
         const it = code ? (invByCode(code)||{}) : {};
@@ -1672,6 +1674,7 @@
                     <div><label class="block text-xs text-gray-600 mb-1">หมวด</label><select id="inv_cat" class="w-full px-3 py-2 border border-gray-200 rounded-lg">${cats.map(c=>`<option ${it.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
                 </div>
                 <div><label class="block text-xs text-gray-600 mb-1">ชื่อยา/เวชภัณฑ์ <span class="text-red-500">*</span></label><input id="inv_name" required value="${esc(it.name||'')}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <div><label class="block text-xs text-gray-600 mb-1">ชื่อในฐานข้อมูล (ตัวช่วยวินิจฉัย)</label><input id="inv_dbname" list="invDbList" value="${esc(it.dbName||'')}" placeholder="เลือกชื่อสามัญจากฐานข้อมูล" class="w-full px-3 py-2 border border-gray-200 rounded-lg"><datalist id="invDbList">${(window.DIAGNOSIS_MASTER||[]).map(d=>`<option value="${esc(d.name)}">`).join('')}</datalist></div>
                 <div class="grid grid-cols-3 gap-3">
                     <div><label class="block text-xs text-gray-600 mb-1">หน่วย</label><input id="inv_unit" value="${esc(it.unit||'')}" placeholder="เม็ด/แผง/ขวด" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
                     <div><label class="block text-xs text-gray-600 mb-1">ราคา/หน่วย</label><input id="inv_price" type="number" step="0.01" min="0" value="${it.price??''}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
@@ -1691,7 +1694,7 @@
         if(!orig && invByCode(code)){ showToast('รหัสนี้มีอยู่แล้ว','error'); return; }
         const it = orig ? invByCode(orig) : {};
         Object.assign(it, {
-            code, category:cat, name:$('#inv_name').value.trim(), unit:$('#inv_unit').value.trim(),
+            code, category:cat, name:$('#inv_name').value.trim(), dbName:$('#inv_dbname').value.trim(), unit:$('#inv_unit').value.trim(),
             price:Number($('#inv_price').value)||0,
             stock: orig ? it.stock : (Number($('#inv_stock').value)||0),
             minStock:Number($('#inv_min').value)||0, updatedAt:nowISO()
