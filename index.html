@@ -220,6 +220,7 @@
                 </div>
 
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="kpiCards"></div>
+                <div id="dashPending" class="mb-6"></div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-hidden">
@@ -929,6 +930,15 @@
         const emptyMsg = isToday ? 'ยังไม่มีผู้รับบริการวันนี้' : `ไม่มีผู้รับบริการวันที่ ${fmtDateTH(selDate)}`;
         $('#dashQueueBody').innerHTML = rows || `<tr><td colspan="5" class="p-8 text-center text-gray-400"><i class="ph ph-tray text-3xl block mb-2"></i>${emptyMsg}</td></tr>`;
 
+        // เตือน: ผู้ป่วยลงทะเบียนวันนี้แต่ยังไม่ได้ส่งเข้าคิว
+        const pend = State.patients.filter(pt=>dateKey(pt.createdAt)===todayISO() && !State.visits.some(v=>v.hn===pt.hn && dateKey(v.date)===todayISO()));
+        const pb=$('#dashPending');
+        if(pb){ pb.innerHTML = pend.length ? `
+            <div class="bg-amber-50 border border-amber-300 rounded-xl p-4">
+                <div class="flex items-center gap-2 mb-2 text-amber-800 font-semibold text-sm"><i class="ph-fill ph-warning-circle text-lg"></i> ลงทะเบียนวันนี้แต่ยังไม่ได้ส่งเข้าคิว (${pend.length})</div>
+                <div class="flex flex-wrap gap-2">${pend.map(pt=>`<div class="flex items-center gap-1 bg-white border border-amber-200 rounded-lg pl-3 pr-1 py-1"><span class="text-sm text-gray-800">${esc(pname(pt))}</span><button onclick="sendToTriage('${esc(pt.hn)}')" class="text-xs bg-brand-greenMain text-white px-2 py-1 rounded-md hover:bg-brand-greenDark"><i class="ph ph-heartbeat"></i> ส่งเข้าคิว</button></div>`).join('')}</div>
+            </div>` : ''; }
+
         $('#dashAppointments').innerHTML = apptToday.length ? apptToday.map(a=>`
             <div class="flex items-start"><div class="w-2 h-2 mt-1.5 rounded-full bg-brand-teal mr-2 shrink-0"></div>
             <div><p class="text-sm font-semibold text-gray-800">${esc(a.time||'')} · ${esc(a.name||'')}</p><p class="text-xs text-gray-500 mt-0.5">${esc(a.type||'')}</p></div></div>`).join('')
@@ -1475,7 +1485,8 @@
             bp_sys:'',bp_dia:'',bt:'',pr:'',weight:'',height:'',bmi:'',pi:'',ph:'',pe:'',
             dx:'',treatment:'',lab:'',meds:[],followUpDate:'',followUpNote:'',
             serviceFee:0, otherFee:0, medTotal:0, total:0, payMethod:'', referTo:'', referReason:'' };
-        try{ await Store.saveVisit(v); State.visits.push(v); Store.localSave(); showToast(`ส่ง ${pname(p)} เข้าคิวซักประวัติแล้ว`); updateBadges(); }
+        try{ await Store.saveVisit(v); State.visits.push(v); Store.localSave(); showToast(`ส่ง ${pname(p)} เข้าคิวซักประวัติแล้ว`); updateBadges();
+            const cur=document.querySelector('.app-section.active')?.id?.replace('section-',''); if(cur==='dashboard') renderDashboard(); }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
     }
 
