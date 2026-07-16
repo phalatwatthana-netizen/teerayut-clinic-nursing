@@ -1621,8 +1621,8 @@
         if(!it) { input.dataset.code=''; return; }
         const row=input.closest('.grid');
         input.dataset.code = it.code;
-        const price=row.querySelector('.med-price'); if(!price.value) price.value = it.price;
-        const dose=row.querySelector('.med-dose'); if(!dose.value && it.unit) dose.placeholder = it.unit;
+        row.querySelector('.med-price').value = it.price;   // อัปเดตราคาจากคลัง (ชีต) เสมอ
+        const dose=row.querySelector('.med-dose'); if(it.unit) dose.placeholder = it.unit;
     }
     function collectMeds(){ return [...document.querySelectorAll('#medList .grid')].map(r=>({ name:r.querySelector('.med-name').value.trim(), code:r.querySelector('.med-name').dataset.code||'', dose:r.querySelector('.med-dose').value.trim(), sig:r.querySelector('.med-sig').value.trim(), days:Number(r.querySelector('.med-days').value)||0, qty:Number(r.querySelector('.med-qty').value)||0, price:Number(r.querySelector('.med-price').value)||0 })).filter(m=>m.name); }
     async function saveExam(event){
