@@ -231,6 +231,7 @@
                             <div class="flex items-center gap-2">
                                 <input type="date" id="dashDate" onchange="renderDashboard()" class="px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-brand-blueMain">
                                 <button onclick="dashDateToday()" class="text-xs bg-brand-bluePale/30 text-brand-blueDark px-2.5 py-1.5 rounded-lg hover:bg-brand-bluePale/50">วันนี้</button>
+                                <button onclick="reloadData(this)" title="โหลดข้อมูลล่าสุดจากชีต" class="text-xs bg-brand-greenMain text-white px-2.5 py-1.5 rounded-lg hover:bg-brand-greenDark flex items-center"><i class="ph ph-arrows-clockwise"></i></button>
                             </div>
                         </div>
                         <div class="overflow-x-auto">
@@ -888,6 +889,12 @@
 
     /* ============================================================ DASHBOARD */
     function dashDateToday(){ $('#dashDate').value = todayISO(); renderDashboard(); }
+    async function reloadData(btn){
+        const orig=btn?btn.innerHTML:''; if(btn){ btn.innerHTML='<i class="ph ph-spinner animate-spin"></i>'; btn.disabled=true; }
+        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; normalizePhones(); Store.localSave(); renderDashboard(); updateBadges(); showToast('โหลดข้อมูลล่าสุดแล้ว'); }
+        catch(e){ showToast('โหลดไม่สำเร็จ: '+e.message,'error'); }
+        finally{ if(btn){ btn.innerHTML=orig; btn.disabled=false; } }
+    }
     function renderDashboard(){
         if($('#dashDate') && !$('#dashDate').value) $('#dashDate').value = todayISO();
         const selDate = ($('#dashDate') && $('#dashDate').value) || todayISO();
