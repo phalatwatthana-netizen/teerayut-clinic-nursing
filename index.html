@@ -638,6 +638,18 @@
                         </div>
                     </div>
                 </div>
+                <div class="bg-brand-bluePale/15 border border-brand-bluePale/40 rounded-xl p-3 mb-4 flex flex-wrap items-center gap-3">
+                    <span class="text-sm font-semibold text-brand-blueDark"><i class="ph-fill ph-scales mr-1"></i> คำนวณน้ำหนักมาตรฐาน (IBW)</span>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="ibwAge" step="1" min="0" oninput="calcIBW()" placeholder="อายุ" class="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain">
+                        <select id="ibwUnit" onchange="calcIBW()" class="px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain">
+                            <option value="month">เดือน (3-12 เดือน)</option>
+                            <option value="year">ปี (1-12 ปี)</option>
+                        </select>
+                    </div>
+                    <span id="ibwResult" class="text-sm text-gray-500"></span>
+                    <button type="button" id="ibwUseBtn" onclick="useIBW()" class="hidden text-xs bg-brand-greenMain text-white px-3 py-1.5 rounded-lg hover:bg-brand-greenDark">ใช้เป็นน้ำหนักคำนวณยา →</button>
+                </div>
                 <p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-4"><i class="ph-fill ph-warning"></i> เป็นตัวช่วยคำนวณ ต้องตรวจสอบขนาดยา ความแรง และฉลากจริงทุกครั้งก่อนจ่าย — ไม่ใช่คำสั่งใช้ยาแทนแพทย์/เภสัช</p>
                 <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-hidden">
                     <div class="overflow-x-auto">
@@ -1834,6 +1846,20 @@
         return `<b class="text-brand-greenDark">${round2(perDoseMl)} ml/ครั้ง</b> · ${round2(perDayMl)} ml/วัน`;
     }
     const round2 = n => Math.round((Number(n)||0)*100)/100;
+    /* คำนวณน้ำหนักมาตรฐาน (Ideal Body Weight) ตามอายุ */
+    let ibwValue = 0;
+    function calcIBW(){
+        const x=parseFloat($('#ibwAge').value)||0, unit=$('#ibwUnit').value;
+        const res=$('#ibwResult'), btn=$('#ibwUseBtn');
+        if(x<=0){ res.textContent=''; btn.classList.add('hidden'); ibwValue=0; return; }
+        let w=0, formula='';
+        if(unit==='month'){ w=(x+9)/2; formula='(อายุ+9)/2'; }
+        else { if(x<=6){ w=2*x+8; formula='2×อายุ+8'; } else { w=(7*x-5)/2; formula='(7×อายุ-5)/2'; } }
+        ibwValue=round2(w);
+        res.innerHTML=`= <b class="text-brand-greenDark text-base">${ibwValue} กก.</b> <span class="text-gray-400">(${formula})</span>`;
+        btn.classList.remove('hidden');
+    }
+    function useIBW(){ if(ibwValue>0){ $('#pediWeight').value=ibwValue; renderPediDose(); showToast('ใช้ IBW '+ibwValue+' กก. คำนวณยาแล้ว'); } }
     function renderPediDose(){
         if(!window.PEDI_DOSE){ $('#pediTableBody').innerHTML='<tr><td colspan="5" class="p-6 text-center text-gray-400">โหลดข้อมูลไม่สำเร็จ</td></tr>'; return; }
         const wt=parseFloat($('#pediWeight')?.value)||0;
