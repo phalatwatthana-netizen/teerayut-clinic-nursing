@@ -643,8 +643,9 @@
                     <div class="flex items-center gap-2">
                         <input type="number" id="ibwAge" step="1" min="0" oninput="calcIBW()" placeholder="อายุ" class="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain">
                         <select id="ibwUnit" onchange="calcIBW()" class="px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain">
-                            <option value="month">เดือน (3-12 เดือน)</option>
-                            <option value="year">ปี (1-12 ปี)</option>
+                            <option value="m">3-12 เดือน</option>
+                            <option value="y1">1-6 ปี</option>
+                            <option value="y2">7-12 ปี</option>
                         </select>
                     </div>
                     <span id="ibwResult" class="text-sm text-gray-500"></span>
@@ -1853,8 +1854,9 @@
         const res=$('#ibwResult'), btn=$('#ibwUseBtn');
         if(x<=0){ res.textContent=''; btn.classList.add('hidden'); ibwValue=0; return; }
         let w=0, formula='';
-        if(unit==='month'){ w=(x+9)/2; formula='(อายุ+9)/2'; }
-        else { if(x<=6){ w=2*x+8; formula='2×อายุ+8'; } else { w=(7*x-5)/2; formula='(7×อายุ-5)/2'; } }
+        if(unit==='m'){ w=(x+9)/2; formula='(อายุเดือน+9)/2'; }
+        else if(unit==='y1'){ w=2*x+8; formula='2×อายุปี+8'; }
+        else { w=(7*x-5)/2; formula='(7×อายุปี-5)/2'; }
         ibwValue=round2(w);
         res.innerHTML=`= <b class="text-brand-greenDark text-base">${ibwValue} กก.</b> <span class="text-gray-400">(${formula})</span>`;
         btn.classList.remove('hidden');
