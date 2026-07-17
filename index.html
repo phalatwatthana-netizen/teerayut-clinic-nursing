@@ -15,6 +15,8 @@
     <script src="thai-address.js"></script>
     <!-- ฐานข้อมูลตัวช่วยวินิจฉัย (Master 172 รายการ + กลุ่มอาการ) -->
     <script src="diagnosis-data.js"></script>
+    <!-- ตารางขนาดยาเด็กตามน้ำหนัก -->
+    <script src="pedidose-data.js"></script>
 
     <!-- Color Palette ตามภาพต้นแบบ (MOP Palette) -->
     <script>
@@ -156,6 +158,9 @@
             </button>
             <button onclick="navTo('inventory')" id="nav-inventory" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
                 <i class="ph ph-package text-xl mr-3"></i> คลังยา <span id="badge-inventory" class="ml-auto text-xs bg-red-500 text-white px-1.5 rounded-full hidden">0</span>
+            </button>
+            <button onclick="navTo('pedidose')" id="nav-pedidose" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-baby text-xl mr-3"></i> ขนาดยาเด็ก
             </button>
             <button onclick="navTo('reports')" id="nav-reports" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
                 <i class="ph ph-chart-line-up text-xl mr-3"></i> รายงานสรุป
@@ -614,6 +619,42 @@
                 </div>
             </section>
 
+            <!-- ===== PEDIATRIC DOSE (ขนาดยาเด็ก) ===== -->
+            <section id="section-pedidose" class="app-section">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-brand-blueDark">ขนาดยาเด็กตามน้ำหนัก</h3>
+                        <p class="text-sm text-gray-500">กรอกน้ำหนักเด็ก (กก.) ระบบคำนวณขนาดยา (ml/ครั้ง) ให้อัตโนมัติ</p>
+                    </div>
+                    <div class="flex w-full md:w-auto gap-2 flex-wrap items-center">
+                        <div class="flex items-center bg-white border border-brand-bluePale/50 rounded-lg px-3 py-2 shadow-sm">
+                            <i class="ph-fill ph-baby text-brand-blueMain text-lg mr-2"></i>
+                            <input type="number" id="pediWeight" step="0.1" min="0" oninput="renderPediDose()" placeholder="น้ำหนัก" class="w-24 bg-transparent text-sm font-semibold focus:outline-none">
+                            <span class="text-sm text-gray-500 ml-1">กก.</span>
+                        </div>
+                        <div class="relative flex-1 md:w-56">
+                            <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-lg"></i>
+                            <input type="text" id="pediSearch" oninput="renderPediDose()" placeholder="ค้นหาชื่อยา..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain">
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-4"><i class="ph-fill ph-warning"></i> เป็นตัวช่วยคำนวณ ต้องตรวจสอบขนาดยา ความแรง และฉลากจริงทุกครั้งก่อนจ่าย — ไม่ใช่คำสั่งใช้ยาแทนแพทย์/เภสัช</p>
+                <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-brand-bg text-gray-600 text-xs uppercase border-b border-gray-200">
+                                    <th class="p-3 font-medium">ชื่อยา</th><th class="p-3 font-medium">ความแรง</th>
+                                    <th class="p-3 font-medium">ขนาด (Rate)</th><th class="p-3 font-medium">ความถี่</th>
+                                    <th class="p-3 font-medium text-brand-greenDark">ขนาดที่คำนวณ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pediTableBody" class="text-sm divide-y divide-gray-50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <!-- ===== REPORTS (รายงาน) ===== -->
             <section id="section-reports" class="app-section">
                 <div class="mb-6"><h3 class="text-xl font-bold text-brand-blueDark">รายงานสรุป</h3><p class="text-sm text-gray-500">ภาพรวมการให้บริการและรายได้</p></div>
@@ -855,7 +896,7 @@
     }
 
     /* ---------- Navigation ---------- */
-    const pageTitles = { dashboard:'หน้าหลัก (Dashboard)', patients:'ห้องบัตร (ทะเบียนผู้รับบริการ)', triage:'ห้องซักประวัติ (Vital Signs)', examination:'ห้องตรวจ (วินิจฉัย/สั่งยา)', pharmacy:'ห้องยา (จัดยา/จ่ายยา)', appointments:'ห้องนัด (ตารางนัดหมาย)', referral:'ห้องส่งต่อ (เอกสารส่งตัว)', billing:'ระบบค่าใช้จ่าย', inventory:'คลังยา / เวชภัณฑ์', reports:'รายงานสรุป', settings:'ตั้งค่า / เชื่อมต่อ' };
+    const pageTitles = { dashboard:'หน้าหลัก (Dashboard)', patients:'ห้องบัตร (ทะเบียนผู้รับบริการ)', triage:'ห้องซักประวัติ (Vital Signs)', examination:'ห้องตรวจ (วินิจฉัย/สั่งยา)', pharmacy:'ห้องยา (จัดยา/จ่ายยา)', appointments:'ห้องนัด (ตารางนัดหมาย)', referral:'ห้องส่งต่อ (เอกสารส่งตัว)', billing:'ระบบค่าใช้จ่าย', inventory:'คลังยา / เวชภัณฑ์', pedidose:'ขนาดยาเด็กตามน้ำหนัก', reports:'รายงานสรุป', settings:'ตั้งค่า / เชื่อมต่อ' };
     function navTo(sectionId){
         document.querySelectorAll('.app-section').forEach(s=>s.classList.remove('active'));
         const target = $('#section-'+sectionId); if(target) target.classList.add('active');
@@ -875,6 +916,7 @@
         else if(id==='referral') renderReferral();
         else if(id==='billing') renderBillingQueue();
         else if(id==='inventory') renderInventory();
+        else if(id==='pedidose') renderPediDose();
         else if(id==='reports') renderReports();
         else if(id==='settings') renderSettings();
         updateBadges();
@@ -1750,6 +1792,61 @@
         const rows=document.querySelectorAll('#medList .grid'); const last=rows[rows.length-1];
         if(last) medPick(last.querySelector('.med-name'));
         showToast('เพิ่ม '+d.name+' ลงรายการยาแล้ว');
+    }
+
+    /* ============================================================ ขนาดยาเด็กตามน้ำหนัก */
+    function pediMgPerMl(strength){
+        const m=String(strength).match(/([\d.]+)\s*(g|mg|mcg)\s*\/\s*([\d.]+)?\s*ml/i);
+        if(!m) return null;
+        let amt=parseFloat(m[1]); const u=m[2].toLowerCase(); const per=m[3]?parseFloat(m[3]):1;
+        return { val: amt/per, unit: u };   // เก็บหน่วยเดิม (g/mg/mcg) ต่อ ml
+    }
+    function pediDosesPerDay(freq){
+        const f=String(freq).toLowerCase().trim();
+        if(f==='od') return 1; if(f==='bid') return 2; if(f==='tid') return 3; if(f==='qid') return 4;
+        const q=f.match(/q\s*(\d+)/); if(q) return Math.round(24/parseInt(q[1],10));
+        return 0;
+    }
+    function pediCalc(d, wt){
+        const rate=parseFloat(d.rate);
+        if(!wt || wt<=0) return '<span class="text-gray-400">กรอกน้ำหนัก</span>';
+        // rate เป็นข้อความ (ตามอายุ) หรือไม่มีค่า
+        if(isNaN(rate)) return `<span class="text-gray-500">${esc(d.rate||'ดูตามอายุ/ฉลาก')}</span>`;
+        const doses=pediDosesPerDay(d.freq);
+        const mm=pediMgPerMl(d.strength);
+        const unit=(d.unit||'').toLowerCase();
+        // ยาฉีด IV (ไม่มี /ml ในความแรง) -> แสดงเป็น mg
+        if(!mm){
+            if(unit.includes('mg/kg/day')){ const day=rate*wt; const per=doses?day/doses:day; return `<b class="text-brand-greenDark">${round2(per)} mg/ครั้ง</b> · ${round2(day)} mg/วัน`; }
+            return '<span class="text-gray-400">—</span>';
+        }
+        // ml/kg/day (เช่น Lactulose)
+        if(unit.includes('ml/kg')){ const day=rate*wt; const per=doses?day/doses:day; return `<b class="text-brand-greenDark">${round2(per)} ml/ครั้ง</b> · ${round2(day)} ml/วัน`; }
+        // mcg (เช่น Meptin) — ให้หน่วยความแรงเป็น mcg
+        let perDoseMass, perDayMass;
+        if(unit.includes('/dose')){ perDoseMass=rate*wt; perDayMass=perDoseMass*(doses||1); }
+        else { perDayMass=rate*wt; perDoseMass=doses?perDayMass/doses:perDayMass; }
+        // แปลงมวลเป็น ml ตามความแรง (หน่วยต้องเข้ากัน: mg กับ mg, mcg กับ mcg)
+        let mgPerMl=mm.val;
+        if(mm.unit==='g') mgPerMl=mm.val*1000;         // g/ml -> mg/ml
+        const perDoseMl = perDoseMass/mgPerMl;
+        const perDayMl = perDayMass/mgPerMl;
+        return `<b class="text-brand-greenDark">${round2(perDoseMl)} ml/ครั้ง</b> · ${round2(perDayMl)} ml/วัน`;
+    }
+    const round2 = n => Math.round((Number(n)||0)*100)/100;
+    function renderPediDose(){
+        if(!window.PEDI_DOSE){ $('#pediTableBody').innerHTML='<tr><td colspan="5" class="p-6 text-center text-gray-400">โหลดข้อมูลไม่สำเร็จ</td></tr>'; return; }
+        const wt=parseFloat($('#pediWeight')?.value)||0;
+        const q=($('#pediSearch')?.value||'').toLowerCase().trim();
+        let list=PEDI_DOSE;
+        if(q) list=list.filter(d=>d.name.toLowerCase().includes(q));
+        $('#pediTableBody').innerHTML = list.map(d=>`<tr class="hover:bg-brand-bg">
+            <td class="p-3 font-medium text-gray-800">${esc(d.name)}</td>
+            <td class="p-3 text-gray-600">${esc(d.strength||'-')}</td>
+            <td class="p-3 text-gray-500 text-xs">${esc(d.rate||'-')}${d.unit?' '+esc(d.unit):''}</td>
+            <td class="p-3 text-gray-600">${esc(d.freq||'-')}</td>
+            <td class="p-3">${pediCalc(d, wt)}</td>
+        </tr>`).join('') || '<tr><td colspan="5" class="p-6 text-center text-gray-400">ไม่พบยา</td></tr>';
     }
 
     /* ============================================================ INVENTORY (คลังยา) */
