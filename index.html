@@ -600,6 +600,7 @@
                         <button onclick="openInvForm()" class="bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-plus mr-2 text-lg"></i> เพิ่มรายการ</button>
                         <button onclick="importInventorySeed()" id="invSeedBtn" class="bg-brand-greenMain hover:bg-brand-greenDark text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-download-simple mr-2 text-lg"></i> นำเข้ารายการเริ่มต้น</button>
                         <button onclick="importReceipt()" class="bg-brand-teal hover:bg-brand-blueDark text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-receipt mr-2 text-lg"></i> นำเข้าใบส่งของ 14/07</button>
+                        <button onclick="importReceipt2()" class="bg-brand-teal hover:bg-brand-blueDark text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-receipt mr-2 text-lg"></i> นำเข้าใบส่งของ (2)</button>
                         <button onclick="autoMatchDb()" class="bg-brand-blueDark hover:bg-brand-teal text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center shadow-sm shrink-0"><i class="ph ph-link mr-2 text-lg"></i> จับคู่ชื่อฐานข้อมูล</button>
                     </div>
                 </div>
@@ -2078,6 +2079,39 @@
             let it = State.inventory.find(x=>norm(x.name).includes(norm(r.match)) || (x.code===r.code));
             if(it){ it.price=r.price; it.unit=r.unit; it.stock=(Number(it.stock)||0)+r.stock; it.note=r.note; it.updatedAt=nowISO(); upd++; }
             else { it={ code:r.code, name:r.name, unit:r.unit, price:r.price, stock:r.stock, minStock:Math.max(5,Math.ceil(r.stock*0.1)), category:r.cat, note:r.note, updatedAt:nowISO() }; State.inventory.push(it); add++; }
+            try{ await Store.saveInventory(it); }catch(e){}
+        }
+        Store.localSave(); showToast(`นำเข้าเสร็จ: อัปเดต ${upd} · เพิ่มใหม่ ${add} รายการ`); renderInventory(); updateBadges();
+    }
+    /* ---------- ใบส่งของชุดที่ 2 (17 รายการ) — คิดราคาต่อหน่วยย่อย ---------- */
+    const RECEIPT_2 = [
+        {match:'a-tussin',name:'A-Tussin 15mg',unit:'เม็ด',price:0.90,stock:100,cat:'ยา',note:'แผงละ 9 · 10เม็ด/แผง (รับ 10 แผง)'},
+        {match:'antussia',name:'Antussia syrup 60ml',unit:'ขวด',price:21,stock:1,cat:'ยา',note:'ขวดละ 21 (รับ 1 ขวด)'},
+        {match:'alsof',name:'Alsof cotton (สำลี)',unit:'แผง',price:6.67,stock:12,cat:'เวชภัณฑ์',note:'กล่องละ 80 · 12แผง/กล่อง (รับ 1 กล่อง)'},
+        {match:'belcid',name:'Belcid suspension (เขียว) 240ml',unit:'ขวด',price:36,stock:3,cat:'ยา',note:'ขวดละ 36 (รับ 3 ขวด)'},
+        {match:'chlorpheniraminesyr',name:'Chlorpheniramine syrup 2mg/5ml 60ml',unit:'ขวด',price:18,stock:3,cat:'ยา',note:'ขวดละ 18 (รับ 3 ขวด)'},
+        {match:'domstar',name:'Domstar 30ml',unit:'ขวด',price:13,stock:3,cat:'ยา',note:'ขวดละ 13 (รับ 3 ขวด)'},
+        {match:'lincomycin',name:'Lincomycin 300mg/ml inj',unit:'amp',price:8,stock:10,cat:'ยาฉีด',note:'แผงละ 80 · สมมติ 10 amp/แผง (รับ 1 แผง)'},
+        {match:'multivitaminau',name:'Multivitamin AU',unit:'เม็ด',price:0.225,stock:1000,cat:'ยา',note:'กระปุกละ 225 · 1000เม็ด (รับ 1 กระปุก)'},
+        {match:'patar3b',name:'Patar 3B (Vit B1-6-12)',unit:'เม็ด',price:0.55,stock:100,cat:'ยา',note:'แผงละ 5.50 · 10เม็ด/แผง (รับ 10 แผง)'},
+        {match:'salmol',name:'Salmol expectorant 60ml (ฟ้า)',unit:'ขวด',price:20,stock:3,cat:'ยา',note:'ขวดละ 20 (รับ 3)'},
+        {match:'sobelin',name:'Sobelin 5mg',unit:'เม็ด',price:0.45,stock:100,cat:'ยา',note:'แผงละ 4.50 · 10เม็ด/แผง (รับ 10 แผง)'},
+        {match:'starthrocin',name:'Starthrocin dry syrup 60ml',unit:'ขวด',price:26,stock:3,cat:'ยา',note:'ขวดละ 26 (รับ 3)'},
+        {match:'t.v.mox',name:'T.V.mox 125 Dry syrup (125mg/5ml) 60ml',unit:'ขวด',price:17,stock:3,cat:'ยา',note:'ขวดละ 17 (รับ 3)'},
+        {match:'tra1.0',name:'Tra 1.0',unit:'เม็ด',price:3.80,stock:100,cat:'ยา',note:'แผงละ 38 · 10เม็ด/แผง (รับ 10 แผง)'},
+        {match:'thoho',name:'Thoho 120mg/5ml 60ml',unit:'ขวด',price:13,stock:3,cat:'ยา',note:'ขวดละ 13 (รับ 3)'},
+        {match:'wonderflu',name:'Wonder FluA/B+Covid+RSV 4in1 (ชุดตรวจ)',unit:'ชิ้น',price:53,stock:5,cat:'เวชภัณฑ์',note:'ชิ้นละ 53 (รับ 5)'},
+        {match:'zytizine',name:'Zytizine syrup 5mg/5ml 60ml',unit:'ขวด',price:17,stock:3,cat:'ยา',note:'ขวดละ 17 (รับ 3)'}
+    ];
+    async function importReceipt2(){
+        if(!await confirmDialog('นำเข้าใบส่งของชุดที่ 2 (17 รายการ)?\nยาชื่อตรงกับที่มี = อัปเดตราคา+เพิ่มสต๊อก · ยาใหม่ = เพิ่มเข้าคลัง', {title:'นำเข้าใบส่งของ (2)', okText:'นำเข้า', icon:'ph-receipt'})) return;
+        const norm=s=>String(s||'').toLowerCase().replace(/\s+/g,'');
+        showToast('กำลังนำเข้าใบส่งของ...','info');
+        let upd=0, add=0;
+        for(const r of RECEIPT_2){
+            let it = State.inventory.find(x=>norm(x.name).includes(norm(r.match)));
+            if(it){ it.price=r.price; it.unit=r.unit; it.stock=(Number(it.stock)||0)+r.stock; it.note=r.note; it.updatedAt=nowISO(); upd++; }
+            else { it={ code:nextInvCode(r.cat==='ยา'?'YA':'MS'), name:r.name, unit:r.unit, price:r.price, stock:r.stock, minStock:Math.max(5,Math.ceil(r.stock*0.1)), category:r.cat, note:r.note, updatedAt:nowISO() }; State.inventory.push(it); add++; }
             try{ await Store.saveInventory(it); }catch(e){}
         }
         Store.localSave(); showToast(`นำเข้าเสร็จ: อัปเดต ${upd} · เพิ่มใหม่ ${add} รายการ`); renderInventory(); updateBadges();
