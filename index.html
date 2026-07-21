@@ -329,6 +329,8 @@
 
                             <h4 class="text-brand-blueDark font-semibold border-b border-gray-100 pb-2 mb-4 flex items-center md:pr-36"><i class="ph-fill ph-user mr-2 text-lg"></i> ข้อมูลส่วนบุคคล</h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 md:pr-36">
+                                <div><label class="block text-xs font-medium text-gray-600 mb-1">รหัส HN</label>
+                                    <input type="text" id="hnInput" placeholder="เว้นว่าง = อัตโนมัติ" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
                                 <div class="lg:col-span-2"><label class="block text-xs font-medium text-gray-600 mb-1">เลขบัตรประชาชน <span class="text-red-500">*</span></label>
                                     <div class="flex gap-2">
                                         <input type="text" id="cid" maxlength="13" required class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
@@ -839,6 +841,7 @@
         async saveAppointment(a){ if(Store.online()) return Store.post('saveAppointment', a); Store.localSave(); return { status:'success', id:a.id }; },
         async deleteAppointment(id){ if(Store.online()) return Store.post('deleteAppointment', {id}); Store.localSave(); return { status:'success' }; },
         async deleteVisit(vn){ if(Store.online()) return Store.post('deleteVisit', {vn}); Store.localSave(); return { status:'success' }; },
+        async deletePatient(hn){ if(Store.online()) return Store.post('deletePatient', {hn}); Store.localSave(); return { status:'success' }; },
         async saveInventory(it){ if(Store.online()) return Store.post('saveInventory', it); Store.localSave(); return { status:'success', code:it.code }; },
         async deleteInventory(code){ if(Store.online()) return Store.post('deleteInventory', {code}); Store.localSave(); return { status:'success' }; }
     };
@@ -1381,7 +1384,7 @@
         if(hn){
             const p = patientByHN(hn)||{};
             $('#patientFormTitle').textContent='แก้ไขข้อมูลผู้รับบริการ';
-            $('#editHn').value=p.hn||'';
+            $('#editHn').value=p.hn||''; $('#hnInput').value=p.hn||'';
             ['cid','prefix','firstName','lastName','gender','phone','race','nationality','maritalStatus','disease','allergy','emContact','emPhone'].forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
             setBirthDateFromISO(p.birthDate);
             ADDR_TEXT_FIELDS.forEach(f=>{ if($('#'+f)) $('#'+f).value=p[f]||''; });
@@ -1391,7 +1394,7 @@
             togglePatientForm(true);
             await loadThaiAddress(); setAddressFromPatient(p);
         } else {
-            $('#patientFormTitle').textContent='ลงทะเบียนผู้รับบริการใหม่'; $('#editHn').value='';
+            $('#patientFormTitle').textContent='ลงทะเบียนผู้รับบริการใหม่'; $('#editHn').value=''; $('#hnInput').value='';
             togglePatientForm(true);
             await loadThaiAddress(); onProvinceChange();
         }
@@ -1401,9 +1404,14 @@
         const btn = event.target.querySelector('button[type="submit"]'); const orig = btn.innerHTML;
         btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-2 text-lg"></i> กำลังบันทึก...'; btn.disabled=true;
         const editHn = $('#editHn').value;
+        const newHn = ($('#hnInput').value.trim()) || editHn || nextHN();
+        // ตรวจ HN ซ้ำกับผู้ป่วยรายอื่น
+        const dup = State.patients.find(x=>x.hn===newHn && x.hn!==editHn);
+        if(dup){ showToast('รหัส HN '+newHn+' มีผู้ป่วยรายอื่นใช้แล้ว','error'); btn.innerHTML=orig; btn.disabled=false; return; }
+        const hnChanged = editHn && newHn!==editHn;
         const addr={}; ADDR_FIELDS.forEach(f=>addr[f]=$('#'+f).value.trim());
         const p = {
-            hn: editHn || nextHN(),
+            hn: newHn,
             cid:$('#cid').value.trim(), prefix:$('#prefix').value, firstName:$('#firstName').value.trim(), lastName:$('#lastName').value.trim(),
             birthDate:getBirthDateISO(), gender:$('#gender').value, phone:$('#phone').value.trim(),
             race:$('#race').value.trim(), nationality:$('#nationality').value.trim(), maritalStatus:$('#maritalStatus').value,
@@ -1429,9 +1437,15 @@
             if(res.hn) p.hn = res.hn; if(res.fileUrl) p.fileUrl = res.fileUrl; if(res.photoUrl) p.photoUrl = res.photoUrl;
             delete p.fileBase64; delete p.fileName; delete p.fileMimeType;
             delete p.photoBase64; delete p.photoName; delete p.photoMimeType;
+            if(hnChanged){
+                // ย้าย visit ทั้งหมดของ HN เดิม -> HN ใหม่ แล้วลบระเบียน HN เดิม
+                for(const v of State.visits.filter(x=>x.hn===editHn)){ v.hn=newHn; try{ await Store.saveVisit(v); }catch(e){} }
+                try{ await Store.deletePatient(editHn); }catch(e){}
+                State.patients = State.patients.filter(x=>x.hn!==editHn);
+            }
             const i = State.patients.findIndex(x=>x.hn===p.hn); if(i>=0) State.patients[i]=p; else State.patients.push(p);
             Store.localSave();
-            showToast(`บันทึกสำเร็จ! รหัส: ${p.hn}`);
+            showToast(`บันทึกสำเร็จ! รหัส: ${p.hn}`+(hnChanged?' (เปลี่ยน HN แล้ว)':''));
             togglePatientForm(false); renderPatientsTable();
         } catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message,'error'); }
         finally { btn.innerHTML=orig; btn.disabled=false; }
