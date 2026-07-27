@@ -1150,14 +1150,21 @@
         </div>`;
     }
     const MM = 96/25.4; // px ต่อ mm (96dpi)
-    /* ย่อเนื้อหา .a5fit ให้พอดีความสูงหน้า A5 แนวนอน (พื้นที่ ~136mm หลังหักขอบ 6mm) */
+    const A5_W = 198*MM;   // ความกว้างพื้นที่พิมพ์ (210 - ขอบ 6mm สองด้าน)
+    const A5_H = 136*MM;   // ความสูงพื้นที่พิมพ์ (148 - ขอบ 6mm สองด้าน)
+    /* ยืด/ย่อเนื้อหา .a5fit ให้เต็มพอดีหน้า A5 แนวนอน ทั้งกว้างและสูง */
+    function a5Scales(fit){
+        const w = fit.scrollWidth || A5_W, h = fit.scrollHeight || A5_H;
+        const sx = Math.min(1.4, Math.max(0.5, A5_W / w));
+        const sy = Math.min(1.8, Math.max(0.4, A5_H / h));
+        return { sx, sy };
+    }
     function fitA5(scope){
         const fit = scope.querySelector('.a5fit'); if(!fit) return;
-        fit.style.transform='none';
-        const avail = 136*MM;              // ความสูงพื้นที่พิมพ์
-        const h = fit.scrollHeight;
-        const k = h>avail ? Math.max(0.4, avail/h) : 1;
-        fit.style.transform = `scale(${k})`;
+        fit.style.transform='none'; fit.style.width='100%';
+        const { sx, sy } = a5Scales(fit);
+        fit.style.transformOrigin='top left';
+        fit.style.transform = `scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
     }
     /* คืน HTML เวชระเบียนที่ฝังอัตราย่อไว้แล้ว (สำหรับ PDF ที่ไม่รัน JS) */
     function buildRecordHtmlFitted(v){
@@ -1165,10 +1172,12 @@
         const tmp=document.createElement('div');
         tmp.style.cssText='position:absolute;left:-10000px;top:0;width:210mm;padding:6mm;box-sizing:border-box';
         tmp.innerHTML=html; document.body.appendChild(tmp);
-        const fit=tmp.querySelector('.a5fit'); const h=fit?fit.scrollHeight:0; const avail=136*MM;
-        const k = h>avail ? Math.max(0.4, avail/h) : 1;
+        const fit=tmp.querySelector('.a5fit');
+        if(fit){ fit.style.width='100%'; }
+        const { sx, sy } = fit ? a5Scales(fit) : { sx:1, sy:1 };
         document.body.removeChild(tmp);
-        return k<1 ? html.replace('transform-origin:top left', 'transform:scale('+k.toFixed(3)+');transform-origin:top left') : html;
+        return html.replace('transform-origin:top left',
+            'width:100%;transform:scale('+sx.toFixed(3)+','+sy.toFixed(3)+');transform-origin:top left');
     }
     function printVisitRecord(vn){
         const v=visitByVN(vn); if(!v) return;
