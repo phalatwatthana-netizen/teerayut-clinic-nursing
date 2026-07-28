@@ -20,6 +20,7 @@ var SHEET_SIGN = 'Sign';
 var SHEET_LOGO = 'Logo';
 var SHEET_REFER = 'Referrals';
 var SHEET_TPL = 'Templates';
+var SHEET_FORMULA = 'Formulas';
 var DRIVE_FOLDER = 'ThirayutClinic_Files';
 
 var HEADERS = {
@@ -31,9 +32,10 @@ var HEADERS = {
   Sign: ['name','position','license','signUrl'],
   Logo: ['name','url'],
   Referrals: ['id','hn','patientName','date','refNo','dear','referTo','attach','purpose','history','current','lab','dx','treatment','reason','other','signer','position','license','createdAt','updatedAt'],
-  Templates: ['id','type','text','createdAt']
+  Templates: ['id','type','text','createdAt'],
+  Formulas: ['id','title','category','formula','note','createdAt','updatedAt']
 };
-var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code', Sign:'name', Logo:'name', Referrals:'id', Templates:'id' };
+var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code', Sign:'name', Logo:'name', Referrals:'id', Templates:'id', Formulas:'id' };
 /* คอลัมน์ที่ต้องเก็บเป็นข้อความ (กัน Google Sheets ตัดเลข 0 นำหน้า) */
 var TEXT_COLS = { Patients:['cid','phone','emPhone'], Users:['username','password'], Inventory:['code'], Referrals:['id','refNo'] };
 
@@ -72,6 +74,8 @@ function doPost(e) {
     if (action === 'deleteTemplate')    return json(deleteRecord(SHEET_TPL, data.id));
     if (action === 'saveSign')          return json(upsert(SHEET_SIGN, data));
     if (action === 'deleteSign')        return json(deleteRecord(SHEET_SIGN, data.name));
+    if (action === 'saveFormula')       return json(upsert(SHEET_FORMULA, data));
+    if (action === 'deleteFormula')     return json(deleteRecord(SHEET_FORMULA, data.id));
     if (action === 'saveVisitPdf')      return json(saveVisitPdf(data));
     return json({ status: 'error', message: 'unknown action: ' + action });
   } catch (err) {
@@ -130,7 +134,8 @@ function loadAll() {
     signs: readAll(SHEET_SIGN),
     logos: readAll(SHEET_LOGO),
     referrals: readAll(SHEET_REFER),
-    templates: readAll(SHEET_TPL)
+    templates: readAll(SHEET_TPL),
+    formulas: readAll(SHEET_FORMULA)
   };
 }
 
@@ -196,6 +201,7 @@ function setupSheets() {
   getSheet(SHEET_LOGO);
   getSheet(SHEET_REFER);
   getSheet(SHEET_TPL);
+  getSheet(SHEET_FORMULA);
   var users = getSheet(SHEET_USERS);
   if (users.getLastRow() < 2) {
     // username, password, name, role, active
@@ -208,7 +214,7 @@ function setupSheets() {
 
 /* ---------- ซ่อมหัวตารางทุกชีตให้ตรงลำดับ HEADERS (รันเองถ้าต้องการ) ---------- */
 function syncHeaders() {
-  ['Patients','Visits','Appointments','Users','Inventory','Sign','Logo','Referrals','Templates'].forEach(function(name){
+  ['Patients','Visits','Appointments','Users','Inventory','Sign','Logo','Referrals','Templates','Formulas'].forEach(function(name){
     var sh = getSheet(name);
     sh.getRange(1, 1, 1, HEADERS[name].length).setValues([HEADERS[name]]);
   });

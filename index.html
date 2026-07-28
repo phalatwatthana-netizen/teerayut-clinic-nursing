@@ -768,19 +768,29 @@
                 </div>
             </section>
 
-            <!-- ===== STAFF (บุคลากร / ผู้ลงชื่อ) ===== -->
+            <!-- ===== STAFF (สูตรการรักษา — ความลับ) ===== -->
             <section id="section-staff" class="app-section">
                 <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
-                    <div><h3 class="text-xl font-bold text-brand-blueDark">STAFF — บุคลากร / ผู้ลงชื่อ</h3><p class="text-sm text-gray-500">จัดการรายชื่อเจ้าหน้าที่ ตำแหน่ง เลขใบอนุญาต และลายเซ็น (ใช้ในเวชระเบียน/ใบส่งตัว)</p></div>
-                    <button onclick="openStaffForm()" class="bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center shadow-sm"><i class="ph ph-user-plus mr-2 text-lg"></i> เพิ่มบุคลากร</button>
+                    <div><h3 class="text-xl font-bold text-brand-blueDark flex items-center"><i class="ph-fill ph-lock-key text-brand-blueMain mr-2"></i> STAFF — สูตรการรักษา (ความลับ)</h3><p class="text-sm text-gray-500">เฉพาะเจ้าหน้าที่ — บันทึกสูตร/แนวทางการรักษาเป็นความลับ</p></div>
+                    <div class="flex gap-2">
+                        <button id="staffAddBtn" onclick="openFormulaForm()" class="hidden bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2.5 rounded-lg text-sm font-medium items-center shadow-sm flex"><i class="ph ph-plus mr-2 text-lg"></i> เพิ่มสูตร</button>
+                        <button id="staffLockBtn" onclick="lockStaff()" class="hidden border border-gray-300 text-gray-600 px-4 py-2.5 rounded-lg text-sm font-medium items-center hover:bg-gray-50 flex"><i class="ph ph-lock mr-2 text-lg"></i> ล็อก</button>
+                    </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead><tr class="bg-brand-bg text-gray-600 text-xs uppercase border-b border-gray-200">
-                            <th class="p-3 font-medium">ชื่อ</th><th class="p-3 font-medium">ตำแหน่ง</th><th class="p-3 font-medium">เลขใบอนุญาต</th><th class="p-3 font-medium">ลายเซ็น</th><th class="p-3 font-medium text-right">จัดการ</th>
-                        </tr></thead>
-                        <tbody id="staffTableBody" class="text-sm divide-y divide-gray-50"></tbody>
-                    </table>
+                <!-- หน้าจอล็อก -->
+                <div id="staffLock" class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 p-10 text-center max-w-md mx-auto">
+                    <i class="ph ph-lock-key text-5xl text-brand-blueMain mb-3"></i>
+                    <p class="text-gray-600 mb-4 text-sm">ส่วนนี้เป็นความลับ กรุณาใส่ PIN เพื่อเข้าถึง</p>
+                    <div class="flex justify-center gap-2">
+                        <input id="staffPin" type="password" inputmode="numeric" placeholder="PIN" class="w-40 px-3 py-2 border border-gray-300 rounded-lg text-center tracking-widest" onkeydown="if(event.key==='Enter')unlockStaff()">
+                        <button onclick="unlockStaff()" class="bg-brand-blueMain hover:bg-brand-teal text-white px-5 py-2 rounded-lg text-sm font-medium">ปลดล็อก</button>
+                    </div>
+                    <button onclick="changeStaffPin()" class="text-xs text-gray-400 mt-4 underline">เปลี่ยน PIN</button>
+                </div>
+                <!-- เนื้อหา (หลังปลดล็อก) -->
+                <div id="staffContent" class="hidden">
+                    <div class="relative mb-3 max-w-md"><i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i><input id="formulaSearch" oninput="renderFormulas()" placeholder="ค้นหาสูตร (ชื่อ/หมวด/รายละเอียด)" class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm"></div>
+                    <div id="formulaList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
                 </div>
             </section>
 
@@ -892,7 +902,7 @@
     const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbykhJnniKpuPO1HzIOMn_HBViixcAwWH961Kw1HerVgSTz9vIgrpQksCbuuCKHwQ-6k/exec';
 
     /* ---------- State ---------- */
-    const State = { patients:[], visits:[], appointments:[], inventory:[], signs:[], logos:[], referrals:[], templates:[], current:{} };
+    const State = { patients:[], visits:[], appointments:[], inventory:[], signs:[], logos:[], referrals:[], templates:[], formulas:[], current:{} };
 
     /* ---------- API / Store ---------- */
     const Store = {
@@ -919,7 +929,7 @@
             if(Store.online()){
                 const r = await fetch(Store.url()+'?action=load&t='+Date.now());
                 const d = await r.json(); if(d.status==='error') throw new Error(d.message);
-                return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[], inventory:d.inventory||[], signs:d.signs||[], logos:d.logos||[], referrals:d.referrals||[], templates:d.templates||[] };
+                return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[], inventory:d.inventory||[], signs:d.signs||[], logos:d.logos||[], referrals:d.referrals||[], templates:d.templates||[], formulas:d.formulas||[] };
             }
             return {
                 patients: JSON.parse(localStorage.getItem('clinic_patients')||'[]'),
@@ -929,7 +939,8 @@
                 signs: JSON.parse(localStorage.getItem('clinic_signs')||'[]'),
                 logos: JSON.parse(localStorage.getItem('clinic_logos')||'[]'),
                 referrals: JSON.parse(localStorage.getItem('clinic_referrals')||'[]'),
-                templates: JSON.parse(localStorage.getItem('clinic_templates')||'[]')
+                templates: JSON.parse(localStorage.getItem('clinic_templates')||'[]'),
+                formulas: JSON.parse(localStorage.getItem('clinic_formulas')||'[]')
             };
         },
         localSave(){
@@ -941,6 +952,7 @@
             localStorage.setItem('clinic_logos', JSON.stringify(State.logos));
             localStorage.setItem('clinic_referrals', JSON.stringify(State.referrals));
             localStorage.setItem('clinic_templates', JSON.stringify(State.templates));
+            localStorage.setItem('clinic_formulas', JSON.stringify(State.formulas));
         },
         async savePatient(p){ if(Store.online()) return Store.post('savePatient', p); Store.localSave(); return { status:'success', hn:p.hn }; },
         async saveVisit(v){ if(Store.online()) return Store.post('saveVisit', v); Store.localSave(); return { status:'success', vn:v.vn }; },
@@ -955,7 +967,9 @@
         async saveTemplate(t){ if(Store.online()) return Store.post('saveTemplate', t); Store.localSave(); return { status:'success', id:t.id }; },
         async deleteTemplate(id){ if(Store.online()) return Store.post('deleteTemplate', {id}); Store.localSave(); return { status:'success' }; },
         async saveSign(s){ if(Store.online()) return Store.post('saveSign', s); Store.localSave(); return { status:'success', name:s.name }; },
-        async deleteSign(name){ if(Store.online()) return Store.post('deleteSign', {name}); Store.localSave(); return { status:'success' }; }
+        async deleteSign(name){ if(Store.online()) return Store.post('deleteSign', {name}); Store.localSave(); return { status:'success' }; },
+        async saveFormula(f){ if(Store.online()) return Store.post('saveFormula', f); Store.localSave(); return { status:'success', id:f.id }; },
+        async deleteFormula(id){ if(Store.online()) return Store.post('deleteFormula', {id}); Store.localSave(); return { status:'success' }; }
     };
 
     /* ---------- Utils ---------- */
@@ -998,6 +1012,20 @@
         setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(100%)'; t.style.transition='all .3s ease-in'; setTimeout(()=>{ if(c.contains(t)) c.removeChild(t); },300); }, 3000);
     }
 
+    /* ---------- Prompt Dialog (กล่องกรอกข้อความกลางจอ) ---------- */
+    function promptDialog(message, opts={}){
+        return new Promise(resolve=>{
+            openModal(opts.title||'กรอกข้อมูล', `
+                <div class="text-sm">
+                    <p class="text-gray-600 mb-3">${esc(message)}</p>
+                    <input id="__promptInput" type="${opts.password?'password':'text'}" ${opts.password?'inputmode="numeric"':''} class="w-full px-3 py-2 border border-gray-300 rounded-lg text-center tracking-widest" onkeydown="if(event.key==='Enter')document.getElementById('__promptOk').click()">
+                    <div class="flex justify-end gap-2 pt-3"><button type="button" id="__promptCancel" class="px-4 py-2 border border-gray-300 rounded-lg">ยกเลิก</button><button type="button" id="__promptOk" class="px-5 py-2 bg-brand-blueMain text-white rounded-lg font-medium">ตกลง</button></div>
+                </div>`);
+            const inp=$('#__promptInput'); setTimeout(()=>inp.focus(),50);
+            $('#__promptOk').onclick=()=>{ const v=inp.value; closeModal(); resolve(v); };
+            $('#__promptCancel').onclick=()=>{ closeModal(); resolve(null); };
+        });
+    }
     /* ---------- Modal ---------- */
     function openModal(title, html){ $('#modalTitle').textContent=title; $('#modalBody').innerHTML=html; $('#modal').classList.remove('hidden'); $('#modal').classList.add('flex'); }
     function closeModal(){ $('#modal').classList.add('hidden'); $('#modal').classList.remove('flex'); }
@@ -1063,7 +1091,7 @@
     function dashDateToday(){ $('#dashDate').value = todayISO(); renderDashboard(); }
     async function reloadData(btn){
         const orig=btn?btn.innerHTML:''; if(btn){ btn.innerHTML='<i class="ph ph-spinner animate-spin"></i>'; btn.disabled=true; }
-        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; State.referrals=d.referrals||[]; State.templates=d.templates||[]; normalizePhones(); Store.localSave(); renderDashboard(); updateBadges(); showToast('โหลดข้อมูลล่าสุดแล้ว'); }
+        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; State.referrals=d.referrals||[]; State.templates=d.templates||[]; State.formulas=d.formulas||[]; normalizePhones(); Store.localSave(); renderDashboard(); updateBadges(); showToast('โหลดข้อมูลล่าสุดแล้ว'); }
         catch(e){ showToast('โหลดไม่สำเร็จ: '+e.message,'error'); }
         finally{ if(btn){ btn.innerHTML=orig; btn.disabled=false; } }
     }
@@ -2926,51 +2954,74 @@
         printReferDoc(referDataFromRecord(r));
     }
 
-    /* ============================================================ STAFF (บุคลากร/ผู้ลงชื่อ = ชีต Sign) */
+    /* ============================================================ STAFF (สูตรการรักษา — ความลับ, ล็อกด้วย PIN) */
+    let _staffUnlocked = false;
+    const staffPin = () => localStorage.getItem('clinic_staff_pin') || '0000';
     function renderStaff(){
-        const list=State.signs||[];
-        $('#staffTableBody').innerHTML = list.length ? list.map(s=>`
-            <tr class="hover:bg-brand-bg transition-colors">
-                <td class="p-3 font-medium text-gray-800">${esc(s.name)}</td>
-                <td class="p-3 text-gray-600">${esc(s.position||'-')}</td>
-                <td class="p-3 text-gray-600">${esc(s.license||'-')}</td>
-                <td class="p-3">${s.signUrl?`<img src="${esc(driveImg(s.signUrl))}" style="height:30px;width:auto;object-fit:contain" onerror="this.outerHTML='<span class=&quot;text-red-400 text-xs&quot;>รูปโหลดไม่ได้</span>'">`:'<span class="text-gray-300">—</span>'}</td>
-                <td class="p-3 text-right whitespace-nowrap">
-                    <button onclick="openStaffForm('${esc(s.name)}')" class="p-1.5 text-gray-500 hover:text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="แก้ไข"><i class="ph ph-pencil-simple text-lg"></i></button>
-                    <button onclick="deleteStaff('${esc(s.name)}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="ลบ"><i class="ph ph-trash text-lg"></i></button>
-                </td>
-            </tr>`).join('') : `<tr><td colspan="5" class="p-8 text-center text-gray-400"><i class="ph ph-identification-badge text-3xl block mb-2"></i>ยังไม่มีบุคลากร — กด "เพิ่มบุคลากร"</td></tr>`;
+        if(_staffUnlocked){ showStaffContent(); }
+        else { $('#staffLock').classList.remove('hidden'); $('#staffContent').classList.add('hidden'); $('#staffAddBtn').classList.add('hidden'); $('#staffLockBtn').classList.add('hidden'); const pin=$('#staffPin'); if(pin){ pin.value=''; setTimeout(()=>pin.focus(),50); } }
     }
-    function openStaffForm(name){
-        const s = name ? ((State.signs||[]).find(x=>x.name===name)||{}) : {};
-        openModal(name?'แก้ไขบุคลากร':'เพิ่มบุคลากร', `
-            <form onsubmit="saveStaff(event)" class="space-y-3 text-sm">
-                <input type="hidden" id="st_orig" value="${esc(s.name||'')}">
-                <div><label class="block text-xs text-gray-600 mb-1">ชื่อ <span class="text-red-500">*</span></label><input id="st_name" required value="${esc(s.name||'')}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
-                <div><label class="block text-xs text-gray-600 mb-1">ตำแหน่ง</label><input id="st_position" value="${esc(s.position||'')}" placeholder="เช่น พยาบาลวิชาชีพ" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
-                <div><label class="block text-xs text-gray-600 mb-1">เลขที่ใบอนุญาตประกอบวิชาชีพ</label><input id="st_license" value="${esc(s.license||'')}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
-                <div><label class="block text-xs text-gray-600 mb-1">ลิงก์รูปลายเซ็น (Google Drive)</label><input id="st_signurl" value="${esc(s.signUrl||'')}" placeholder="วางลิงก์แชร์ไฟล์รูปลายเซ็น" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
-                <p class="text-[11px] text-gray-400">* ตั้งสิทธิ์ไฟล์รูปเป็น "ทุกคนที่มีลิงก์ · ผู้อ่าน" เพื่อให้ลายเซ็นแสดงได้</p>
+    function showStaffContent(){
+        $('#staffLock').classList.add('hidden'); $('#staffContent').classList.remove('hidden');
+        $('#staffAddBtn').classList.remove('hidden'); $('#staffLockBtn').classList.remove('hidden');
+        renderFormulas();
+    }
+    function unlockStaff(){
+        if($('#staffPin').value === staffPin()){ _staffUnlocked=true; showStaffContent(); }
+        else { showToast('PIN ไม่ถูกต้อง','error'); $('#staffPin').value=''; }
+    }
+    function lockStaff(){ _staffUnlocked=false; renderStaff(); }
+    async function changeStaffPin(){
+        const oldp = await promptDialog('ใส่ PIN เดิม (ค่าเริ่มต้น 0000)', {title:'เปลี่ยน PIN', password:true});
+        if(oldp===null) return;
+        if(oldp !== staffPin()){ showToast('PIN เดิมไม่ถูกต้อง','error'); return; }
+        const np = await promptDialog('ตั้ง PIN ใหม่ (ตัวเลข 4 หลักขึ้นไป)', {title:'ตั้ง PIN ใหม่', password:true});
+        if(np===null) return;
+        if(!/^\d{4,}$/.test(np)){ showToast('PIN ต้องเป็นตัวเลขอย่างน้อย 4 หลัก','error'); return; }
+        localStorage.setItem('clinic_staff_pin', np); showToast('เปลี่ยน PIN แล้ว');
+    }
+    function renderFormulas(){
+        const q=($('#formulaSearch')?$('#formulaSearch').value:'').trim().toLowerCase();
+        let list=[...(State.formulas||[])].sort((a,b)=>String(a.title||'').localeCompare(String(b.title||'')));
+        if(q) list=list.filter(f=>[f.title,f.category,f.formula,f.note].some(x=>String(x||'').toLowerCase().includes(q)));
+        $('#formulaList').innerHTML = list.length ? list.map(f=>`
+            <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 p-4">
+                <div class="flex justify-between items-start gap-2">
+                    <div><div class="font-semibold text-brand-blueDark">${esc(f.title||'-')}</div>${f.category?`<span class="text-xs bg-brand-bluePale/30 text-brand-blueDark px-2 py-0.5 rounded">${esc(f.category)}</span>`:''}</div>
+                    <div class="flex gap-1 shrink-0">
+                        <button onclick="openFormulaForm('${esc(f.id)}')" class="p-1.5 text-gray-500 hover:text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="แก้ไข"><i class="ph ph-pencil-simple"></i></button>
+                        <button onclick="deleteFormula('${esc(f.id)}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="ลบ"><i class="ph ph-trash"></i></button>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-700 mt-2 whitespace-pre-wrap">${esc(f.formula||'')}</div>
+                ${f.note?`<div class="text-xs text-gray-400 mt-2 whitespace-pre-wrap">หมายเหตุ: ${esc(f.note)}</div>`:''}
+            </div>`).join('') : `<div class="col-span-full p-8 text-center text-gray-400"><i class="ph ph-flask text-3xl block mb-2"></i>${q?'ไม่พบสูตรที่ค้นหา':'ยังไม่มีสูตรการรักษา — กด "เพิ่มสูตร"'}</div>`;
+    }
+    function openFormulaForm(id){
+        const f = id ? ((State.formulas||[]).find(x=>String(x.id)===String(id))||{}) : {};
+        openModal(id?'แก้ไขสูตรการรักษา':'เพิ่มสูตรการรักษา', `
+            <form onsubmit="saveFormula(event)" class="space-y-3 text-sm">
+                <input type="hidden" id="fm_id" value="${esc(f.id||'')}">
+                <div><label class="block text-xs text-gray-600 mb-1">ชื่อ/โรค/อาการ <span class="text-red-500">*</span></label><input id="fm_title" required value="${esc(f.title||'')}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <div><label class="block text-xs text-gray-600 mb-1">หมวด</label><input id="fm_category" value="${esc(f.category||'')}" placeholder="เช่น ทางเดินหายใจ, ผิวหนัง" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <div><label class="block text-xs text-gray-600 mb-1">สูตร/แนวทางการรักษา <span class="text-red-500">*</span></label><textarea id="fm_formula" required rows="5" placeholder="ยา/ขนาด/วิธีใช้/ขั้นตอน..." class="w-full px-3 py-2 border border-gray-200 rounded-lg">${esc(f.formula||'')}</textarea></div>
+                <div><label class="block text-xs text-gray-600 mb-1">หมายเหตุ</label><textarea id="fm_note" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg">${esc(f.note||'')}</textarea></div>
                 <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ยกเลิก</button><button type="submit" class="px-5 py-2 bg-brand-greenMain text-white rounded-lg font-medium">บันทึก</button></div>
             </form>`);
     }
-    async function saveStaff(e){
+    async function saveFormula(e){
         e.preventDefault();
-        const orig=$('#st_orig').value;
-        const name=$('#st_name').value.trim();
-        if(!name){ showToast('กรอกชื่อ','error'); return; }
-        if(!orig && (State.signs||[]).some(s=>s.name===name)){ showToast('มีชื่อนี้อยู่แล้ว','error'); return; }
-        const rec={ name, position:$('#st_position').value.trim(), license:$('#st_license').value.trim(), signUrl:$('#st_signurl').value.trim() };
-        try{
-            if(orig && orig!==name){ await Store.deleteSign(orig); State.signs=State.signs.filter(s=>s.name!==orig); }
-            const ex=(State.signs||[]).find(s=>s.name===name);
-            if(ex) Object.assign(ex,rec); else State.signs.push(rec);
-            await Store.saveSign(rec); Store.localSave(); closeModal(); showToast('บันทึกบุคลากรแล้ว'); renderStaff();
-        }catch(err){ showToast('ไม่สำเร็จ: '+err.message,'error'); }
+        const id=$('#fm_id').value;
+        const existing = id ? (State.formulas||[]).find(x=>String(x.id)===String(id)) : null;
+        const rec = existing || { id:'F'+Date.now(), createdAt:nowISO() };
+        Object.assign(rec, { title:$('#fm_title').value.trim(), category:$('#fm_category').value.trim(), formula:$('#fm_formula').value.trim(), note:$('#fm_note').value.trim(), updatedAt:nowISO() });
+        if(!existing) State.formulas.push(rec);
+        try{ await Store.saveFormula(rec); Store.localSave(); closeModal(); showToast('บันทึกสูตรแล้ว'); renderFormulas(); }
+        catch(err){ showToast('ไม่สำเร็จ: '+err.message,'error'); }
     }
-    async function deleteStaff(name){
-        if(!await confirmDialog('ลบบุคลากร "'+name+'" ออกจากระบบ?', {title:'ลบบุคลากร', okText:'ลบ', danger:true, icon:'ph-trash'})) return;
-        try{ await Store.deleteSign(name); State.signs=State.signs.filter(s=>s.name!==name); Store.localSave(); showToast('ลบบุคลากรแล้ว'); renderStaff(); }
+    async function deleteFormula(id){
+        if(!await confirmDialog('ลบสูตรการรักษานี้?', {title:'ลบสูตร', okText:'ลบ', danger:true, icon:'ph-trash'})) return;
+        try{ await Store.deleteFormula(id); State.formulas=State.formulas.filter(f=>String(f.id)!==String(id)); Store.localSave(); showToast('ลบสูตรแล้ว'); renderFormulas(); }
         catch(e){ showToast('ลบไม่สำเร็จ: '+e.message,'error'); }
     }
 
@@ -3080,7 +3131,7 @@
     function updateDate(){ const el=$('#currentDateDisplay'); if(el) el.innerText=new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }
     async function boot(){
         updateConnBox();
-        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; State.referrals=d.referrals||[]; State.templates=d.templates||[]; normalizePhones(); Store.localSave(); }
+        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; State.referrals=d.referrals||[]; State.templates=d.templates||[]; State.formulas=d.formulas||[]; normalizePhones(); Store.localSave(); }
         catch(e){ showToast('โหลดข้อมูลไม่สำเร็จ: '+e.message,'error'); }
         const cur = document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard';
         renderView(cur); updateBadges();
