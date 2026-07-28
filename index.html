@@ -562,7 +562,7 @@
                         <form id="referForm" onsubmit="saveReferral(event)" class="space-y-2.5 text-sm">
                             <input type="hidden" id="ref_id">
                             <div><label class="block text-xs font-medium text-gray-600 mb-1">ผู้รับบริการ <span class="text-red-500">*</span></label>
-                                <select id="ref_patient" required onchange="referPickPatient()" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-brand-bg/50"></select></div>
+                                <input id="ref_patient" list="refPatientList" onchange="referPickPatient()" autocomplete="off" placeholder="พิมพ์ชื่อ นามสกุล หรือ HN" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-brand-bg/50"><datalist id="refPatientList"></datalist></div>
                             <div><label class="block text-xs font-medium text-gray-600 mb-1">ประวัติวันที่มารับบริการ</label>
                                 <select id="ref_visit" onchange="referPickVisit()" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-brand-bg/50"></select></div>
                             <div class="grid grid-cols-2 gap-2">
@@ -570,7 +570,7 @@
                                 <div><label class="block text-xs text-gray-600 mb-1">วันที่</label><input id="ref_date" type="date" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
                             </div>
                             <div><label class="block text-xs text-gray-600 mb-1">เรียน</label><input id="ref_dear" oninput="renderReferPreview()" placeholder="นายแพทย์ผู้เกี่ยวข้อง" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
-                            <div><label class="block text-xs text-gray-600 mb-1">ส่งต่อไปยัง <span class="text-red-500">*</span></label><input id="ref_to" required oninput="renderReferPreview()" placeholder="เช่น รพ.สวรรคโลก / รพ.ศรีสังวรสุโขทัย" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                            <div><label class="block text-xs text-gray-600 mb-1">ส่งต่อไปยัง</label><input id="ref_to" oninput="renderReferPreview()" placeholder="เช่น รพ.สวรรคโลก / รพ.ศรีสังวรสุโขทัย" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
                             <div><label class="block text-xs text-gray-600 mb-1">สิ่งที่แนบมาด้วย</label><input id="ref_attach" oninput="renderReferPreview()" placeholder="เช่น ผลเลือด, ฟิล์ม x-ray, ใบยินยอม" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
                             <div class="flex items-center gap-4 py-1"><span class="text-xs text-gray-600">มาเพื่อ</span>
                                 <label class="flex items-center gap-1 text-sm"><input type="checkbox" id="ref_p_treat" onchange="renderReferPreview()" class="rounded"> รับการรักษาต่อ</label>
@@ -584,7 +584,7 @@
                             <div><label class="block text-xs text-gray-600 mb-1">6. สาเหตุที่ส่ง <span class="text-red-500">*</span></label><textarea id="ref_reason" required rows="2" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea></div>
                             <div><label class="block text-xs text-gray-600 mb-1">7. รายละเอียดอื่นๆ</label><textarea id="ref_other" rows="2" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea></div>
                             <div class="grid grid-cols-2 gap-2">
-                                <div><label class="block text-xs text-gray-600 mb-1">ผู้ส่งต่อ (ลงชื่อ)</label><select id="ref_signer" onchange="referPickSigner()" class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-brand-bg/50"></select></div>
+                                <div><label class="block text-xs text-gray-600 mb-1">ผู้ส่งต่อ</label><select id="ref_signer" onchange="referPickSigner()" class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-brand-bg/50"></select></div>
                                 <div><label class="block text-xs text-gray-600 mb-1">เลขที่ใบอนุญาตฯ</label><input id="ref_license" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
                             </div>
                         </form>
@@ -1768,7 +1768,7 @@
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
         finally{ btn.innerHTML=orig; btn.disabled=false; }
     }
-    function openReferFromExam(){ const v=visitByVN(State.current.vn); if(!v) return; navTo('referral'); setTimeout(()=>{ newReferral(); $('#ref_patient').value=v.hn; referPickPatient(); if(!$('#ref_reason').value) $('#ref_reason').value=v.dx||v.cc||''; renderReferPreview(); },60); }
+    function openReferFromExam(){ const v=visitByVN(State.current.vn); if(!v) return; navTo('referral'); setTimeout(()=>{ newReferral(); $('#ref_patient').value=`${v.hn} — ${pname(patientByHN(v.hn))}`; referPickPatient(); if(!$('#ref_reason').value) $('#ref_reason').value=v.dx||v.cc||''; renderReferPreview(); },60); }
 
     /* ============================================================ PHARMACY */
     function renderPharmacyQueue(){
@@ -2326,9 +2326,7 @@
 
     /* ============================================================ REFERRAL */
     function renderReferral(){
-        const cur=$('#ref_patient').value;
-        $('#ref_patient').innerHTML = `<option value="">-- เลือกผู้รับบริการ --</option>` + State.patients.map(p=>`<option value="${esc(p.hn)}">${esc(p.hn)} | ${esc(pname(p))}</option>`).join('');
-        if(cur) $('#ref_patient').value=cur;
+        $('#refPatientList').innerHTML = State.patients.map(p=>`<option value="${esc(p.hn)} — ${esc(pname(p))}"></option>`).join('');
         if(!$('#ref_dear').value) $('#ref_dear').value='นายแพทย์ผู้เกี่ยวข้อง';
         if(!$('#ref_date').value) $('#ref_date').value=todayISO();
         // ดรอปดาวน์ผู้ส่งต่อจากชีต Sign (ชื่อ + ลายเซ็น)
@@ -2382,9 +2380,17 @@
         if(rec && rec.license) $('#ref_license').value=rec.license;
         renderReferPreview();
     }
+    /* แปลงค่าที่พิมพ์/เลือกในช่องผู้รับบริการ เป็น HN */
+    function refSelectedHN(){
+        const v=$('#ref_patient').value.trim(); if(!v) return '';
+        const first=v.split(/[\s—|]+/)[0];
+        if(patientByHN(first)) return first;
+        const p=State.patients.find(x=>pname(x)===v || `${x.hn} — ${pname(x)}`===v || String(x.hn)===v);
+        return p?p.hn:'';
+    }
     /* เลือกผู้ป่วย → แสดงเฉพาะวันที่ที่ผู้ป่วยมารับบริการจริง แล้วดึงข้อมูลจากวันล่าสุด */
     function referPickPatient(){
-        const hn=$('#ref_patient').value; const vsel=$('#ref_visit');
+        const hn=refSelectedHN(); const vsel=$('#ref_visit');
         if(!hn){ vsel.innerHTML=''; renderReferPreview(); return; }
         const vs=referLoadVisitOptions(hn);
         if(vs.length){ vsel.value=vs[0].vn; referFillFromVisit(vs[0].vn); }
@@ -2425,7 +2431,7 @@
     /* โหลดใบส่งตัวเดิมจากประวัติมาแก้ไข */
     function editReferral(id){
         const r=(State.referrals||[]).find(x=>String(x.id)===String(id)); if(!r) return;
-        $('#ref_id').value=r.id; $('#ref_patient').value=r.hn||''; if(r.hn) referLoadVisitOptions(r.hn);
+        $('#ref_id').value=r.id; $('#ref_patient').value=r.hn?`${r.hn} — ${r.patientName||pname(patientByHN(r.hn))}`:''; if(r.hn) referLoadVisitOptions(r.hn);
         $('#ref_no').value=r.refNo||''; $('#ref_date').value=dateKey(r.date)||todayISO();
         $('#ref_dear').value=r.dear||'นายแพทย์ผู้เกี่ยวข้อง'; $('#ref_to').value=r.referTo||''; $('#ref_attach').value=r.attach||'';
         $('#ref_p_treat').checked=/รักษาต่อ/.test(r.purpose||''); $('#ref_p_dx').checked=/วินิจฉัย/.test(r.purpose||'');
@@ -2446,7 +2452,7 @@
     }
     /* อ่านค่าจากฟอร์ม + ข้อมูลผู้ป่วย เป็น object สำหรับสร้างใบ */
     function referGather(){
-        const hn=$('#ref_patient').value; const p=patientByHN(hn)||{};
+        const hn=refSelectedHN(); const p=patientByHN(hn)||{};
         return { hn, name:pname(p), gender:p.gender||'', age:(p.birthDate?age(p.birthDate):''), phone:p.phone||'', allergy:p.allergy||'ไม่มี',
             refNo:$('#ref_no').value, date:$('#ref_date').value, dear:$('#ref_dear').value, to:$('#ref_to').value, attach:$('#ref_attach').value,
             pTreat:$('#ref_p_treat').checked, pDx:$('#ref_p_dx').checked,
@@ -2529,7 +2535,7 @@
     }
     async function saveReferral(event){
         event.preventDefault();
-        const hn=$('#ref_patient').value; const p=patientByHN(hn); if(!p){ showToast('เลือกผู้รับบริการ','error'); return; }
+        const hn=refSelectedHN(); const p=patientByHN(hn); if(!p){ showToast('เลือกผู้รับบริการ','error'); return; }
         if(!$('#ref_no').value) $('#ref_no').value=nextRefNo();
         const d=referGather();
         const id=$('#ref_id').value;
