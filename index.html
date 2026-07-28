@@ -2486,7 +2486,7 @@
     }
     function renderReferPreview(){
         const host=$('#referPreviewSheet'); if(!host) return;
-        host.innerHTML=`<div class="refsheet" style="width:210mm;min-height:297mm;background:#fff;padding:12mm;box-sizing:border-box">${buildReferralHtml(referGather())}</div>`;
+        host.innerHTML=`<div class="refsheet" style="width:210mm;min-height:297mm;background:#fff;padding:4mm 12mm 12mm;box-sizing:border-box">${buildReferralHtml(referGather())}</div>`;
         fitReferPreview();
     }
     function fitReferPreview(){
@@ -2498,7 +2498,7 @@
         wrap.style.height=(sheet.offsetHeight*k)+'px';
     }
     function printReferDoc(d){
-        printHTML(`<div style="width:210mm;min-height:297mm;padding:12mm;box-sizing:border-box"><style>@page{size:A4 portrait;margin:0;}</style>${buildReferralHtml(d)}</div>`);
+        printHTML(`<div style="width:210mm;min-height:297mm;padding:4mm 12mm 12mm;box-sizing:border-box"><style>@page{size:A4 portrait;margin:0;}</style>${buildReferralHtml(d)}</div>`);
     }
     function printReferPreview(){
         if(!$('#ref_patient').value){ showToast('เลือกผู้รับบริการก่อน','error'); return; }
