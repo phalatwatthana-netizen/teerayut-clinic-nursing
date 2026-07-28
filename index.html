@@ -1210,7 +1210,7 @@
         const meds = (v.meds||[]).map(m=>esc(m.name)+(m.dose?(' '+esc(m.dose)):'')+(m.sig?(' '+esc(m.sig)):'')+(m.qty?(' x'+m.qty):'')).join(', ');
         return `<div class="a5fit" style="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif;color:#111;font-size:15px;line-height:1.7;width:100%;box-sizing:border-box;transform-origin:top left">
             <style>@page{size:A5 landscape;margin:6mm;} *{box-sizing:border-box;}</style>
-            <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:6px">
+            <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px">
                 <div style="flex:1;border:2px solid ${NAVY};border-radius:14px;text-align:center;padding:6px 10px">
                     <div style="font-size:21px;font-weight:700;color:${NAVY};line-height:1.2">${CLINIC.name}</div>
                     <div style="font-size:15px;font-weight:600;color:${NAVY}">${CLINIC.address}</div>
@@ -1239,7 +1239,16 @@
                 <div><b style="color:${NAVY}">Rx :</b> ${fill(meds,600)}</div>
                 <div><b style="color:${NAVY}">Treatment :</b> ${fill(v.treatment,540)}</div>
                 <div><b style="color:${NAVY}">Follow Up :</b> ${fill(v.followUpDate?(fmtDateTH(v.followUpDate)+' '+(v.followUpNote||'')):'',520)}</div>
-                <div>${(()=>{ const u=Auth.get(); const nm=v.signer||(u?u.name:''); const rec=nm?referSignRec(nm):null; const sImg=rec?driveImg(rec.signUrl):''; return sImg?`<span style="display:inline-flex;align-items:flex-end;gap:6px"><b style="color:${NAVY}">Signature :</b> <img src="${esc(sImg)}" style="height:34px;width:auto;object-fit:contain" onerror="this.style.display='none'"> <span style="border-bottom:1px dotted #333;min-width:200px;text-align:center;padding-bottom:2px">${esc(nm||'')}</span></span>`:`<b style="color:${NAVY}">Signature :</b> ${fill('',540)}`; })()}</div>
+                <div>${(()=>{
+                    const u=Auth.get();
+                    const liveEl=document.getElementById('triage_signer');
+                    const live=(State.current&&State.current.vn===v.vn&&liveEl&&liveEl.value)?liveEl.value:'';
+                    const nm=live||v.signer||(u?u.name:'');
+                    const norm=s=>String(s||'').replace(/\s+/g,'').trim();
+                    const rec=nm?((State.signs||[]).find(s=>s.name===nm)||(State.signs||[]).find(s=>norm(s.name)===norm(nm))):null;
+                    const sImg=rec?driveImg(rec.signUrl):'';
+                    return sImg?`<span style="display:inline-flex;align-items:flex-end;gap:6px"><b style="color:${NAVY}">Signature :</b> <img src="${esc(sImg)}" style="height:34px;width:auto;object-fit:contain" onerror="this.style.display='none'"> <span style="border-bottom:1px dotted #333;min-width:200px;text-align:center;padding-bottom:2px">${esc(nm||'')}</span></span>`:`<b style="color:${NAVY}">Signature :</b> ${fill('',540)}`;
+                })()}</div>
             </div>
         </div>`;
     }
