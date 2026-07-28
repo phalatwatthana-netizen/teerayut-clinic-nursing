@@ -69,7 +69,7 @@
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; }
-            #print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
             .no-print { display: none !important; }
         }
     </style>
@@ -2789,7 +2789,7 @@
     }
     /* พิมพ์โหมดหลายหน้า: เนื้อหายาวไหลลงหน้าถัดไปได้ หัวกระดาษซ้ำทุกหน้า */
     function printReferMulti(d){
-        printHTML(`<div style="width:186mm;margin:0 auto"><style>@page{size:A4 portrait;margin:12mm;}</style>${buildReferralHtml(d,{paged:true})}</div>`);
+        printHTML(`<div style="padding:10mm 12mm"><style>@page{size:A4 portrait;margin:0;}</style>${buildReferralHtml(d,{paged:true})}</div>`);
     }
     function printReferMultiPreview(){
         if(!refSelectedHN()){ showToast('เลือกผู้รับบริการก่อน','error'); return; }
