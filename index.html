@@ -780,12 +780,12 @@
                 <!-- หน้าจอล็อก -->
                 <div id="staffLock" class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 p-10 text-center max-w-md mx-auto">
                     <i class="ph ph-lock-key text-5xl text-brand-blueMain mb-3"></i>
-                    <p class="text-gray-600 mb-4 text-sm">ส่วนนี้เป็นความลับ กรุณาใส่ PIN เพื่อเข้าถึง</p>
+                    <p class="text-gray-600 mb-1 text-sm">ส่วนนี้เป็นความลับ</p>
+                    <p class="text-gray-500 mb-4 text-xs">ยืนยันด้วยรหัสผ่านบัญชีของคุณ (<span id="staffUser" class="font-medium"></span>)</p>
                     <div class="flex justify-center gap-2">
-                        <input id="staffPin" type="password" inputmode="numeric" placeholder="PIN" class="w-40 px-3 py-2 border border-gray-300 rounded-lg text-center tracking-widest" onkeydown="if(event.key==='Enter')unlockStaff()">
-                        <button onclick="unlockStaff()" class="bg-brand-blueMain hover:bg-brand-teal text-white px-5 py-2 rounded-lg text-sm font-medium">ปลดล็อก</button>
+                        <input id="staffPin" type="password" placeholder="รหัสผ่าน" autocomplete="current-password" class="w-48 px-3 py-2 border border-gray-300 rounded-lg text-center" onkeydown="if(event.key==='Enter')unlockStaff()">
+                        <button id="staffUnlockBtn" onclick="unlockStaff()" class="bg-brand-blueMain hover:bg-brand-teal text-white px-5 py-2 rounded-lg text-sm font-medium">ปลดล็อก</button>
                     </div>
-                    <button onclick="changeStaffPin()" class="text-xs text-gray-400 mt-4 underline">เปลี่ยน PIN</button>
                 </div>
                 <!-- เนื้อหา (หลังปลดล็อก) -->
                 <div id="staffContent" class="hidden">
@@ -2956,30 +2956,32 @@
 
     /* ============================================================ STAFF (สูตรการรักษา — ความลับ, ล็อกด้วย PIN) */
     let _staffUnlocked = false;
-    const staffPin = () => localStorage.getItem('clinic_staff_pin') || '0000';
     function renderStaff(){
         if(_staffUnlocked){ showStaffContent(); }
-        else { $('#staffLock').classList.remove('hidden'); $('#staffContent').classList.add('hidden'); $('#staffAddBtn').classList.add('hidden'); $('#staffLockBtn').classList.add('hidden'); const pin=$('#staffPin'); if(pin){ pin.value=''; setTimeout(()=>pin.focus(),50); } }
+        else {
+            $('#staffLock').classList.remove('hidden'); $('#staffContent').classList.add('hidden');
+            $('#staffAddBtn').classList.add('hidden'); $('#staffLockBtn').classList.add('hidden');
+            const u=Auth.get(); const su=$('#staffUser'); if(su) su.textContent=(u&&(u.name||u.username))||'-';
+            const pin=$('#staffPin'); if(pin){ pin.value=''; setTimeout(()=>pin.focus(),50); }
+        }
     }
     function showStaffContent(){
         $('#staffLock').classList.add('hidden'); $('#staffContent').classList.remove('hidden');
         $('#staffAddBtn').classList.remove('hidden'); $('#staffLockBtn').classList.remove('hidden');
         renderFormulas();
     }
-    function unlockStaff(){
-        if($('#staffPin').value === staffPin()){ _staffUnlocked=true; showStaffContent(); }
-        else { showToast('PIN ไม่ถูกต้อง','error'); $('#staffPin').value=''; }
+    /* ปลดล็อกด้วยรหัสผ่านบัญชีจากชีต Users (ยืนยันตัวตนผู้ใช้ปัจจุบัน) */
+    async function unlockStaff(){
+        const pass=$('#staffPin').value; if(!pass){ showToast('กรอกรหัสผ่าน','error'); return; }
+        const u=Auth.get(); if(!u){ showToast('กรุณาเข้าสู่ระบบก่อน','error'); return; }
+        const btn=$('#staffUnlockBtn'), orig=btn.innerHTML; btn.innerHTML='<i class="ph ph-spinner animate-spin"></i>'; btn.disabled=true;
+        try{
+            await Auth.login(u.username, pass);   // ตรวจกับชีต Users (throws ถ้าผิด)
+            _staffUnlocked=true; showStaffContent();
+        }catch(e){ showToast('รหัสผ่านไม่ถูกต้อง','error'); $('#staffPin').value=''; $('#staffPin').focus(); }
+        finally{ btn.innerHTML=orig; btn.disabled=false; }
     }
     function lockStaff(){ _staffUnlocked=false; renderStaff(); }
-    async function changeStaffPin(){
-        const oldp = await promptDialog('ใส่ PIN เดิม (ค่าเริ่มต้น 0000)', {title:'เปลี่ยน PIN', password:true});
-        if(oldp===null) return;
-        if(oldp !== staffPin()){ showToast('PIN เดิมไม่ถูกต้อง','error'); return; }
-        const np = await promptDialog('ตั้ง PIN ใหม่ (ตัวเลข 4 หลักขึ้นไป)', {title:'ตั้ง PIN ใหม่', password:true});
-        if(np===null) return;
-        if(!/^\d{4,}$/.test(np)){ showToast('PIN ต้องเป็นตัวเลขอย่างน้อย 4 หลัก','error'); return; }
-        localStorage.setItem('clinic_staff_pin', np); showToast('เปลี่ยน PIN แล้ว');
-    }
     function renderFormulas(){
         const q=($('#formulaSearch')?$('#formulaSearch').value:'').trim().toLowerCase();
         let list=[...(State.formulas||[])].sort((a,b)=>String(a.title||'').localeCompare(String(b.title||'')));
