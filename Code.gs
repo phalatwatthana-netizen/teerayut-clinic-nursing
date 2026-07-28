@@ -49,6 +49,10 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  // ล็อกกันการเขียน/ลบชนกันเมื่อหลายเครื่องบันทึกพร้อมกัน (race condition)
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(20000); }
+  catch (lerr) { return json({ status: 'error', message: 'ระบบกำลังบันทึกงานอื่นอยู่ กรุณาลองใหม่อีกครั้ง' }); }
   try {
     var body = JSON.parse(e.postData.contents);
     var action = body.action;
@@ -70,6 +74,8 @@ function doPost(e) {
     return json({ status: 'error', message: 'unknown action: ' + action });
   } catch (err) {
     return json({ status: 'error', message: String(err) });
+  } finally {
+    lock.releaseLock();
   }
 }
 

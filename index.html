@@ -9,17 +9,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Phosphor Icons (CDN) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <!-- สร้างรูป/PDF ฝั่งเบราว์เซอร์ (ใบส่งตัว) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- สร้างรูป/PDF ฝั่งเบราว์เซอร์ (ใบส่งตัว) — defer ไม่บล็อกการแสดงผล -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Google Fonts: Noto Sans Thai -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- ข้อมูลเขตการปกครองไทย (ฝังในโปรเจกต์ ไม่ต้องพึ่ง CDN ภายนอก) -->
-    <script src="thai-address.js"></script>
+    <!-- ข้อมูลเขตการปกครองไทย (ฝังในโปรเจกต์) — defer ไม่บล็อกการแสดงผลหน้าแรก -->
+    <script defer src="thai-address.js"></script>
     <!-- ฐานข้อมูลตัวช่วยวินิจฉัย (Master 172 รายการ + กลุ่มอาการ) -->
-    <script src="diagnosis-data.js"></script>
+    <script defer src="diagnosis-data.js"></script>
     <!-- ตารางขนาดยาเด็กตามน้ำหนัก -->
-    <script src="pedidose-data.js"></script>
+    <script defer src="pedidose-data.js"></script>
 
     <!-- Color Palette ตามภาพต้นแบบ (MOP Palette) -->
     <script>
@@ -2985,8 +2985,36 @@
         const cur = document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard';
         renderView(cur); updateBadges();
     }
+    /* ---------- ซิงก์ข้อมูลอัตโนมัติ (รองรับหลายเครื่องพร้อมกัน) ----------
+       ดึงข้อมูลล่าสุดจากชีตเงียบๆ เมื่อสลับกลับมาหน้าจอ + ทุก 30 วิ
+       โดยไม่รบกวนฟอร์มที่กำลังกรอกอยู่ */
+    let _lastSync = 0, _syncing = false;
+    async function autoSync(force){
+        if(!Store.online() || document.hidden || _syncing) return;
+        if(!force && Date.now()-_lastSync < 20000) return;   // throttle 20 วิ
+        // ไม่ซิงก์ถ้ากำลังพิมพ์อยู่ในฟอร์ม (กันข้อมูลที่ยังไม่บันทึกหาย)
+        const ae = document.activeElement;
+        if(ae && (ae.tagName==='INPUT' || ae.tagName==='TEXTAREA' || ae.tagName==='SELECT')) return;
+        _syncing = true; _lastSync = Date.now();
+        try{
+            const d = await Store.load();
+            State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments;
+            State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[];
+            State.referrals=d.referrals||[]; State.templates=d.templates||[];
+            normalizePhones(); Store.localSave();
+            const cur = document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard';
+            // ห้องที่มีฟอร์มแก้ไข: รีเฟรชเฉพาะตอนยังไม่ได้เลือกคนไข้ (ปลอดภัย ไม่ทับที่กรอก)
+            const roomForms = ['triage','examination','pharmacy','billing'];
+            if(roomForms.includes(cur)){ if(!State.current.vn) renderView(cur); else updateBadges(); }
+            else renderView(cur);
+        }catch(e){ /* เงียบ ไม่รบกวนผู้ใช้ */ }
+        finally{ _syncing = false; }
+    }
     window.onload = () => {
         updateDate(); setInterval(updateDate, 60000);
+        document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) autoSync(true); });
+        window.addEventListener('focus', ()=>autoSync(true));
+        setInterval(()=>autoSync(false), 30000);
         const session = Auth.get();
         if(session){ applyUser(session); hideLogin(); boot(); }
         else { showLogin(); }
