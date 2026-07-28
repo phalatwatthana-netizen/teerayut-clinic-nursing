@@ -2406,7 +2406,7 @@
     function referFillFromVisit(vn){
         const v=vn?visitByVN(vn):null; if(!v) return;
         const p=patientByHN(v.hn)||{};
-        $('#ref_history').value=[v.cc?('CC: '+v.cc):'', v.pi?('PI: '+v.pi):'', v.ph?('PH: '+v.ph):'', p.disease?('โรคประจำตัว: '+p.disease):'', p.allergy?('แพ้ยา: '+p.allergy):''].filter(Boolean).join('\n');
+        $('#ref_history').value=[v.cc?('CC: '+v.cc):'', v.pi?('PI: '+v.pi):'', v.ph?('PH: '+v.ph):'', p.disease?('โรคประจำตัว: '+p.disease):''].filter(Boolean).join('\n');
         $('#ref_current').value=v.pe||'';
         $('#ref_lab').value=v.lab||'';
         $('#ref_dx').value=v.dx||'';
