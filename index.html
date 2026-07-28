@@ -1242,7 +1242,7 @@
                 <div>${L('ชื่อ',p.firstName,110)} &nbsp; ${L('นามสกุล',p.lastName,110)} &nbsp; ${L('อายุ',age(p.birthDate),34)} <b style="color:${NAVY}">ปี</b> &nbsp; <b style="color:${NAVY}">เพศ</b> ${chk(p.gender==='ชาย')} ชาย ${chk(p.gender==='หญิง')} หญิง &nbsp; ${L('เบอร์โทรศัพท์',p.phone,100)}</div>
                 <div>${L('ที่อยู่',p.address,280)} &nbsp; ${L('เชื้อชาติ',p.race,50)} &nbsp; ${L('สถานภาพ',p.maritalStatus,50)} &nbsp; ${L('สัญชาติ',p.nationality,50)}</div>
                 <div>${L('ชื่อผู้ติดต่อในกรณีฉุกเฉิน',p.emContact,140)} &nbsp; ${L('เบอร์โทรศัพท์',p.emPhone,100)}</div>
-                <div>${L('โรคประจำตัว',p.disease,140)} &nbsp; ${L('แพ้ยา',p.allergy,140)} &nbsp; ${L('ยาที่รับประทาน','',140)}</div>
+                <div>${L('โรคประจำตัว',p.disease,140)} &nbsp; <b style="color:#c00">แพ้ยา</b> <span style="border-bottom:1px dotted #c00;display:inline-block;min-width:140px;padding:0 4px;font-weight:700;color:#c00">${esc(p.allergy||'')}</span> &nbsp; ${L('ยาที่รับประทาน','',140)}</div>
             </div>
             <div style="border:1.5px solid ${NAVY};border-radius:10px;padding:8px 12px;margin-top:6px;position:relative">
                 <div style="margin-bottom:2px"><b style="color:${NAVY}">BP</b> ${fill(v.bp_sys,26)}/${fill(v.bp_dia,26)} <b style="color:${NAVY}">mmHg</b> &nbsp; <b style="color:${NAVY}">BT</b> ${fill(v.bt,32)}<b style="color:${NAVY}">°C</b> &nbsp; <b style="color:${NAVY}">PR</b> ${fill(v.pr,32)}<b style="color:${NAVY}">/min</b> &nbsp; <b style="color:${NAVY}">Weight</b> ${fill(v.weight,38)}<b style="color:${NAVY}">kg</b> &nbsp; <b style="color:${NAVY}">Height</b> ${fill(v.height,38)}<b style="color:${NAVY}">cm.</b> &nbsp; <b style="color:${NAVY}">Date</b> ${fill(fmtDateTH(v.date),64)}</div>
@@ -2708,6 +2708,7 @@
         opts=opts||{};
         const NAVY='#0f3d91';
         const line=(v,mw)=>`<span style="border-bottom:1px dotted #555;padding:0 6px;min-width:${mw||40}px;display:inline-block;font-weight:500">${esc(v||'')}</span>`;
+        const lineRed=(v,mw)=>`<span style="border-bottom:1px dotted #c00;padding:0 6px;min-width:${mw||40}px;display:inline-block;font-weight:700;color:#c00">${esc(v||'')}</span>`;
         const chk=on=>`<span style="display:inline-block;width:13px;height:13px;border:1.4px solid ${NAVY};text-align:center;line-height:12px;font-size:11px;vertical-align:middle">${on?'✓':''}</span>`;
         const para=v=>esc(v||'').replace(/\n/g,'<br>');
         const secLine=txt=>`<div style="border-bottom:1px dotted #666;min-height:22px;padding:2px 4px 1px;white-space:pre-wrap">${txt||'&nbsp;'}</div>`;
@@ -2730,7 +2731,7 @@
             <div style="margin:4px 0"><b style="color:${NAVY}">ส่งต่อไปยัง</b> ${line(d.to,320)}</div>
             <div style="margin:4px 0"><b style="color:${NAVY}">สิ่งที่แนบมาด้วย</b> ${line(d.attach,360)}</div>
             <div style="margin:4px 0"><b style="color:${NAVY}">ชื่อผู้ป่วย</b> ${line(d.name,190)} &nbsp;<b style="color:${NAVY}">เพศ</b> ${line(d.gender,40)} &nbsp;<b style="color:${NAVY}">อายุ</b> ${line(d.age,34)} ปี &nbsp;<b style="color:${NAVY}">HN</b> ${line(d.hn,80)}</div>
-            <div style="margin:4px 0"><b style="color:${NAVY}">โทร.</b> ${line(d.phone,130)} &nbsp;<b style="color:${NAVY}">ประวัติแพ้ยา</b> ${line(d.allergy,200)}</div>
+            <div style="margin:4px 0"><b style="color:${NAVY}">โทร.</b> ${line(d.phone,130)} &nbsp;<b style="color:#c00">ประวัติแพ้ยา</b> ${lineRed(d.allergy,200)}</div>
             <div style="margin:6px 0"><b style="color:${NAVY}">มาเพื่อ</b> &nbsp; ${chk(d.pTreat)} รับการรักษาต่อ &nbsp;&nbsp; ${chk(d.pDx)} รับการตรวจวินิจฉัยเพิ่มเติม</div>
             ${sec('1. ประวัติการป่วย', d.history)}
             ${sec('2. การป่วยปัจจุบัน', d.current)}
