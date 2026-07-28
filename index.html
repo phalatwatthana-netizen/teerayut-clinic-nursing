@@ -1201,7 +1201,7 @@
     function buildRecordHtml(v){
         const p = patientByHN(v.hn)||{};
         const NAVY='#0f3d91';
-        const boxes = (str,n,w) => { str=String(str||''); let h=''; for(let i=0;i<n;i++){ h+=`<span style="display:inline-block;width:${w||16}px;height:20px;line-height:20px;border:1px solid ${NAVY};text-align:center;font-size:13px;margin-right:-1px;vertical-align:middle">${esc(str[i]||'')}</span>`; } return h; };
+        const boxes = (str,n,w) => { str=String(str||''); let h=''; for(let i=0;i<n;i++){ h+=`<span style="display:inline-block;width:${w||14}px;height:16px;line-height:16px;border:1px solid ${NAVY};text-align:center;font-size:11px;margin-right:-1px;vertical-align:middle">${esc(str[i]||'')}</span>`; } return h; };
         const fill = (val,minw) => `<span style="border-bottom:1px dotted #333;display:inline-block;min-width:${minw||60}px;padding:0 4px;font-weight:500">${esc(val||'')}</span>`;
         const chk = on => `<span style="display:inline-block;width:12px;height:12px;border:1.5px solid ${NAVY};text-align:center;line-height:11px;font-size:11px;vertical-align:middle">${on?'✓':''}</span>`;
         const L = (label,val,minw) => `<b style="color:${NAVY}">${label}</b> ${fill(val,minw)}`;
@@ -1211,15 +1211,15 @@
         return `<div class="a5fit" style="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif;color:#111;font-size:15px;line-height:1.7;width:100%;box-sizing:border-box;transform-origin:top left">
             <style>@page{size:A5 landscape;margin:6mm;} *{box-sizing:border-box;}</style>
             <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:6px">
-                <div style="flex:1;border:2px solid ${NAVY};border-radius:12px;text-align:center;padding:2px 10px;display:flex;flex-direction:column;justify-content:center">
-                    <div style="font-size:19px;font-weight:700;color:${NAVY};line-height:1.15">${CLINIC.name}</div>
-                    <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.2">${CLINIC.address}</div>
-                    <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.2">โทร.${CLINIC.phone}</div>
+                <div style="flex:1;border:2px solid ${NAVY};border-radius:12px;text-align:center;padding:1px 10px;display:flex;flex-direction:column;justify-content:center">
+                    <div style="font-size:16px;font-weight:700;color:${NAVY};line-height:1.1">${CLINIC.name}</div>
+                    <div style="font-size:12px;font-weight:600;color:${NAVY};line-height:1.15">${CLINIC.address}</div>
+                    <div style="font-size:12px;font-weight:600;color:${NAVY};line-height:1.15">โทร.${CLINIC.phone}</div>
                 </div>
-                <div style="flex:0 0 306px;border:2px solid ${NAVY};border-radius:12px;padding:2px 10px;display:flex;flex-direction:column;justify-content:center">
-                    <div style="display:flex;align-items:center;margin-bottom:1px"><b style="color:${NAVY};font-size:17px;width:80px">HN.</b> ${fill(v.hn,150)}</div>
-                    <div style="display:flex;align-items:center;margin-bottom:1px"><b style="color:${NAVY};width:80px">บัตรประชาชน</b> <span>${boxes(p.cid,13,15)}</span></div>
-                    <div style="display:flex;align-items:center"><b style="color:${NAVY};width:80px">วันเดือนปีเกิด</b> <span>${boxes(beDate,8,16)}</span></div>
+                <div style="flex:0 0 306px;border:2px solid ${NAVY};border-radius:12px;padding:1px 10px;display:flex;flex-direction:column;justify-content:center">
+                    <div style="display:flex;align-items:center;margin-bottom:0"><b style="color:${NAVY};font-size:14px;width:78px">HN.</b> ${fill(v.hn,150)}</div>
+                    <div style="display:flex;align-items:center;margin-bottom:0"><b style="color:${NAVY};font-size:13px;width:78px">บัตรประชาชน</b> <span>${boxes(p.cid,13,13)}</span></div>
+                    <div style="display:flex;align-items:center"><b style="color:${NAVY};font-size:13px;width:78px">วันเดือนปีเกิด</b> <span>${boxes(beDate,8,14)}</span></div>
                 </div>
             </div>
             <div style="padding:0 4px">
@@ -1228,7 +1228,7 @@
                 <div>${L('ชื่อผู้ติดต่อในกรณีฉุกเฉิน',p.emContact,140)} &nbsp; ${L('เบอร์โทรศัพท์',p.emPhone,100)}</div>
                 <div>${L('โรคประจำตัว',p.disease,140)} &nbsp; ${L('แพ้ยา',p.allergy,140)} &nbsp; ${L('ยาที่รับประทาน','',140)}</div>
             </div>
-            <div style="border:1.5px solid ${NAVY};border-radius:10px;padding:8px 12px;margin-top:6px">
+            <div style="border:1.5px solid ${NAVY};border-radius:10px;padding:8px 12px;margin-top:6px;position:relative">
                 <div style="margin-bottom:2px"><b style="color:${NAVY}">BP</b> ${fill(v.bp_sys,26)}/${fill(v.bp_dia,26)} <b style="color:${NAVY}">mmHg</b> &nbsp; <b style="color:${NAVY}">BT</b> ${fill(v.bt,32)}<b style="color:${NAVY}">°C</b> &nbsp; <b style="color:${NAVY}">PR</b> ${fill(v.pr,32)}<b style="color:${NAVY}">/min</b> &nbsp; <b style="color:${NAVY}">Weight</b> ${fill(v.weight,38)}<b style="color:${NAVY}">kg</b> &nbsp; <b style="color:${NAVY}">Height</b> ${fill(v.height,38)}<b style="color:${NAVY}">cm.</b> &nbsp; <b style="color:${NAVY}">Date</b> ${fill(fmtDateTH(v.date),64)}</div>
                 ${(()=>{ let ex=[]; try{ ex=Array.isArray(v.vitalsExtra)?v.vitalsExtra:JSON.parse(v.vitalsExtra||'[]'); }catch(e){} return ex.map((d,i)=>`<div style="margin-top:2px;font-size:13px"><b style="color:${NAVY}">ครั้งที่ ${i+2}:</b> BP ${esc(d.bp_sys||'-')}/${esc(d.bp_dia||'-')} mmHg &nbsp; BT ${esc(d.bt||'-')}°C &nbsp; PR ${esc(d.pr||'-')}/min &nbsp; W ${esc(d.weight||'-')}kg &nbsp; H ${esc(d.height||'-')}cm</div>`).join(''); })()}
                 <div><b style="color:${NAVY}">CC :</b> ${fill(v.cc,600)}</div>
@@ -1248,8 +1248,8 @@
                     const rec=nm?((State.signs||[]).find(s=>s.name===nm)||(State.signs||[]).find(s=>norm(s.name)===norm(nm))):null;
                     const sImg=rec?driveImg(rec.signUrl):'';
                     const pos=rec?rec.position:'';
-                    return `<div style="text-align:right;margin-top:6px">
-                        <div style="display:inline-block;text-align:center;min-width:240px;line-height:1.35">
+                    return `<div style="position:absolute;right:12px;bottom:8px;text-align:right">
+                        <div style="display:inline-block;text-align:center;min-width:240px;line-height:1.3">
                             ${sImg?`<img src="${esc(sImg)}" style="height:40px;width:auto;object-fit:contain;display:block;margin:0 auto -2px" onerror="this.style.display='none'">`:'<div style="height:26px"></div>'}
                             <div style="border-top:1px dotted #333;padding-top:2px">( ${esc(nm||'.................................')} )</div>
                             ${pos?`<div style="font-size:14px">${esc(pos)}</div>`:''}
