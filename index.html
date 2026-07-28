@@ -168,6 +168,9 @@
             <button onclick="navTo('reports')" id="nav-reports" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
                 <i class="ph ph-chart-line-up text-xl mr-3"></i> รายงานสรุป
             </button>
+            <button onclick="navTo('staff')" id="nav-staff" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-identification-badge text-xl mr-3"></i> STAFF (บุคลากร)
+            </button>
             <button onclick="navTo('settings')" id="nav-settings" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
                 <i class="ph ph-gear text-xl mr-3"></i> ตั้งค่า / เชื่อมต่อ
             </button>
@@ -765,6 +768,22 @@
                 </div>
             </section>
 
+            <!-- ===== STAFF (บุคลากร / ผู้ลงชื่อ) ===== -->
+            <section id="section-staff" class="app-section">
+                <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
+                    <div><h3 class="text-xl font-bold text-brand-blueDark">STAFF — บุคลากร / ผู้ลงชื่อ</h3><p class="text-sm text-gray-500">จัดการรายชื่อเจ้าหน้าที่ ตำแหน่ง เลขใบอนุญาต และลายเซ็น (ใช้ในเวชระเบียน/ใบส่งตัว)</p></div>
+                    <button onclick="openStaffForm()" class="bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center shadow-sm"><i class="ph ph-user-plus mr-2 text-lg"></i> เพิ่มบุคลากร</button>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead><tr class="bg-brand-bg text-gray-600 text-xs uppercase border-b border-gray-200">
+                            <th class="p-3 font-medium">ชื่อ</th><th class="p-3 font-medium">ตำแหน่ง</th><th class="p-3 font-medium">เลขใบอนุญาต</th><th class="p-3 font-medium">ลายเซ็น</th><th class="p-3 font-medium text-right">จัดการ</th>
+                        </tr></thead>
+                        <tbody id="staffTableBody" class="text-sm divide-y divide-gray-50"></tbody>
+                    </table>
+                </div>
+            </section>
+
             <!-- ===== SETTINGS ===== -->
             <section id="section-settings" class="app-section">
                 <div class="mb-6"><h3 class="text-xl font-bold text-brand-blueDark">ตั้งค่า / เชื่อมต่อฐานข้อมูล</h3><p class="text-sm text-gray-500">เชื่อมต่อ Google Sheets เพื่อบันทึกข้อมูลจริงและใช้งานหลายเครื่องร่วมกัน</p></div>
@@ -934,7 +953,9 @@
         async saveReferral(r){ if(Store.online()) return Store.post('saveReferral', r); Store.localSave(); return { status:'success', id:r.id }; },
         async deleteReferral(id){ if(Store.online()) return Store.post('deleteReferral', {id}); Store.localSave(); return { status:'success' }; },
         async saveTemplate(t){ if(Store.online()) return Store.post('saveTemplate', t); Store.localSave(); return { status:'success', id:t.id }; },
-        async deleteTemplate(id){ if(Store.online()) return Store.post('deleteTemplate', {id}); Store.localSave(); return { status:'success' }; }
+        async deleteTemplate(id){ if(Store.online()) return Store.post('deleteTemplate', {id}); Store.localSave(); return { status:'success' }; },
+        async saveSign(s){ if(Store.online()) return Store.post('saveSign', s); Store.localSave(); return { status:'success', name:s.name }; },
+        async deleteSign(name){ if(Store.online()) return Store.post('deleteSign', {name}); Store.localSave(); return { status:'success' }; }
     };
 
     /* ---------- Utils ---------- */
@@ -1025,6 +1046,7 @@
         else if(id==='inventory') renderInventory();
         else if(id==='pedidose') renderPediDose();
         else if(id==='reports') renderReports();
+        else if(id==='staff') renderStaff();
         else if(id==='settings') renderSettings();
         updateBadges();
     }
@@ -2902,6 +2924,54 @@
     function printReferral(id){
         const r=(State.referrals||[]).find(x=>String(x.id)===String(id)); if(!r) return;
         printReferDoc(referDataFromRecord(r));
+    }
+
+    /* ============================================================ STAFF (บุคลากร/ผู้ลงชื่อ = ชีต Sign) */
+    function renderStaff(){
+        const list=State.signs||[];
+        $('#staffTableBody').innerHTML = list.length ? list.map(s=>`
+            <tr class="hover:bg-brand-bg transition-colors">
+                <td class="p-3 font-medium text-gray-800">${esc(s.name)}</td>
+                <td class="p-3 text-gray-600">${esc(s.position||'-')}</td>
+                <td class="p-3 text-gray-600">${esc(s.license||'-')}</td>
+                <td class="p-3">${s.signUrl?`<img src="${esc(driveImg(s.signUrl))}" style="height:30px;width:auto;object-fit:contain" onerror="this.outerHTML='<span class=&quot;text-red-400 text-xs&quot;>รูปโหลดไม่ได้</span>'">`:'<span class="text-gray-300">—</span>'}</td>
+                <td class="p-3 text-right whitespace-nowrap">
+                    <button onclick="openStaffForm('${esc(s.name)}')" class="p-1.5 text-gray-500 hover:text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="แก้ไข"><i class="ph ph-pencil-simple text-lg"></i></button>
+                    <button onclick="deleteStaff('${esc(s.name)}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="ลบ"><i class="ph ph-trash text-lg"></i></button>
+                </td>
+            </tr>`).join('') : `<tr><td colspan="5" class="p-8 text-center text-gray-400"><i class="ph ph-identification-badge text-3xl block mb-2"></i>ยังไม่มีบุคลากร — กด "เพิ่มบุคลากร"</td></tr>`;
+    }
+    function openStaffForm(name){
+        const s = name ? ((State.signs||[]).find(x=>x.name===name)||{}) : {};
+        openModal(name?'แก้ไขบุคลากร':'เพิ่มบุคลากร', `
+            <form onsubmit="saveStaff(event)" class="space-y-3 text-sm">
+                <input type="hidden" id="st_orig" value="${esc(s.name||'')}">
+                <div><label class="block text-xs text-gray-600 mb-1">ชื่อ <span class="text-red-500">*</span></label><input id="st_name" required value="${esc(s.name||'')}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <div><label class="block text-xs text-gray-600 mb-1">ตำแหน่ง</label><input id="st_position" value="${esc(s.position||'')}" placeholder="เช่น พยาบาลวิชาชีพ" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <div><label class="block text-xs text-gray-600 mb-1">เลขที่ใบอนุญาตประกอบวิชาชีพ</label><input id="st_license" value="${esc(s.license||'')}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <div><label class="block text-xs text-gray-600 mb-1">ลิงก์รูปลายเซ็น (Google Drive)</label><input id="st_signurl" value="${esc(s.signUrl||'')}" placeholder="วางลิงก์แชร์ไฟล์รูปลายเซ็น" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <p class="text-[11px] text-gray-400">* ตั้งสิทธิ์ไฟล์รูปเป็น "ทุกคนที่มีลิงก์ · ผู้อ่าน" เพื่อให้ลายเซ็นแสดงได้</p>
+                <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ยกเลิก</button><button type="submit" class="px-5 py-2 bg-brand-greenMain text-white rounded-lg font-medium">บันทึก</button></div>
+            </form>`);
+    }
+    async function saveStaff(e){
+        e.preventDefault();
+        const orig=$('#st_orig').value;
+        const name=$('#st_name').value.trim();
+        if(!name){ showToast('กรอกชื่อ','error'); return; }
+        if(!orig && (State.signs||[]).some(s=>s.name===name)){ showToast('มีชื่อนี้อยู่แล้ว','error'); return; }
+        const rec={ name, position:$('#st_position').value.trim(), license:$('#st_license').value.trim(), signUrl:$('#st_signurl').value.trim() };
+        try{
+            if(orig && orig!==name){ await Store.deleteSign(orig); State.signs=State.signs.filter(s=>s.name!==orig); }
+            const ex=(State.signs||[]).find(s=>s.name===name);
+            if(ex) Object.assign(ex,rec); else State.signs.push(rec);
+            await Store.saveSign(rec); Store.localSave(); closeModal(); showToast('บันทึกบุคลากรแล้ว'); renderStaff();
+        }catch(err){ showToast('ไม่สำเร็จ: '+err.message,'error'); }
+    }
+    async function deleteStaff(name){
+        if(!await confirmDialog('ลบบุคลากร "'+name+'" ออกจากระบบ?', {title:'ลบบุคลากร', okText:'ลบ', danger:true, icon:'ph-trash'})) return;
+        try{ await Store.deleteSign(name); State.signs=State.signs.filter(s=>s.name!==name); Store.localSave(); showToast('ลบบุคลากรแล้ว'); renderStaff(); }
+        catch(e){ showToast('ลบไม่สำเร็จ: '+e.message,'error'); }
     }
 
     /* ============================================================ SETTINGS */

@@ -70,6 +70,8 @@ function doPost(e) {
     if (action === 'deleteReferral')    return json(deleteRecord(SHEET_REFER, data.id));
     if (action === 'saveTemplate')      return json(upsert(SHEET_TPL, data));
     if (action === 'deleteTemplate')    return json(deleteRecord(SHEET_TPL, data.id));
+    if (action === 'saveSign')          return json(upsert(SHEET_SIGN, data));
+    if (action === 'deleteSign')        return json(deleteRecord(SHEET_SIGN, data.name));
     if (action === 'saveVisitPdf')      return json(saveVisitPdf(data));
     return json({ status: 'error', message: 'unknown action: ' + action });
   } catch (err) {
