@@ -2761,7 +2761,18 @@
         wrap.style.height=(sheet.offsetHeight*k)+'px';
     }
     function printReferDoc(d){
-        printHTML(`<div style="width:210mm;min-height:297mm;padding:4mm 12mm 12mm;box-sizing:border-box"><style>@page{size:A4 portrait;margin:0;}</style>${buildReferralHtml(d)}</div>`);
+        const inner = buildReferralHtml(d);
+        // วัดความสูงจริงแล้วย่อให้พอดี 1 หน้า A4 (กันล้นไปหน้า 2)
+        const tmp=document.createElement('div');
+        tmp.style.cssText='position:absolute;left:-10000px;top:0;width:210mm;padding:4mm 12mm 12mm;box-sizing:border-box';
+        tmp.innerHTML=`<div class="refwrap">${inner}</div>`;
+        document.body.appendChild(tmp);
+        const availH=(297-4-12)*MM;
+        const h=tmp.querySelector('.refwrap').scrollHeight;
+        const k=h>availH?Math.max(0.45, availH/h):1;
+        document.body.removeChild(tmp);
+        const scaled = k<1 ? `<div style="transform:scale(${k.toFixed(3)});transform-origin:top left;width:${(100/k).toFixed(2)}%">${inner}</div>` : inner;
+        printHTML(`<div style="width:210mm;height:297mm;padding:4mm 12mm 12mm;box-sizing:border-box;overflow:hidden"><style>@page{size:A4 portrait;margin:0;}</style>${scaled}</div>`);
     }
     function printReferPreview(){
         if(!refSelectedHN()){ showToast('เลือกผู้รับบริการก่อน','error'); return; }
@@ -2788,8 +2799,9 @@
             }else{
                 const { jsPDF }=window.jspdf;
                 const pdf=new jsPDF('p','mm','a4');
-                const w=210, h=canvas.height*w/canvas.width;
-                pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,w,Math.min(h,297));
+                let w=210, h=canvas.height*w/canvas.width;
+                if(h>297){ const s=297/h; w=w*s; h=297; }   // ย่อให้พอดี 1 หน้า
+                pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',(210-w)/2,0,w,h);
                 pdf.save(fname+'.pdf');
             }
             showToast('บันทึก'+(type==='jpg'?'รูป JPG':'ไฟล์ PDF')+'แล้ว');
