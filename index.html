@@ -1247,7 +1247,15 @@
                     const norm=s=>String(s||'').replace(/\s+/g,'').trim();
                     const rec=nm?((State.signs||[]).find(s=>s.name===nm)||(State.signs||[]).find(s=>norm(s.name)===norm(nm))):null;
                     const sImg=rec?driveImg(rec.signUrl):'';
-                    return sImg?`<span style="display:inline-flex;align-items:flex-end;gap:6px"><b style="color:${NAVY}">Signature :</b> <img src="${esc(sImg)}" style="height:34px;width:auto;object-fit:contain" onerror="this.style.display='none'"> <span style="border-bottom:1px dotted #333;min-width:200px;text-align:center;padding-bottom:2px">${esc(nm||'')}</span></span>`:`<b style="color:${NAVY}">Signature :</b> ${fill('',540)}`;
+                    const pos=rec?rec.position:'';
+                    return `<div style="text-align:right;margin-top:6px">
+                        <div style="display:inline-block;text-align:center;min-width:240px;line-height:1.35">
+                            ${sImg?`<img src="${esc(sImg)}" style="height:40px;width:auto;object-fit:contain;display:block;margin:0 auto -2px" onerror="this.style.display='none'">`:'<div style="height:26px"></div>'}
+                            <div style="border-top:1px dotted #333;padding-top:2px">( ${esc(nm||'.................................')} )</div>
+                            ${pos?`<div style="font-size:14px">${esc(pos)}</div>`:''}
+                            <div style="font-size:12px;color:#555">ผู้ตรวจ/ผู้บันทึก</div>
+                        </div>
+                    </div>`;
                 })()}</div>
             </div>
         </div>`;
