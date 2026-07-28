@@ -580,7 +580,7 @@
                             <div><label class="block text-xs text-gray-600 mb-1">6. สาเหตุที่ส่ง <span class="text-red-500">*</span></label><textarea id="ref_reason" required rows="2" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea></div>
                             <div><label class="block text-xs text-gray-600 mb-1">7. รายละเอียดอื่นๆ</label><textarea id="ref_other" rows="2" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea></div>
                             <div class="grid grid-cols-2 gap-2">
-                                <div><label class="block text-xs text-gray-600 mb-1">ผู้ส่งต่อ (ลงชื่อ)</label><input id="ref_signer" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                                <div><label class="block text-xs text-gray-600 mb-1">ผู้ส่งต่อ (ลงชื่อ)</label><select id="ref_signer" onchange="referPickSigner()" class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-brand-bg/50"></select></div>
                                 <div><label class="block text-xs text-gray-600 mb-1">เลขที่ใบอนุญาตฯ</label><input id="ref_license" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
                             </div>
                         </form>
@@ -827,7 +827,7 @@
     const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbykhJnniKpuPO1HzIOMn_HBViixcAwWH961Kw1HerVgSTz9vIgrpQksCbuuCKHwQ-6k/exec';
 
     /* ---------- State ---------- */
-    const State = { patients:[], visits:[], appointments:[], inventory:[], current:{} };
+    const State = { patients:[], visits:[], appointments:[], inventory:[], signs:[], logos:[], current:{} };
 
     /* ---------- API / Store ---------- */
     const Store = {
@@ -854,13 +854,15 @@
             if(Store.online()){
                 const r = await fetch(Store.url()+'?action=load&t='+Date.now());
                 const d = await r.json(); if(d.status==='error') throw new Error(d.message);
-                return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[], inventory:d.inventory||[] };
+                return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[], inventory:d.inventory||[], signs:d.signs||[], logos:d.logos||[] };
             }
             return {
                 patients: JSON.parse(localStorage.getItem('clinic_patients')||'[]'),
                 visits: JSON.parse(localStorage.getItem('clinic_visits')||'[]'),
                 appointments: JSON.parse(localStorage.getItem('clinic_appts')||'[]'),
-                inventory: JSON.parse(localStorage.getItem('clinic_inventory')||'[]')
+                inventory: JSON.parse(localStorage.getItem('clinic_inventory')||'[]'),
+                signs: JSON.parse(localStorage.getItem('clinic_signs')||'[]'),
+                logos: JSON.parse(localStorage.getItem('clinic_logos')||'[]')
             };
         },
         localSave(){
@@ -868,6 +870,8 @@
             localStorage.setItem('clinic_visits', JSON.stringify(State.visits));
             localStorage.setItem('clinic_appts', JSON.stringify(State.appointments));
             localStorage.setItem('clinic_inventory', JSON.stringify(State.inventory));
+            localStorage.setItem('clinic_signs', JSON.stringify(State.signs));
+            localStorage.setItem('clinic_logos', JSON.stringify(State.logos));
         },
         async savePatient(p){ if(Store.online()) return Store.post('savePatient', p); Store.localSave(); return { status:'success', hn:p.hn }; },
         async saveVisit(v){ if(Store.online()) return Store.post('saveVisit', v); Store.localSave(); return { status:'success', vn:v.vn }; },
@@ -983,7 +987,7 @@
     function dashDateToday(){ $('#dashDate').value = todayISO(); renderDashboard(); }
     async function reloadData(btn){
         const orig=btn?btn.innerHTML:''; if(btn){ btn.innerHTML='<i class="ph ph-spinner animate-spin"></i>'; btn.disabled=true; }
-        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; normalizePhones(); Store.localSave(); renderDashboard(); updateBadges(); showToast('โหลดข้อมูลล่าสุดแล้ว'); }
+        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; normalizePhones(); Store.localSave(); renderDashboard(); updateBadges(); showToast('โหลดข้อมูลล่าสุดแล้ว'); }
         catch(e){ showToast('โหลดไม่สำเร็จ: '+e.message,'error'); }
         finally{ if(btn){ btn.innerHTML=orig; btn.disabled=false; } }
     }
@@ -2318,7 +2322,13 @@
         if(cur) $('#ref_patient').value=cur;
         if(!$('#ref_dear').value) $('#ref_dear').value='นายแพทย์ผู้เกี่ยวข้อง';
         if(!$('#ref_date').value) $('#ref_date').value=todayISO();
-        if(!$('#ref_signer').value){ const u=Auth.get(); if(u) $('#ref_signer').value=u.name||''; }
+        // ดรอปดาวน์ผู้ส่งต่อจากชีต Sign (ชื่อ + ลายเซ็น)
+        const curSign=$('#ref_signer').value;
+        const signs=State.signs||[];
+        $('#ref_signer').innerHTML = `<option value="">-- เลือกผู้ส่งต่อ --</option>` + signs.map(s=>`<option value="${esc(s.name)}">${esc(s.name)}${s.license?(' · '+esc(s.license)):''}</option>`).join('');
+        if(curSign) $('#ref_signer').value=curSign;
+        else { const u=Auth.get(); if(u && signs.some(s=>s.name===u.name)) $('#ref_signer').value=u.name; }
+        referPickSigner();
         const refs = State.visits.filter(v=>v.status===STATUS.REFER).sort((a,b)=>(b.referAt||'').localeCompare(a.referAt||''));
         $('#referHistory').innerHTML = refs.length ? refs.map(v=>{ const p=patientByHN(v.hn)||{}; return `
             <div class="p-2"><div class="flex justify-between"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span><span class="text-xs text-gray-400">${fmtDateTH(v.date)}</span></div>
@@ -2336,6 +2346,22 @@
     function nextRefNo(){
         const n = State.visits.filter(v=>v.refNo).length + 1;
         return String(n).padStart(3,'0')+'/'+(new Date().getFullYear()+543);
+    }
+    /* แปลงลิงก์ Google Drive ให้เป็น URL รูปภาพที่ฝัง <img> ได้ */
+    function driveImg(url){
+        url=String(url||'').trim(); if(!url) return '';
+        let m = url.match(/\/d\/([-\w]{25,})/) || url.match(/[?&]id=([-\w]{25,})/);
+        if(m) return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000';
+        return url;
+    }
+    /* หา URL ลายเซ็น/เลขใบอนุญาต จากชื่อผู้ส่งต่อ (ชีต Sign) */
+    function referSignRec(name){ return (State.signs||[]).find(s=>s.name===name)||null; }
+    function currentLogo(){ const l=(State.logos||[])[0]; return l?driveImg(l.url):''; }
+    /* เลือกผู้ส่งต่อ → เติมเลขใบอนุญาต + แสดงลายเซ็นในพรีวิว */
+    function referPickSigner(){
+        const rec=referSignRec($('#ref_signer').value);
+        if(rec && rec.license) $('#ref_license').value=rec.license;
+        renderReferPreview();
     }
     /* เลือกผู้ป่วย → ดึงข้อมูล visit ล่าสุดมาเติมอัตโนมัติ */
     function referPickPatient(){
@@ -2392,11 +2418,19 @@
         const chk=on=>`<span style="display:inline-block;width:13px;height:13px;border:1.4px solid ${NAVY};text-align:center;line-height:12px;font-size:11px;vertical-align:middle">${on?'✓':''}</span>`;
         const para=v=>esc(v||'').replace(/\n/g,'<br>');
         const sec=(t,v)=>`<div style="margin:5px 0"><b style="color:${NAVY}">${t}</b><div style="border:1px solid #ccc;border-radius:5px;min-height:32px;padding:4px 8px;margin-top:2px;white-space:pre-wrap">${para(v)}</div></div>`;
+        const logo=currentLogo();
+        const logoImg = logo ? `<img src="${esc(logo)}" alt="logo" style="height:60px;width:auto;object-fit:contain;flex:0 0 auto" onerror="this.style.display='none'">` : '';
+        const signUrl = driveImg((referSignRec(d.signer)||{}).signUrl);
+        const signImg = signUrl ? `<img src="${esc(signUrl)}" alt="sign" style="height:48px;width:auto;object-fit:contain;margin:2px auto -6px" onerror="this.style.display='none'">` : '';
         return `<div style="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif;color:#111;font-size:15px;line-height:1.55">
-            <div style="text-align:center;border:2px solid ${NAVY};border-radius:12px;padding:6px 10px;margin-bottom:8px">
-                <div style="font-size:20px;font-weight:700;color:${NAVY};line-height:1.2">${CLINIC.name}</div>
-                <div style="font-size:13px;font-weight:600;color:${NAVY}">${CLINIC.address}</div>
-                <div style="font-size:13px;font-weight:600;color:${NAVY}">โทร. ${CLINIC.phone}</div>
+            <div style="display:flex;align-items:center;gap:12px;border:2px solid ${NAVY};border-radius:12px;padding:6px 12px;margin-bottom:8px">
+                ${logoImg}
+                <div style="flex:1;text-align:center">
+                    <div style="font-size:20px;font-weight:700;color:${NAVY};line-height:1.2">${CLINIC.name}</div>
+                    <div style="font-size:13px;font-weight:600;color:${NAVY}">${CLINIC.address}</div>
+                    <div style="font-size:13px;font-weight:600;color:${NAVY}">โทร. ${CLINIC.phone}</div>
+                </div>
+                ${logoImg?'<div style="width:60px;flex:0 0 auto"></div>':''}
             </div>
             <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:4px">
                 <div style="font-size:18px;font-weight:700;color:${NAVY}">ใบส่งตัวผู้ป่วยไปรับการตรวจหรือรักษาต่อ</div>
@@ -2417,7 +2451,7 @@
             ${sec('7. รายละเอียดอื่นๆ', d.other)}
             <div style="margin-top:22px;width:62%;margin-left:38%;text-align:center;font-size:15px">
                 <div>จึงเรียนมาเพื่อพิจารณา</div>
-                <div style="margin-top:14px">ลงชื่อ ...............................................</div>
+                ${signImg?`<div style="margin-top:6px">${signImg}</div><div>ลงชื่อ</div>`:'<div style="margin-top:14px">ลงชื่อ ...............................................</div>'}
                 <div>( ${esc(d.signer||'')} )</div>
                 <div>เลขที่ใบอนุญาตประกอบวิชาชีพ ${esc(d.license||'..................')}</div>
                 <div>วันที่ ${d.date?fmtDateTH(d.date):'..................'}</div>
@@ -2625,7 +2659,7 @@
     function updateDate(){ const el=$('#currentDateDisplay'); if(el) el.innerText=new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }
     async function boot(){
         updateConnBox();
-        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; normalizePhones(); Store.localSave(); }
+        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; normalizePhones(); Store.localSave(); }
         catch(e){ showToast('โหลดข้อมูลไม่สำเร็จ: '+e.message,'error'); }
         const cur = document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard';
         renderView(cur); updateBadges();

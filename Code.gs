@@ -16,6 +16,8 @@ var SHEET_VISITS = 'Visits';
 var SHEET_APPTS = 'Appointments';
 var SHEET_USERS = 'Users';
 var SHEET_INV = 'Inventory';
+var SHEET_SIGN = 'Sign';
+var SHEET_LOGO = 'Logo';
 var DRIVE_FOLDER = 'ThirayutClinic_Files';
 
 var HEADERS = {
@@ -23,9 +25,11 @@ var HEADERS = {
   Visits: ['vn','hn','date','status','cc','pi','ph','pe','bp_sys','bp_dia','bt','pr','weight','height','bmi','dx','treatment','lab','meds_json','medTotal','serviceFee','otherFee','total','paid','payMethod','referTo','referReason','followUpDate','followUpNote','createdAt','triageAt','examAt','dispenseAt','doneAt','referAt','refNo','refDear','refAttach','refPurpose','refHistory','refOther','refSigner','refLicense'],
   Appointments: ['id','hn','name','date','time','type','status','createdAt'],
   Users: ['username','password','name','role','active'],
-  Inventory: ['code','name','unit','price','stock','minStock','category','updatedAt','dbName','opdName']
+  Inventory: ['code','name','unit','price','stock','minStock','category','updatedAt','dbName','opdName'],
+  Sign: ['name','license','signUrl'],
+  Logo: ['name','url']
 };
-var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code' };
+var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code', Sign:'name', Logo:'name' };
 /* คอลัมน์ที่ต้องเก็บเป็นข้อความ (กัน Google Sheets ตัดเลข 0 นำหน้า) */
 var TEXT_COLS = { Patients:['cid','phone','emPhone'], Users:['username','password'], Inventory:['code'] };
 
@@ -106,7 +110,9 @@ function loadAll() {
     patients: readAll(SHEET_PATIENTS),
     visits: readAll(SHEET_VISITS),
     appointments: readAll(SHEET_APPTS),
-    inventory: readAll(SHEET_INV)
+    inventory: readAll(SHEET_INV),
+    signs: readAll(SHEET_SIGN),
+    logos: readAll(SHEET_LOGO)
   };
 }
 
@@ -168,6 +174,8 @@ function setupSheets() {
   getSheet(SHEET_VISITS);
   getSheet(SHEET_APPTS);
   getSheet(SHEET_INV);
+  getSheet(SHEET_SIGN);
+  getSheet(SHEET_LOGO);
   var users = getSheet(SHEET_USERS);
   if (users.getLastRow() < 2) {
     // username, password, name, role, active
@@ -180,7 +188,7 @@ function setupSheets() {
 
 /* ---------- ซ่อมหัวตารางทุกชีตให้ตรงลำดับ HEADERS (รันเองถ้าต้องการ) ---------- */
 function syncHeaders() {
-  ['Patients','Visits','Appointments','Users','Inventory'].forEach(function(name){
+  ['Patients','Visits','Appointments','Users','Inventory','Sign','Logo'].forEach(function(name){
     var sh = getSheet(name);
     sh.getRange(1, 1, 1, HEADERS[name].length).setValues([HEADERS[name]]);
   });
