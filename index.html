@@ -424,21 +424,22 @@
 
             <!-- ===== TRIAGE (ห้องซักประวัติ) ===== -->
             <section id="section-triage" class="app-section">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <div>
-                        <h3 class="text-xl font-bold text-brand-blueDark">ห้องซักประวัติ และตรวจรักษา</h3>
-                        <p class="text-sm text-gray-500">บันทึกสัญญาณชีพ (Vital Signs) อาการสำคัญ และการประเมินเบื้องต้น</p>
-                    </div>
-                    <div class="flex items-center bg-white border border-brand-bluePale/50 rounded-lg px-3 py-2 shadow-sm">
-                        <i class="ph-fill ph-user-circle text-brand-blueMain text-xl mr-2"></i>
-                        <select id="triagePatientSelect" onchange="loadTriagePatient()" class="bg-transparent text-sm font-medium text-gray-700 focus:outline-none w-48 sm:w-64 cursor-pointer"></select>
-                    </div>
+                <div class="mb-6">
+                    <h3 class="text-xl font-bold text-brand-blueDark">ห้องซักประวัติ และตรวจรักษา</h3>
+                    <p class="text-sm text-gray-500">บันทึกสัญญาณชีพ (Vital Signs) อาการสำคัญ และการประเมินเบื้องต้น</p>
                 </div>
 
-                <div id="triageEmpty" class="bg-white p-10 rounded-xl shadow-sm text-center border border-brand-bluePale/30">
-                    <i class="ph ph-user-list text-4xl text-brand-blueLight mb-3"></i>
-                    <p class="text-gray-500 text-sm">เลือกผู้รับบริการจากคิวด้านบน หรือส่งผู้ป่วยเข้าคิวจาก "ห้องบัตร"</p>
-                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-5 items-start">
+                    <aside class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-hidden">
+                        <div class="p-3 border-b border-gray-100 bg-brand-bluePale/20 font-semibold text-brand-blueDark text-sm flex items-center"><i class="ph-fill ph-user-list mr-2"></i> คิวรอซักประวัติ</div>
+                        <div id="triageQueueList" class="divide-y divide-gray-50 max-h-[72vh] overflow-y-auto"></div>
+                    </aside>
+                    <div>
+                        <select id="triagePatientSelect" class="hidden"></select>
+                        <div id="triageEmpty" class="bg-white p-10 rounded-xl shadow-sm text-center border border-brand-bluePale/30">
+                            <i class="ph ph-user-list text-4xl text-brand-blueLight mb-3"></i>
+                            <p class="text-gray-500 text-sm">เลือกผู้รับบริการจากคิวด้านซ้าย หรือส่งผู้ป่วยเข้าคิวจาก "ห้องบัตร"</p>
+                        </div>
 
                 <div id="triageForm-wrap" class="hidden bg-white rounded-xl shadow-sm border border-brand-bluePale/30 p-6">
                     <div id="triagePatientStrip" class="mb-4"></div>
@@ -472,6 +473,8 @@
                             <button type="submit" class="px-5 py-2.5 bg-brand-greenMain hover:bg-brand-greenDark text-white rounded-lg text-sm font-medium transition-colors shadow-md flex items-center"><i class="ph ph-arrow-right mr-2 text-lg"></i> บันทึก & ส่งห้องตรวจ</button>
                         </div>
                     </form>
+                </div>
+                    </div>
                 </div>
             </section>
 
@@ -1641,10 +1644,20 @@
     function renderTriageQueue(){
         const list = todayVisits().filter(v=>v.status===STATUS.TRIAGE);
         const sel = $('#triagePatientSelect');
-        sel.innerHTML = `<option value="">-- เลือกผู้รอซักประวัติ (${list.length}) --</option>` + list.map(v=>{ const p=patientByHN(v.hn)||{}; return `<option value="${v.vn}">${esc(v.hn)} | ${esc(pname(p))}</option>`; }).join('');
-        if(State.current.vn && list.some(v=>v.vn===State.current.vn)){ sel.value=State.current.vn; loadTriagePatient(); }
-        else { $('#triageForm-wrap').classList.add('hidden'); $('#triageEmpty').classList.remove('hidden'); }
+        sel.innerHTML = `<option value="">--</option>` + list.map(v=>`<option value="${v.vn}"></option>`).join('');
+        // รายชื่อแนวตั้งด้านซ้าย
+        const cur=State.current.vn;
+        $('#triageQueueList').innerHTML = list.length ? list.map((v,i)=>{ const p=patientByHN(v.hn)||{}; const active=String(v.vn)===String(cur);
+            return `<button type="button" onclick="selectTriage('${v.vn}')" class="w-full text-left p-3 flex items-center gap-2 transition-colors ${active?'bg-brand-blueMain text-white':'hover:bg-brand-bluePale/20'}">
+                <span class="w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${active?'bg-white/25 text-white':'bg-brand-bluePale/40 text-brand-blueDark'}">${i+1}</span>
+                <span class="min-w-0"><span class="block text-sm font-semibold truncate ${active?'text-white':'text-gray-800'}">${esc(pname(p))}</span>
+                <span class="block text-xs truncate ${active?'text-white/80':'text-gray-400'}">${esc(v.hn)}${p.allergy&&p.allergy!=='ไม่มี'?' · ⚠ แพ้ยา':''}</span></span>
+            </button>`; }).join('')
+            : `<div class="p-6 text-center text-gray-400 text-sm"><i class="ph ph-user-list text-2xl block mb-1"></i>ไม่มีผู้รอซักประวัติ</div>`;
+        if(cur && list.some(v=>v.vn===cur)){ sel.value=cur; loadTriagePatient(); }
+        else { State.current.vn=null; $('#triageForm-wrap').classList.add('hidden'); $('#triageEmpty').classList.remove('hidden'); }
     }
+    function selectTriage(vn){ State.current.vn=vn; $('#triagePatientSelect').value=vn; renderTriageQueue(); }
     function patientStrip(p, v){
         const noAllergy = !p.allergy || p.allergy==='ไม่มี';
         return `<div class="flex flex-wrap items-center gap-3 bg-brand-bluePale/20 rounded-xl px-4 py-3 border border-brand-bluePale/40">
