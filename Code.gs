@@ -19,6 +19,7 @@ var SHEET_INV = 'Inventory';
 var SHEET_SIGN = 'Sign';
 var SHEET_LOGO = 'Logo';
 var SHEET_REFER = 'Referrals';
+var SHEET_TPL = 'Templates';
 var DRIVE_FOLDER = 'ThirayutClinic_Files';
 
 var HEADERS = {
@@ -29,9 +30,10 @@ var HEADERS = {
   Inventory: ['code','name','unit','price','stock','minStock','category','updatedAt','dbName','opdName'],
   Sign: ['name','position','license','signUrl'],
   Logo: ['name','url'],
-  Referrals: ['id','hn','patientName','date','refNo','dear','referTo','attach','purpose','history','current','lab','dx','treatment','reason','other','signer','position','license','createdAt','updatedAt']
+  Referrals: ['id','hn','patientName','date','refNo','dear','referTo','attach','purpose','history','current','lab','dx','treatment','reason','other','signer','position','license','createdAt','updatedAt'],
+  Templates: ['id','type','text','createdAt']
 };
-var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code', Sign:'name', Logo:'name', Referrals:'id' };
+var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code', Sign:'name', Logo:'name', Referrals:'id', Templates:'id' };
 /* คอลัมน์ที่ต้องเก็บเป็นข้อความ (กัน Google Sheets ตัดเลข 0 นำหน้า) */
 var TEXT_COLS = { Patients:['cid','phone','emPhone'], Users:['username','password'], Inventory:['code'], Referrals:['id','refNo'] };
 
@@ -62,6 +64,8 @@ function doPost(e) {
     if (action === 'deleteInventory')   return json(deleteRecord(SHEET_INV, data.code));
     if (action === 'saveReferral')      return json(upsert(SHEET_REFER, data));
     if (action === 'deleteReferral')    return json(deleteRecord(SHEET_REFER, data.id));
+    if (action === 'saveTemplate')      return json(upsert(SHEET_TPL, data));
+    if (action === 'deleteTemplate')    return json(deleteRecord(SHEET_TPL, data.id));
     if (action === 'saveVisitPdf')      return json(saveVisitPdf(data));
     return json({ status: 'error', message: 'unknown action: ' + action });
   } catch (err) {
@@ -117,7 +121,8 @@ function loadAll() {
     inventory: readAll(SHEET_INV),
     signs: readAll(SHEET_SIGN),
     logos: readAll(SHEET_LOGO),
-    referrals: readAll(SHEET_REFER)
+    referrals: readAll(SHEET_REFER),
+    templates: readAll(SHEET_TPL)
   };
 }
 
@@ -182,6 +187,7 @@ function setupSheets() {
   getSheet(SHEET_SIGN);
   getSheet(SHEET_LOGO);
   getSheet(SHEET_REFER);
+  getSheet(SHEET_TPL);
   var users = getSheet(SHEET_USERS);
   if (users.getLastRow() < 2) {
     // username, password, name, role, active
@@ -194,7 +200,7 @@ function setupSheets() {
 
 /* ---------- ซ่อมหัวตารางทุกชีตให้ตรงลำดับ HEADERS (รันเองถ้าต้องการ) ---------- */
 function syncHeaders() {
-  ['Patients','Visits','Appointments','Users','Inventory','Sign','Logo','Referrals'].forEach(function(name){
+  ['Patients','Visits','Appointments','Users','Inventory','Sign','Logo','Referrals','Templates'].forEach(function(name){
     var sh = getSheet(name);
     sh.getRange(1, 1, 1, HEADERS[name].length).setValues([HEADERS[name]]);
   });

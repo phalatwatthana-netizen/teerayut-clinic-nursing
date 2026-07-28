@@ -471,6 +471,9 @@
                                     <input type="number" min="0" id="cc_dur" placeholder="ระยะเวลา" class="w-24 px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white shadow-sm">
                                     <select id="cc_unit" class="w-24 px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white shadow-sm"><option value="">หน่วย</option><option>นาที</option><option>ชม.</option><option>วัน</option><option>เดือน</option><option>ปี</option></select>
                                     <span class="text-sm text-gray-500 whitespace-nowrap">ก่อนมาคลินิก</span>
+                                    <select id="cc_tpl" onchange="applyTpl('cc')" class="px-2 py-2 border border-brand-bluePale/60 rounded-lg text-xs bg-brand-bluePale/20 text-brand-blueDark"><option value="">📋 เทมเพลท CC</option></select>
+                                    <button type="button" onclick="saveTpl('cc')" title="บันทึกข้อความ CC เป็นเทมเพลท" class="p-2 text-brand-teal hover:bg-brand-teal/10 rounded-lg"><i class="ph ph-bookmark-simple text-lg"></i></button>
+                                    <button type="button" onclick="delTpl('cc')" title="ลบเทมเพลทที่เลือก" class="p-2 text-red-500 hover:bg-red-50 rounded-lg"><i class="ph ph-trash text-lg"></i></button>
                                 </div></div>
                             <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PI :</label>
                                 <div class="w-full">
@@ -478,6 +481,9 @@
                                         <input type="number" min="0" id="pi_dur" placeholder="ระยะเวลา" class="w-24 px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white shadow-sm">
                                         <select id="pi_unit" class="w-24 px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white shadow-sm"><option value="">หน่วย</option><option>นาที</option><option>ชม.</option><option>วัน</option><option>เดือน</option><option>ปี</option></select>
                                         <span class="text-sm text-gray-500 whitespace-nowrap">ก่อนมาคลินิก</span>
+                                        <select id="pi_tpl" onchange="applyTpl('pi')" class="px-2 py-2 border border-brand-bluePale/60 rounded-lg text-xs bg-brand-bluePale/20 text-brand-blueDark"><option value="">📋 เทมเพลท PI</option></select>
+                                        <button type="button" onclick="saveTpl('pi')" title="บันทึกข้อความ PI เป็นเทมเพลท" class="p-2 text-brand-teal hover:bg-brand-teal/10 rounded-lg"><i class="ph ph-bookmark-simple text-lg"></i></button>
+                                        <button type="button" onclick="delTpl('pi')" title="ลบเทมเพลทที่เลือก" class="p-2 text-red-500 hover:bg-red-50 rounded-lg"><i class="ph ph-trash text-lg"></i></button>
                                     </div>
                                     <textarea id="pi" rows="2" placeholder="ประวัติการเจ็บป่วยปัจจุบัน (Present Illness)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm"></textarea>
                                 </div></div>
@@ -862,7 +868,7 @@
     const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbykhJnniKpuPO1HzIOMn_HBViixcAwWH961Kw1HerVgSTz9vIgrpQksCbuuCKHwQ-6k/exec';
 
     /* ---------- State ---------- */
-    const State = { patients:[], visits:[], appointments:[], inventory:[], signs:[], logos:[], referrals:[], current:{} };
+    const State = { patients:[], visits:[], appointments:[], inventory:[], signs:[], logos:[], referrals:[], templates:[], current:{} };
 
     /* ---------- API / Store ---------- */
     const Store = {
@@ -889,7 +895,7 @@
             if(Store.online()){
                 const r = await fetch(Store.url()+'?action=load&t='+Date.now());
                 const d = await r.json(); if(d.status==='error') throw new Error(d.message);
-                return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[], inventory:d.inventory||[], signs:d.signs||[], logos:d.logos||[], referrals:d.referrals||[] };
+                return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[], inventory:d.inventory||[], signs:d.signs||[], logos:d.logos||[], referrals:d.referrals||[], templates:d.templates||[] };
             }
             return {
                 patients: JSON.parse(localStorage.getItem('clinic_patients')||'[]'),
@@ -898,7 +904,8 @@
                 inventory: JSON.parse(localStorage.getItem('clinic_inventory')||'[]'),
                 signs: JSON.parse(localStorage.getItem('clinic_signs')||'[]'),
                 logos: JSON.parse(localStorage.getItem('clinic_logos')||'[]'),
-                referrals: JSON.parse(localStorage.getItem('clinic_referrals')||'[]')
+                referrals: JSON.parse(localStorage.getItem('clinic_referrals')||'[]'),
+                templates: JSON.parse(localStorage.getItem('clinic_templates')||'[]')
             };
         },
         localSave(){
@@ -909,6 +916,7 @@
             localStorage.setItem('clinic_signs', JSON.stringify(State.signs));
             localStorage.setItem('clinic_logos', JSON.stringify(State.logos));
             localStorage.setItem('clinic_referrals', JSON.stringify(State.referrals));
+            localStorage.setItem('clinic_templates', JSON.stringify(State.templates));
         },
         async savePatient(p){ if(Store.online()) return Store.post('savePatient', p); Store.localSave(); return { status:'success', hn:p.hn }; },
         async saveVisit(v){ if(Store.online()) return Store.post('saveVisit', v); Store.localSave(); return { status:'success', vn:v.vn }; },
@@ -919,7 +927,9 @@
         async saveInventory(it){ if(Store.online()) return Store.post('saveInventory', it); Store.localSave(); return { status:'success', code:it.code }; },
         async deleteInventory(code){ if(Store.online()) return Store.post('deleteInventory', {code}); Store.localSave(); return { status:'success' }; },
         async saveReferral(r){ if(Store.online()) return Store.post('saveReferral', r); Store.localSave(); return { status:'success', id:r.id }; },
-        async deleteReferral(id){ if(Store.online()) return Store.post('deleteReferral', {id}); Store.localSave(); return { status:'success' }; }
+        async deleteReferral(id){ if(Store.online()) return Store.post('deleteReferral', {id}); Store.localSave(); return { status:'success' }; },
+        async saveTemplate(t){ if(Store.online()) return Store.post('saveTemplate', t); Store.localSave(); return { status:'success', id:t.id }; },
+        async deleteTemplate(id){ if(Store.online()) return Store.post('deleteTemplate', {id}); Store.localSave(); return { status:'success' }; }
     };
 
     /* ---------- Utils ---------- */
@@ -1026,7 +1036,7 @@
     function dashDateToday(){ $('#dashDate').value = todayISO(); renderDashboard(); }
     async function reloadData(btn){
         const orig=btn?btn.innerHTML:''; if(btn){ btn.innerHTML='<i class="ph ph-spinner animate-spin"></i>'; btn.disabled=true; }
-        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; State.referrals=d.referrals||[]; normalizePhones(); Store.localSave(); renderDashboard(); updateBadges(); showToast('โหลดข้อมูลล่าสุดแล้ว'); }
+        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; State.referrals=d.referrals||[]; State.templates=d.templates||[]; normalizePhones(); Store.localSave(); renderDashboard(); updateBadges(); showToast('โหลดข้อมูลล่าสุดแล้ว'); }
         catch(e){ showToast('โหลดไม่สำเร็จ: '+e.message,'error'); }
         finally{ if(btn){ btn.innerHTML=orig; btn.disabled=false; } }
     }
@@ -1722,6 +1732,7 @@
         $('#triagePatientStrip').innerHTML = patientStrip(p, v);
         ['bp_sys','bp_dia','bt','pr','weight','height','bmi','cc','pi','ph','pe'].forEach(f=>{ if($('#'+f)) $('#'+f).value = v[f]||''; });
         ['cc_dur','cc_unit','pi_dur','pi_unit'].forEach(f=>{ if($('#'+f)) $('#'+f).value=''; });
+        renderTplSelects();
         // ดรอปดาวน์ผู้ตรวจ/ลงชื่อ จากชีต Sign (ค่าเริ่มต้น = ผู้ล็อกอิน)
         const u=Auth.get();
         $('#triage_signer').innerHTML = `<option value="">— เลือกผู้ลงชื่อ —</option>` + (State.signs||[]).map(s=>`<option value="${esc(s.name)}">${esc(s.name)}${s.position?(' · '+esc(s.position)):''}</option>`).join('');
@@ -1740,6 +1751,35 @@
             if(bmi<18.5) cls='border-blue-300 bg-blue-50 text-blue-700'; else if(bmi<=22.9) cls='border-green-300 bg-green-50 text-green-700'; else if(bmi<=24.9) cls='border-yellow-300 bg-yellow-50 text-yellow-700'; else cls='border-red-300 bg-red-50 text-red-700';
             out.className=`w-full px-3 py-2 border ${cls} rounded-lg text-sm font-semibold text-center shadow-sm`;
         } else { out.value=''; out.className='w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-semibold text-gray-500 text-center shadow-sm'; }
+    }
+    /* ---------- เทมเพลท CC/PI (เก็บในชีต Templates) ---------- */
+    function renderTplSelects(){
+        ['cc','pi'].forEach(type=>{
+            const sel=$('#'+type+'_tpl'); if(!sel) return;
+            const list=(State.templates||[]).filter(t=>t.type===type);
+            sel.innerHTML=`<option value="">📋 เทมเพลท ${type.toUpperCase()}</option>`+list.map(t=>`<option value="${esc(t.id)}">${esc((t.text||'').slice(0,40))}${(t.text||'').length>40?'…':''}</option>`).join('');
+        });
+    }
+    function applyTpl(type){
+        const sel=$('#'+type+'_tpl'); const t=(State.templates||[]).find(x=>String(x.id)===String(sel.value));
+        if(t){ $('#'+type).value=t.text||''; }
+        sel.value='';
+    }
+    async function saveTpl(type){
+        const text=$('#'+type).value.trim();
+        if(!text){ showToast('พิมพ์ข้อความ '+type.toUpperCase()+' ก่อนบันทึกเป็นเทมเพลท','error'); return; }
+        if((State.templates||[]).some(t=>t.type===type && (t.text||'').trim()===text)){ showToast('มีเทมเพลทนี้อยู่แล้ว','error'); return; }
+        const rec={ id:'T'+Date.now(), type, text, createdAt:nowISO() };
+        State.templates.push(rec);
+        try{ await Store.saveTemplate(rec); Store.localSave(); renderTplSelects(); showToast('บันทึกเทมเพลท '+type.toUpperCase()+' แล้ว'); }
+        catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message,'error'); }
+    }
+    async function delTpl(type){
+        const sel=$('#'+type+'_tpl'); const id=sel.value;
+        if(!id){ showToast('เลือกเทมเพลทที่ต้องการลบก่อน','error'); return; }
+        if(!await confirmDialog('ลบเทมเพลทนี้?', {title:'ลบเทมเพลท', okText:'ลบ', danger:true, icon:'ph-trash'})) return;
+        try{ await Store.deleteTemplate(id); State.templates=State.templates.filter(t=>String(t.id)!==String(id)); Store.localSave(); renderTplSelects(); showToast('ลบเทมเพลทแล้ว'); }
+        catch(e){ showToast('ลบไม่สำเร็จ: '+e.message,'error'); }
     }
     /* ---------- สัญญาณชีพเพิ่มเติม (ครั้งที่ 2-3) ---------- */
     const VITAL_INP='w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-white shadow-sm';
@@ -2882,7 +2922,7 @@
     function updateDate(){ const el=$('#currentDateDisplay'); if(el) el.innerText=new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }
     async function boot(){
         updateConnBox();
-        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; State.referrals=d.referrals||[]; normalizePhones(); Store.localSave(); }
+        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; State.referrals=d.referrals||[]; State.templates=d.templates||[]; normalizePhones(); Store.localSave(); }
         catch(e){ showToast('โหลดข้อมูลไม่สำเร็จ: '+e.message,'error'); }
         const cur = document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard';
         renderView(cur); updateBadges();
