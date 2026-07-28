@@ -2462,7 +2462,8 @@
         const line=(v,mw)=>`<span style="border-bottom:1px dotted #555;padding:0 6px;min-width:${mw||40}px;display:inline-block;font-weight:500">${esc(v||'')}</span>`;
         const chk=on=>`<span style="display:inline-block;width:13px;height:13px;border:1.4px solid ${NAVY};text-align:center;line-height:12px;font-size:11px;vertical-align:middle">${on?'✓':''}</span>`;
         const para=v=>esc(v||'').replace(/\n/g,'<br>');
-        const sec=(t,v)=>`<div style="margin:7px 0"><b style="color:${NAVY}">${t}</b><div style="border-bottom:1px dotted #666;min-height:22px;padding:2px 4px 1px;white-space:pre-wrap">${para(v)}</div></div>`;
+        const secLine=txt=>`<div style="border-bottom:1px dotted #666;min-height:22px;padding:2px 4px 1px;white-space:pre-wrap">${txt||'&nbsp;'}</div>`;
+        const sec=(t,v)=>{ const lines=String(v||'').split('\n'); const rows=(lines.length?lines:['']).map(l=>secLine(esc(l))).join(''); return `<div style="margin:7px 0"><b style="color:${NAVY}">${t}</b>${rows}</div>`; };
         const logo=currentLogo();
         const logoImg = logo ? `<img src="${esc(logo)}" alt="logo" style="height:150px;width:auto;max-width:100%;object-fit:contain;display:block;margin:-12px auto -8px" onerror="this.style.display='none'">` : '';
         const signUrl = driveImg((referSignRec(d.signer)||{}).signUrl);
