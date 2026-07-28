@@ -593,7 +593,8 @@
                             <h4 class="font-semibold text-brand-blueDark flex items-center"><i class="ph-fill ph-note-pencil mr-2"></i> ออกใบส่งตัว</h4>
                             <div class="flex gap-2">
                                 <button type="button" onclick="newReferral()" class="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 flex items-center"><i class="ph ph-file-plus mr-1"></i> ใหม่</button>
-                                <button type="button" onclick="printReferPreview()" class="px-3 py-1.5 border border-brand-blueMain text-brand-blueMain rounded-lg text-xs font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-printer mr-1"></i> พิมพ์</button>
+                                <button type="button" onclick="printReferPreview()" class="px-3 py-1.5 border border-brand-blueMain text-brand-blueMain rounded-lg text-xs font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-printer mr-1"></i> พิมพ์ 1 หน้า</button>
+                                <button type="button" onclick="printReferMultiPreview()" class="px-3 py-1.5 border border-brand-blueMain text-brand-blueMain rounded-lg text-xs font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-files mr-1"></i> พิมพ์หลายหน้า</button>
                                 <button type="button" onclick="saveReferFile('pdf',this)" class="px-3 py-1.5 border border-red-400 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 flex items-center"><i class="ph ph-file-pdf mr-1"></i> PDF</button>
                                 <button type="button" onclick="saveReferFile('jpg',this)" class="px-3 py-1.5 border border-amber-400 text-amber-600 rounded-lg text-xs font-medium hover:bg-amber-50 flex items-center"><i class="ph ph-image mr-1"></i> JPG</button>
                                 <button type="submit" form="referForm" class="px-3 py-1.5 bg-brand-blueMain hover:bg-brand-teal text-white rounded-lg text-xs font-medium flex items-center"><i class="ph ph-floppy-disk mr-1"></i> บันทึก</button>
@@ -2703,7 +2704,8 @@
             signer:r.signer||'', license:r.license||'' };
     }
     /* สร้าง HTML ใบส่งตัว (A4 แนวตั้ง) */
-    function buildReferralHtml(d){
+    function buildReferralHtml(d, opts){
+        opts=opts||{};
         const NAVY='#0f3d91';
         const line=(v,mw)=>`<span style="border-bottom:1px dotted #555;padding:0 6px;min-width:${mw||40}px;display:inline-block;font-weight:500">${esc(v||'')}</span>`;
         const chk=on=>`<span style="display:inline-block;width:13px;height:13px;border:1.4px solid ${NAVY};text-align:center;line-height:12px;font-size:11px;vertical-align:middle">${on?'✓':''}</span>`;
@@ -2714,13 +2716,13 @@
         const logoImg = logo ? `<img src="${esc(logo)}" alt="logo" style="height:150px;width:auto;max-width:100%;object-fit:contain;display:block;margin:-12px auto -8px" onerror="this.style.display='none'">` : '';
         const signUrl = driveImg((referSignRec(d.signer)||{}).signUrl);
         const signImg = signUrl ? `<img src="${esc(signUrl)}" alt="sign" style="height:48px;width:auto;object-fit:contain;margin:2px auto -6px" onerror="this.style.display='none'">` : '';
-        return `<div style="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif;color:#111;font-size:15px;line-height:1.55">
-            <div style="text-align:center;margin-bottom:8px">
+        const FONT="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif";
+        const head = `<div style="text-align:center;margin-bottom:8px">
                 ${logoImg}
                 <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.25">${CLINIC.address}</div>
                 <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.25">โทร. ${CLINIC.phone}</div>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:4px">
+            </div>`;
+        const body = `<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:4px">
                 <div style="font-size:18px;font-weight:700;color:${NAVY}">ใบส่งตัวผู้ป่วยไปรับการตรวจหรือรักษาต่อ</div>
                 <div style="font-size:14px">เลขที่ ${line(d.refNo,70)}</div>
             </div>
@@ -2744,8 +2746,15 @@
                 ${(referSignRec(d.signer)||{}).position?`<div>ตำแหน่ง ${esc(referSignRec(d.signer).position)}</div>`:''}
                 <div>เลขที่ใบอนุญาตประกอบวิชาชีพ ${esc(d.license||'..................')}</div>
                 <div>วันที่ ${d.date?fmtDateTH(d.date):'..................'}</div>
-            </div>
-        </div>`;
+            </div>`;
+        // โหมดหลายหน้า: หัวกระดาษอยู่ใน thead → เบราว์เซอร์พิมพ์ซ้ำทุกหน้าอัตโนมัติ
+        if(opts.paged){
+            return `<table style="width:100%;border-collapse:collapse;${FONT};color:#111;font-size:15px;line-height:1.55">
+                <thead><tr><td style="padding:0">${head}</td></tr></thead>
+                <tbody><tr><td style="padding:0">${body}</td></tr></tbody>
+            </table>`;
+        }
+        return `<div style="${FONT};color:#111;font-size:15px;line-height:1.55">${head}${body}</div>`;
     }
     function renderReferPreview(){
         const host=$('#referPreviewSheet'); if(!host) return;
@@ -2777,6 +2786,14 @@
     function printReferPreview(){
         if(!refSelectedHN()){ showToast('เลือกผู้รับบริการก่อน','error'); return; }
         printReferDoc(referGather());
+    }
+    /* พิมพ์โหมดหลายหน้า: เนื้อหายาวไหลลงหน้าถัดไปได้ หัวกระดาษซ้ำทุกหน้า */
+    function printReferMulti(d){
+        printHTML(`<div style="width:186mm;margin:0 auto"><style>@page{size:A4 portrait;margin:12mm;}</style>${buildReferralHtml(d,{paged:true})}</div>`);
+    }
+    function printReferMultiPreview(){
+        if(!refSelectedHN()){ showToast('เลือกผู้รับบริการก่อน','error'); return; }
+        printReferMulti(referGather());
     }
     function downloadDataUrl(url,name){ const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
     /* บันทึกใบส่งตัวเป็น PDF/JPG ตรงตามพรีวิวเป๊ะ (เรนเดอร์เต็มขนาด A4) */
