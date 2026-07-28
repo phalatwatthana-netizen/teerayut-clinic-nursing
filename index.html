@@ -1804,11 +1804,24 @@
                 </div>
                 <div class="flex items-center gap-2 mt-2"><span class="text-xs text-gray-500 whitespace-nowrap">อื่นๆ ระบุ:</span><input type="text" class="pe-other flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-sm" data-g="${gi}" placeholder="ระบุเพิ่มเติม (เว้นว่าง=ไม่แสดง)"></div>
             </div>`).join('')}
+            <div class="border border-dashed border-brand-teal/50 rounded-xl p-3 bg-brand-teal/5">
+                <div class="font-semibold text-brand-blueDark mb-2">ระบบอื่น (พิมพ์เอง)</div>
+                <div id="peCustomList" class="space-y-2"></div>
+                <button type="button" onclick="peAddCustom()" class="mt-2 text-xs text-brand-teal font-medium flex items-center"><i class="ph ph-plus-circle mr-1"></i> เพิ่มระบบ</button>
+            </div>
             <div class="flex justify-end gap-2 pt-1"><button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ยกเลิก</button><button type="button" onclick="applyPeForm()" class="px-5 py-2 bg-brand-greenMain text-white rounded-lg font-medium">ใส่ลงช่อง PE</button></div>
         </div>`;
         openModal('แบบฟอร์มตรวจร่างกาย (PE)', html);
+        peAddCustom();
     }
     function peCheckAll(gi){ document.querySelectorAll(`.pe-chk[data-g="${gi}"]`).forEach(c=>c.checked=true); }
+    function peAddCustom(){
+        $('#peCustomList').insertAdjacentHTML('beforeend', `<div class="flex items-center gap-2">
+            <input type="text" class="pe-cname w-32 px-2 py-1.5 border border-gray-200 rounded-lg text-sm" placeholder="ชื่อระบบ เช่น Neuro">
+            <input type="text" class="pe-ctext flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-sm" placeholder="รายละเอียด">
+            <button type="button" onclick="this.parentElement.remove()" class="text-red-500 p-1"><i class="ph ph-x-circle text-lg"></i></button>
+        </div>`);
+    }
     function applyPeForm(){
         const lines=PE_FORM.map((g,gi)=>{
             const picked=[...document.querySelectorAll(`.pe-chk[data-g="${gi}"]:checked`)].map(c=>c.value);
@@ -1816,6 +1829,11 @@
             if(other && other.trim()) picked.push(other.trim());
             return picked.length ? `${g.key}: ${picked.join(', ')}` : '';
         }).filter(Boolean);
+        // ระบบที่พิมพ์เอง
+        [...document.querySelectorAll('#peCustomList > div')].forEach(row=>{
+            const nm=(row.querySelector('.pe-cname')||{}).value||''; const tx=(row.querySelector('.pe-ctext')||{}).value||'';
+            if(nm.trim() || tx.trim()) lines.push(`${nm.trim()||'อื่นๆ'}: ${tx.trim()}`);
+        });
         const txt=lines.join('\n');
         const cur=$('#pe').value.trim();
         $('#pe').value = cur ? (cur+'\n'+txt) : txt;
