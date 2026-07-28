@@ -1211,7 +1211,7 @@
                 <div style="flex:0 0 306px;border:2px solid ${NAVY};border-radius:14px;padding:6px 10px">
                     <div style="display:flex;align-items:center;margin-bottom:4px"><b style="color:${NAVY};font-size:18px;width:80px">HN.</b> ${fill(v.hn,150)}</div>
                     <div style="display:flex;align-items:center;margin-bottom:4px"><b style="color:${NAVY};width:80px">บัตรประชาชน</b> <span>${boxes(p.cid,13,15)}</span></div>
-                    <div style="display:flex;align-items:center"><b style="color:${NAVY};width:80px">วัน/เดือน/ปี</b> <span>${boxes(beDate,8,16)}</span></div>
+                    <div style="display:flex;align-items:center"><b style="color:${NAVY};width:80px">วันเดือนปีเกิด</b> <span>${boxes(beDate,8,16)}</span></div>
                 </div>
             </div>
             <div style="padding:0 4px">
@@ -1230,7 +1230,7 @@
                 <div><b style="color:${NAVY}">Rx :</b> ${fill(meds,600)}</div>
                 <div><b style="color:${NAVY}">Treatment :</b> ${fill(v.treatment,540)}</div>
                 <div><b style="color:${NAVY}">Follow Up :</b> ${fill(v.followUpDate?(fmtDateTH(v.followUpDate)+' '+(v.followUpNote||'')):'',520)}</div>
-                <div><b style="color:${NAVY}">Signature :</b> ${fill('',540)}</div>
+                <div>${(()=>{ const u=Auth.get(); const rec=u?referSignRec(u.name):null; const sImg=rec?driveImg(rec.signUrl):''; return sImg?`<span style="display:inline-flex;align-items:flex-end;gap:6px"><b style="color:${NAVY}">Signature :</b> <img src="${esc(sImg)}" style="height:34px;width:auto;object-fit:contain" onerror="this.style.display='none'"> <span style="border-bottom:1px dotted #333;min-width:200px;text-align:center;padding-bottom:2px">${esc(u.name||'')}</span></span>`:`<b style="color:${NAVY}">Signature :</b> ${fill('',540)}`; })()}</div>
             </div>
         </div>`;
     }
