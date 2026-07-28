@@ -488,7 +488,11 @@
                                     <textarea id="pi" rows="2" placeholder="ประวัติการเจ็บป่วยปัจจุบัน (Present Illness)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm"></textarea>
                                 </div></div>
                             <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PH :</label><input type="text" id="ph" placeholder="ประวัติการเจ็บป่วยในอดีต (Past History)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm"></div>
-                            <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PE :</label><textarea id="pe" rows="2" placeholder="การตรวจร่างกาย (Physical Examination)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm"></textarea></div>
+                            <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PE :</label>
+                                <div class="w-full">
+                                    <div class="flex justify-end mb-1"><button type="button" onclick="openPeForm()" class="px-3 py-1.5 border border-brand-teal text-brand-teal rounded-lg text-xs font-medium hover:bg-brand-teal/10 flex items-center"><i class="ph ph-list-checks mr-1"></i> แบบฟอร์ม PE (เช็คลิสต์)</button></div>
+                                    <textarea id="pe" rows="3" placeholder="การตรวจร่างกาย (Physical Examination)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm"></textarea>
+                                </div></div>
                         </div>
 
                         <div class="flex flex-col sm:flex-row sm:items-center gap-2 px-2 mt-4">
@@ -1780,6 +1784,42 @@
         if(!await confirmDialog('ลบเทมเพลทนี้?', {title:'ลบเทมเพลท', okText:'ลบ', danger:true, icon:'ph-trash'})) return;
         try{ await Store.deleteTemplate(id); State.templates=State.templates.filter(t=>String(t.id)!==String(id)); Store.localSave(); renderTplSelects(); showToast('ลบเทมเพลทแล้ว'); }
         catch(e){ showToast('ลบไม่สำเร็จ: '+e.message,'error'); }
+    }
+    /* ---------- แบบฟอร์ม PE (เช็คลิสต์ตรวจร่างกาย) ---------- */
+    const PE_FORM=[
+        {key:'GA', label:'ลักษณะทั่วไป', items:['รู้สึกตัวดี','ไม่ซีด','ไม่มีตัวเหลือง']},
+        {key:'HEENT', label:'ศีรษะ ตา หู จมูก และคอ', items:['เยื่อบุตาไม่ซีด','ตาขาวไม่เหลือง','คอไม่แดง']},
+        {key:'CVS', label:'ระบบหัวใจและหลอดเลือด', items:['เสียงหัวใจ S1S2 ปกติ','จังหวะการเต้นของหัวใจสม่ำเสมอ','ไม่มีเสียงฟู่ของหัวใจ']},
+        {key:'RS', label:'ระบบทางเดินหายใจ', items:['เสียงหายใจเข้าปอดทั้งสองข้างเท่ากัน','เสียงหายใจปกติ','ไม่มีเสียงหายใจผิดปกติ']},
+        {key:'Abdomen', label:'ช่องท้อง', items:['หน้าท้องนุ่ม','ไม่กดเจ็บ','ไม่มีหน้าท้องเกร็ง','คลำไม่พบก้อน']},
+        {key:'Extremities', label:'แขนขา', items:['ไม่มีอาการบวม','เคลื่อนไหวได้ปกติ']}
+    ];
+    function openPeForm(){
+        const html=`<div class="space-y-3 text-sm max-h-[65vh] overflow-y-auto pr-1">
+            ${PE_FORM.map((g,gi)=>`<div class="border border-gray-100 rounded-xl p-3">
+                <div class="font-semibold text-brand-blueDark mb-2">${g.key} <span class="text-xs text-gray-400 font-normal">${g.label}</span>
+                    <button type="button" onclick="peCheckAll(${gi})" class="ml-2 text-xs text-brand-teal font-normal">เลือกทั้งหมด</button></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    ${g.items.map((it,ii)=>`<label class="flex items-center gap-2"><input type="checkbox" class="pe-chk rounded" data-g="${gi}" value="${esc(it)}"> ${esc(it)}</label>`).join('')}
+                </div>
+                <div class="flex items-center gap-2 mt-2"><span class="text-xs text-gray-500 whitespace-nowrap">อื่นๆ ระบุ:</span><input type="text" class="pe-other flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-sm" data-g="${gi}" placeholder="ระบุเพิ่มเติม (เว้นว่าง=ไม่แสดง)"></div>
+            </div>`).join('')}
+            <div class="flex justify-end gap-2 pt-1"><button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ยกเลิก</button><button type="button" onclick="applyPeForm()" class="px-5 py-2 bg-brand-greenMain text-white rounded-lg font-medium">ใส่ลงช่อง PE</button></div>
+        </div>`;
+        openModal('แบบฟอร์มตรวจร่างกาย (PE)', html);
+    }
+    function peCheckAll(gi){ document.querySelectorAll(`.pe-chk[data-g="${gi}"]`).forEach(c=>c.checked=true); }
+    function applyPeForm(){
+        const lines=PE_FORM.map((g,gi)=>{
+            const picked=[...document.querySelectorAll(`.pe-chk[data-g="${gi}"]:checked`)].map(c=>c.value);
+            const other=(document.querySelector(`.pe-other[data-g="${gi}"]`)||{}).value;
+            if(other && other.trim()) picked.push(other.trim());
+            return picked.length ? `${g.key}: ${picked.join(', ')}` : '';
+        }).filter(Boolean);
+        const txt=lines.join('\n');
+        const cur=$('#pe').value.trim();
+        $('#pe').value = cur ? (cur+'\n'+txt) : txt;
+        closeModal();
     }
     /* ---------- สัญญาณชีพเพิ่มเติม (ครั้งที่ 2-3) ---------- */
     const VITAL_INP='w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-white shadow-sm';
