@@ -1071,6 +1071,23 @@
             State.current.vn=null; renderView(document.querySelector('.app-section.active')?.id?.replace('section-','')||'dashboard'); updateBadges();
         }catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
     }
+    /* ส่งกลับห้องก่อนหน้า (ถอยสถานะทีละขั้นตามลำดับงาน) */
+    async function sendBackPrev(vn){
+        const v=visitByVN(vn); if(!v) return;
+        const flow=[STATUS.TRIAGE,STATUS.EXAM,STATUS.PHARM,STATUS.BILL,STATUS.DONE];
+        const i=flow.indexOf(v.status);
+        if(i<=0){ showToast('ไม่มีห้องก่อนหน้า','error'); return; }
+        const prev=flow[i-1];
+        const label={[STATUS.TRIAGE]:'ห้องซักประวัติ',[STATUS.EXAM]:'ห้องตรวจ',[STATUS.PHARM]:'ห้องยา',[STATUS.BILL]:'ห้องคิดเงิน'}[prev]||prev;
+        if(!await confirmDialog('ส่งผู้ป่วยกลับ'+label+'?', {title:'ส่งกลับห้องก่อนหน้า', okText:'ส่งกลับ', icon:'ph-arrow-arc-left'})) return;
+        const patch={ status:prev };
+        try{
+            await Store.saveVisit(Object.assign({}, v, patch));
+            Object.assign(v, patch); Store.localSave();
+            showToast('ส่งกลับ'+label+'แล้ว'); closeModal();
+            State.current.vn=null; renderView(document.querySelector('.app-section.active')?.id?.replace('section-','')||'dashboard'); updateBadges();
+        }catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
+    }
     /* ลบ visit (ประวัติการรับบริการวันนั้น) */
     async function deleteVisitRec(vn){
         const v=visitByVN(vn); if(!v) return;
@@ -1143,6 +1160,7 @@
                 <div id="pdfResult2" class="hidden"></div>
                 <div class="flex flex-wrap justify-between gap-2 border-t border-gray-100 pt-3">
                     <div class="flex gap-2">
+                        ${![STATUS.TRIAGE,STATUS.EXAM].includes(v.status)?`<button onclick="sendBackPrev('${v.vn}')" class="px-3 py-2 border border-amber-400 text-amber-600 rounded-lg text-xs font-medium hover:bg-amber-50 flex items-center"><i class="ph ph-arrow-arc-left mr-1"></i> ส่งกลับห้องก่อนหน้า</button>`:''}
                         ${v.status!==STATUS.TRIAGE?`<button onclick="sendBackToTriage('${v.vn}')" class="px-3 py-2 border border-orange-400 text-orange-600 rounded-lg text-xs font-medium hover:bg-orange-50 flex items-center"><i class="ph ph-arrow-u-up-left mr-1"></i> ส่งกลับซักประวัติ</button>`:''}
                         <button onclick="deleteVisitRec('${v.vn}')" class="px-3 py-2 border border-red-300 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 flex items-center"><i class="ph ph-trash mr-1"></i> ลบ visit</button>
                     </div>
@@ -1636,6 +1654,7 @@
             ${ noAllergy ? '' : `<span class="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-lg"><i class="ph-fill ph-warning"></i> แพ้: ${esc(p.allergy)}</span>`}
             ${ v ? `<div class="ml-auto flex flex-wrap gap-1.5 shrink-0">
                 <button type="button" onclick="openVisitDetail('${esc(v.vn)}')" class="text-xs bg-brand-teal text-white px-3 py-1.5 rounded-lg hover:bg-brand-blueDark flex items-center"><i class="ph ph-file-text mr-1"></i> เวชระเบียน/พิมพ์</button>
+                ${ ![STATUS.TRIAGE,STATUS.EXAM].includes(v.status) ? `<button type="button" onclick="sendBackPrev('${esc(v.vn)}')" class="text-xs bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 flex items-center"><i class="ph ph-arrow-arc-left mr-1"></i> ส่งกลับห้องก่อนหน้า</button>` : '' }
                 ${ v.status!==STATUS.TRIAGE ? `<button type="button" onclick="sendBackToTriage('${esc(v.vn)}')" class="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 flex items-center"><i class="ph ph-arrow-u-up-left mr-1"></i> ส่งกลับซักประวัติ</button>` : '' }
                 <button type="button" onclick="deleteVisitRec('${esc(v.vn)}')" class="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 flex items-center"><i class="ph ph-trash mr-1"></i> ลบ visit</button>
             </div>` : '' }
@@ -1689,6 +1708,7 @@
             <div class="flex justify-between items-center">
                 <div class="text-xs text-gray-500">${esc(v.hn)} · ${esc(v.cc||'-')}</div>
                 <div class="flex gap-1 shrink-0" onclick="event.stopPropagation()">
+                    ${ ![STATUS.TRIAGE,STATUS.EXAM].includes(v.status) ? `<button type="button" onclick="sendBackPrev('${esc(v.vn)}')" title="ส่งกลับห้องก่อนหน้า" class="p-1 text-amber-500 hover:bg-amber-50 rounded"><i class="ph ph-arrow-arc-left"></i></button>` : '' }
                     ${ v.status!==STATUS.TRIAGE ? `<button type="button" onclick="sendBackToTriage('${esc(v.vn)}')" title="ส่งกลับซักประวัติ" class="p-1 text-orange-500 hover:bg-orange-50 rounded"><i class="ph ph-arrow-u-up-left"></i></button>` : '' }
                     <button type="button" onclick="deleteVisitRec('${esc(v.vn)}')" title="ลบ visit" class="p-1 text-red-500 hover:bg-red-50 rounded"><i class="ph ph-trash"></i></button>
                 </div>
