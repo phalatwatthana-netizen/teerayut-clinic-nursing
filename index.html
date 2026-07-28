@@ -563,6 +563,8 @@
                             <input type="hidden" id="ref_id">
                             <div><label class="block text-xs font-medium text-gray-600 mb-1">ผู้รับบริการ <span class="text-red-500">*</span></label>
                                 <select id="ref_patient" required onchange="referPickPatient()" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-brand-bg/50"></select></div>
+                            <div><label class="block text-xs font-medium text-gray-600 mb-1">ประวัติวันที่มารับบริการ</label>
+                                <select id="ref_visit" onchange="referPickVisit()" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-brand-bg/50"></select></div>
                             <div class="grid grid-cols-2 gap-2">
                                 <div><label class="block text-xs text-gray-600 mb-1">เลขที่</label><input id="ref_no" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
                                 <div><label class="block text-xs text-gray-600 mb-1">วันที่</label><input id="ref_date" type="date" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
@@ -2356,7 +2358,7 @@
     }
     function nextRefNo(){
         const n = (State.referrals||[]).length + 1;
-        return String(n).padStart(3,'0')+'/'+(new Date().getFullYear()+543);
+        return String(n).padStart(2,'0')+'/'+(new Date().getFullYear()+543);
     }
     /* แปลงลิงก์ Google Drive ให้เป็น URL รูปภาพที่ฝัง <img> ได้ */
     function driveImg(url){
@@ -2374,22 +2376,36 @@
         if(rec && rec.license) $('#ref_license').value=rec.license;
         renderReferPreview();
     }
-    /* เลือกผู้ป่วย → ดึงข้อมูล visit ล่าสุดมาเติมอัตโนมัติ */
+    /* เลือกผู้ป่วย → แสดงเฉพาะวันที่ที่ผู้ป่วยมารับบริการจริง แล้วดึงข้อมูลจากวันล่าสุด */
     function referPickPatient(){
-        const hn=$('#ref_patient').value; if(!hn){ renderReferPreview(); return; }
-        const p=patientByHN(hn)||{};
+        const hn=$('#ref_patient').value; const vsel=$('#ref_visit');
+        if(!hn){ vsel.innerHTML=''; renderReferPreview(); return; }
+        const vs=referLoadVisitOptions(hn);
+        if(vs.length){ vsel.value=vs[0].vn; referFillFromVisit(vs[0].vn); }
+        if(!$('#ref_no').value) $('#ref_no').value=nextRefNo();
+        if(!$('#ref_date').value) $('#ref_date').value=todayISO();
+        $('#ref_p_treat').checked=true;
+        renderReferPreview();
+    }
+    /* เติมตัวเลือกวันที่มารับบริการของผู้ป่วย (คืน array visits) */
+    function referLoadVisitOptions(hn){
+        const vsel=$('#ref_visit');
         const vs=State.visits.filter(v=>v.hn===hn).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-        const v=vs[0]||{};
+        vsel.innerHTML = vs.length ? vs.map(v=>`<option value="${esc(v.vn)}">${fmtDateTH(v.date)}${v.cc?(' · '+esc(v.cc)):''}</option>`).join('')
+            : `<option value="">— ไม่มีประวัติมารับบริการ —</option>`;
+        return vs;
+    }
+    function referPickVisit(){ referFillFromVisit($('#ref_visit').value); renderReferPreview(); }
+    /* เติมข้อมูลใบส่งตัวจาก visit ที่เลือก */
+    function referFillFromVisit(vn){
+        const v=vn?visitByVN(vn):null; if(!v) return;
+        const p=patientByHN(v.hn)||{};
         $('#ref_history').value=[v.cc?('CC: '+v.cc):'', v.pi?('PI: '+v.pi):'', v.ph?('PH: '+v.ph):'', p.disease?('โรคประจำตัว: '+p.disease):'', p.allergy?('แพ้ยา: '+p.allergy):''].filter(Boolean).join('\n');
         $('#ref_current').value=v.pe||'';
         $('#ref_lab').value=v.lab||'';
         $('#ref_dx').value=v.dx||'';
         $('#ref_treatment').value=referTreatText(v);
         $('#ref_reason').value=v.referReason||v.dx||'';
-        if(!$('#ref_no').value) $('#ref_no').value=nextRefNo();
-        if(!$('#ref_date').value) $('#ref_date').value=todayISO();
-        $('#ref_p_treat').checked=true;
-        renderReferPreview();
     }
     /* เริ่มใบส่งตัวใหม่ (ล้างฟอร์ม) */
     function newReferral(){
@@ -2403,7 +2419,7 @@
     /* โหลดใบส่งตัวเดิมจากประวัติมาแก้ไข */
     function editReferral(id){
         const r=(State.referrals||[]).find(x=>String(x.id)===String(id)); if(!r) return;
-        $('#ref_id').value=r.id; $('#ref_patient').value=r.hn||'';
+        $('#ref_id').value=r.id; $('#ref_patient').value=r.hn||''; if(r.hn) referLoadVisitOptions(r.hn);
         $('#ref_no').value=r.refNo||''; $('#ref_date').value=dateKey(r.date)||todayISO();
         $('#ref_dear').value=r.dear||'นายแพทย์ผู้เกี่ยวข้อง'; $('#ref_to').value=r.referTo||''; $('#ref_attach').value=r.attach||'';
         $('#ref_p_treat').checked=/รักษาต่อ/.test(r.purpose||''); $('#ref_p_dx').checked=/วินิจฉัย/.test(r.purpose||'');
@@ -2446,7 +2462,7 @@
         const line=(v,mw)=>`<span style="border-bottom:1px dotted #555;padding:0 6px;min-width:${mw||40}px;display:inline-block;font-weight:500">${esc(v||'')}</span>`;
         const chk=on=>`<span style="display:inline-block;width:13px;height:13px;border:1.4px solid ${NAVY};text-align:center;line-height:12px;font-size:11px;vertical-align:middle">${on?'✓':''}</span>`;
         const para=v=>esc(v||'').replace(/\n/g,'<br>');
-        const sec=(t,v)=>`<div style="margin:5px 0"><b style="color:${NAVY}">${t}</b><div style="border:1px solid #ccc;border-radius:5px;min-height:32px;padding:4px 8px;margin-top:2px;white-space:pre-wrap">${para(v)}</div></div>`;
+        const sec=(t,v)=>`<div style="margin:7px 0"><b style="color:${NAVY}">${t}</b><div style="border-bottom:1px dotted #666;min-height:22px;padding:2px 4px 1px;white-space:pre-wrap">${para(v)}</div></div>`;
         const logo=currentLogo();
         const logoImg = logo ? `<img src="${esc(logo)}" alt="logo" style="height:150px;width:auto;max-width:100%;object-fit:contain;display:block;margin:-12px auto -8px" onerror="this.style.display='none'">` : '';
         const signUrl = driveImg((referSignRec(d.signer)||{}).signUrl);
