@@ -462,8 +462,22 @@
                         </div>
 
                         <div class="space-y-4 px-2">
-                            <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">CC :</label><input type="text" id="cc" placeholder="อาการสำคัญที่มาพบ (Chief Complaint)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm"></div>
-                            <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PI :</label><textarea id="pi" rows="2" placeholder="ประวัติการเจ็บป่วยปัจจุบัน (Present Illness)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm"></textarea></div>
+                            <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">CC :</label>
+                                <div class="w-full flex flex-wrap items-center gap-2">
+                                    <input type="text" id="cc" placeholder="อาการสำคัญที่มาพบ (Chief Complaint)" class="flex-1 min-w-[180px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm">
+                                    <input type="number" min="0" id="cc_dur" placeholder="ระยะเวลา" class="w-24 px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white shadow-sm">
+                                    <select id="cc_unit" class="w-24 px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white shadow-sm"><option value="">หน่วย</option><option>นาที</option><option>ชม.</option><option>วัน</option><option>เดือน</option><option>ปี</option></select>
+                                    <span class="text-sm text-gray-500 whitespace-nowrap">ก่อนมาคลินิก</span>
+                                </div></div>
+                            <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PI :</label>
+                                <div class="w-full">
+                                    <div class="flex flex-wrap items-center gap-2 mb-2">
+                                        <input type="number" min="0" id="pi_dur" placeholder="ระยะเวลา" class="w-24 px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white shadow-sm">
+                                        <select id="pi_unit" class="w-24 px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white shadow-sm"><option value="">หน่วย</option><option>นาที</option><option>ชม.</option><option>วัน</option><option>เดือน</option><option>ปี</option></select>
+                                        <span class="text-sm text-gray-500 whitespace-nowrap">ก่อนมาคลินิก</span>
+                                    </div>
+                                    <textarea id="pi" rows="2" placeholder="ประวัติการเจ็บป่วยปัจจุบัน (Present Illness)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm"></textarea>
+                                </div></div>
                             <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PH :</label><input type="text" id="ph" placeholder="ประวัติการเจ็บป่วยในอดีต (Past History)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm"></div>
                             <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PE :</label><textarea id="pe" rows="2" placeholder="การตรวจร่างกาย (Physical Examination)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm"></textarea></div>
                         </div>
@@ -1680,6 +1694,7 @@
         $('#triageEmpty').classList.add('hidden'); $('#triageForm-wrap').classList.remove('hidden');
         $('#triagePatientStrip').innerHTML = patientStrip(p, v);
         ['bp_sys','bp_dia','bt','pr','weight','height','bmi','cc','pi','ph','pe'].forEach(f=>{ if($('#'+f)) $('#'+f).value = v[f]||''; });
+        ['cc_dur','cc_unit','pi_dur','pi_unit'].forEach(f=>{ if($('#'+f)) $('#'+f).value=''; });
         calculateBMI();
     }
     function calculateBMI(){
@@ -1695,7 +1710,13 @@
         const v = visitByVN(State.current.vn); if(!v){ showToast('ไม่พบข้อมูล visit','error'); return; }
         const btn=event.target.querySelector('button[type="submit"]'); const orig=btn.innerHTML;
         btn.innerHTML='<i class="ph ph-spinner animate-spin mr-2"></i> กำลังบันทึก...'; btn.disabled=true;
-        const patch = { bp_sys:$('#bp_sys').value, bp_dia:$('#bp_dia').value, bt:$('#bt').value, pr:$('#pr').value, weight:$('#weight').value, height:$('#height').value, bmi:$('#bmi').value, cc:$('#cc').value.trim(), pi:$('#pi').value.trim(), ph:$('#ph').value.trim(), pe:$('#pe').value.trim(), status:STATUS.EXAM, triageAt:nowISO() };
+        // CC: ต่อระยะเวลาไว้ท้ายประโยค + "ก่อนมาคลินิก"
+        let cc=$('#cc').value.trim(); const ccDur=$('#cc_dur').value.trim(), ccU=$('#cc_unit').value;
+        if(ccDur && ccU) cc=(cc?cc+' ':'')+ccDur+' '+ccU+' ก่อนมาคลินิก';
+        // PI: ระยะเวลาไว้ต้นประโยค + "ก่อนมาคลินิก"
+        let pi=$('#pi').value.trim(); const piDur=$('#pi_dur').value.trim(), piU=$('#pi_unit').value;
+        if(piDur && piU) pi=piDur+' '+piU+' ก่อนมาคลินิก'+(pi?' '+pi:'');
+        const patch = { bp_sys:$('#bp_sys').value, bp_dia:$('#bp_dia').value, bt:$('#bt').value, pr:$('#pr').value, weight:$('#weight').value, height:$('#height').value, bmi:$('#bmi').value, cc:cc, pi:pi, ph:$('#ph').value.trim(), pe:$('#pe').value.trim(), status:STATUS.EXAM, triageAt:nowISO() };
         try{
             await Store.saveVisit(Object.assign({}, v, patch));   // บันทึกก่อน
             Object.assign(v, patch);                              // เปลี่ยนสถานะเฉพาะเมื่อสำเร็จ
