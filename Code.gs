@@ -20,7 +20,7 @@ var DRIVE_FOLDER = 'ThirayutClinic_Files';
 
 var HEADERS = {
   Patients: ['hn','cid','prefix','firstName','lastName','birthDate','gender','phone','race','nationality','maritalStatus','address','disease','allergy','emContact','emPhone','fileUrl','photoUrl','createdAt'],
-  Visits: ['vn','hn','date','status','cc','pi','ph','pe','bp_sys','bp_dia','bt','pr','weight','height','bmi','dx','treatment','lab','meds_json','medTotal','serviceFee','otherFee','total','paid','payMethod','referTo','referReason','followUpDate','followUpNote','createdAt','triageAt','examAt','dispenseAt','doneAt','referAt'],
+  Visits: ['vn','hn','date','status','cc','pi','ph','pe','bp_sys','bp_dia','bt','pr','weight','height','bmi','dx','treatment','lab','meds_json','medTotal','serviceFee','otherFee','total','paid','payMethod','referTo','referReason','followUpDate','followUpNote','createdAt','triageAt','examAt','dispenseAt','doneAt','referAt','refNo','refDear','refAttach','refPurpose','refHistory','refOther','refSigner','refLicense'],
   Appointments: ['id','hn','name','date','time','type','status','createdAt'],
   Users: ['username','password','name','role','active'],
   Inventory: ['code','name','unit','price','stock','minStock','category','updatedAt','dbName','opdName']

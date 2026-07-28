@@ -548,24 +548,55 @@
             <!-- ===== REFERRAL (ห้องส่งต่อ) ===== -->
             <section id="section-referral" class="app-section">
                 <div class="mb-6"><h3 class="text-xl font-bold text-brand-blueDark">ห้องส่งต่อ (Referral)</h3><p class="text-sm text-gray-500">ออกใบส่งตัวผู้รับบริการไปยังสถานพยาบาลอื่น</p></div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 p-6">
-                        <h4 class="font-semibold text-brand-blueDark mb-4 flex items-center"><i class="ph-fill ph-note-pencil mr-2"></i> ออกใบส่งตัวใหม่</h4>
-                        <form id="referForm" onsubmit="saveReferral(event)" class="space-y-3">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <!-- ฟอร์มออกใบส่งตัว -->
+                    <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 p-5 max-h-[82vh] overflow-y-auto">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-brand-blueDark flex items-center"><i class="ph-fill ph-note-pencil mr-2"></i> ออกใบส่งตัว</h4>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="printReferPreview()" class="px-3 py-1.5 border border-brand-blueMain text-brand-blueMain rounded-lg text-xs font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-printer mr-1"></i> พิมพ์</button>
+                                <button type="submit" form="referForm" class="px-3 py-1.5 bg-brand-blueMain hover:bg-brand-teal text-white rounded-lg text-xs font-medium flex items-center"><i class="ph ph-floppy-disk mr-1"></i> บันทึก</button>
+                            </div>
+                        </div>
+                        <form id="referForm" onsubmit="saveReferral(event)" class="space-y-2.5 text-sm">
                             <div><label class="block text-xs font-medium text-gray-600 mb-1">ผู้รับบริการ <span class="text-red-500">*</span></label>
-                                <select id="ref_patient" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></select></div>
-                            <div><label class="block text-xs font-medium text-gray-600 mb-1">ส่งต่อไปยัง <span class="text-red-500">*</span></label>
-                                <input type="text" id="ref_to" required placeholder="เช่น รพ.สต. / รพ.ประจำจังหวัด" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
-                            <div><label class="block text-xs font-medium text-gray-600 mb-1">เหตุผล/การวินิจฉัยเบื้องต้น <span class="text-red-500">*</span></label>
-                                <textarea id="ref_reason" required rows="3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></textarea></div>
-                            <div><label class="block text-xs font-medium text-gray-600 mb-1">การรักษาที่ให้ก่อนส่งต่อ</label>
-                                <textarea id="ref_treatment" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></textarea></div>
-                            <button type="submit" class="w-full bg-brand-blueMain hover:bg-brand-teal text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"><i class="ph ph-floppy-disk mr-2 text-lg"></i> บันทึก & พิมพ์ใบส่งตัว</button>
+                                <select id="ref_patient" required onchange="referPickPatient()" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-brand-bg/50"></select></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-xs text-gray-600 mb-1">เลขที่</label><input id="ref_no" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                                <div><label class="block text-xs text-gray-600 mb-1">วันที่</label><input id="ref_date" type="date" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                            </div>
+                            <div><label class="block text-xs text-gray-600 mb-1">เรียน</label><input id="ref_dear" oninput="renderReferPreview()" placeholder="นายแพทย์ผู้เกี่ยวข้อง" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                            <div><label class="block text-xs text-gray-600 mb-1">ส่งต่อไปยัง <span class="text-red-500">*</span></label><input id="ref_to" required oninput="renderReferPreview()" placeholder="เช่น รพ.สวรรคโลก / รพ.ศรีสังวรสุโขทัย" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                            <div><label class="block text-xs text-gray-600 mb-1">สิ่งที่แนบมาด้วย</label><input id="ref_attach" oninput="renderReferPreview()" placeholder="เช่น ผลเลือด, ฟิล์ม x-ray, ใบยินยอม" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                            <div class="flex items-center gap-4 py-1"><span class="text-xs text-gray-600">มาเพื่อ</span>
+                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" id="ref_p_treat" onchange="renderReferPreview()" class="rounded"> รับการรักษาต่อ</label>
+                                <label class="flex items-center gap-1 text-sm"><input type="checkbox" id="ref_p_dx" onchange="renderReferPreview()" class="rounded"> ตรวจวินิจฉัยเพิ่มเติม</label>
+                            </div>
+                            <div><label class="block text-xs text-gray-600 mb-1">1. ประวัติการป่วย</label><textarea id="ref_history" rows="2" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea></div>
+                            <div><label class="block text-xs text-gray-600 mb-1">2. การป่วยปัจจุบัน</label><textarea id="ref_current" rows="2" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea></div>
+                            <div><label class="block text-xs text-gray-600 mb-1">3. ผลตรวจทางห้องปฏิบัติการที่สำคัญ</label><textarea id="ref_lab" rows="2" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea></div>
+                            <div><label class="block text-xs text-gray-600 mb-1">4. การวินิจฉัยโรคเบื้องต้น</label><textarea id="ref_dx" rows="2" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea></div>
+                            <div><label class="block text-xs text-gray-600 mb-1">5. การรักษาที่ให้ไว้แล้ว</label><textarea id="ref_treatment" rows="2" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea></div>
+                            <div><label class="block text-xs text-gray-600 mb-1">6. สาเหตุที่ส่ง <span class="text-red-500">*</span></label><textarea id="ref_reason" required rows="2" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea></div>
+                            <div><label class="block text-xs text-gray-600 mb-1">7. รายละเอียดอื่นๆ</label><textarea id="ref_other" rows="2" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></textarea></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-xs text-gray-600 mb-1">ผู้ส่งต่อ (ลงชื่อ)</label><input id="ref_signer" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                                <div><label class="block text-xs text-gray-600 mb-1">เลขที่ใบอนุญาตฯ</label><input id="ref_license" oninput="renderReferPreview()" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                            </div>
                         </form>
+                        <div class="mt-4 border-t border-gray-100 pt-3">
+                            <div class="text-xs font-semibold text-brand-blueDark mb-1"><i class="ph-fill ph-clock-counter-clockwise text-brand-teal mr-1"></i> ประวัติการส่งต่อ</div>
+                            <div id="referHistory" class="divide-y divide-gray-50 max-h-[24vh] overflow-y-auto"></div>
+                        </div>
                     </div>
-                    <div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-hidden">
-                        <div class="p-3 border-b border-gray-100 bg-gray-50/50 font-semibold text-brand-blueDark text-sm"><i class="ph-fill ph-clock-counter-clockwise text-brand-teal mr-1"></i> ประวัติการส่งต่อ</div>
-                        <div id="referHistory" class="divide-y divide-gray-50 max-h-[60vh] overflow-y-auto"></div>
+                    <!-- พรีวิวเรียลไทม์ -->
+                    <div>
+                        <div class="bg-gray-100 rounded-xl p-3 xl:sticky xl:top-4">
+                            <div class="text-xs text-gray-500 mb-2 flex items-center"><i class="ph ph-eye mr-1"></i> พรีวิวใบส่งตัว (เรียลไทม์ · A4)</div>
+                            <div id="referPreviewWrap" class="relative overflow-hidden bg-white shadow-lg mx-auto" style="width:100%">
+                                <div id="referPreviewSheet"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -2282,21 +2313,153 @@
 
     /* ============================================================ REFERRAL */
     function renderReferral(){
+        const cur=$('#ref_patient').value;
         $('#ref_patient').innerHTML = `<option value="">-- เลือกผู้รับบริการ --</option>` + State.patients.map(p=>`<option value="${esc(p.hn)}">${esc(p.hn)} | ${esc(pname(p))}</option>`).join('');
+        if(cur) $('#ref_patient').value=cur;
+        if(!$('#ref_dear').value) $('#ref_dear').value='นายแพทย์ผู้เกี่ยวข้อง';
+        if(!$('#ref_date').value) $('#ref_date').value=todayISO();
+        if(!$('#ref_signer').value){ const u=Auth.get(); if(u) $('#ref_signer').value=u.name||''; }
         const refs = State.visits.filter(v=>v.status===STATUS.REFER).sort((a,b)=>(b.referAt||'').localeCompare(a.referAt||''));
         $('#referHistory').innerHTML = refs.length ? refs.map(v=>{ const p=patientByHN(v.hn)||{}; return `
-            <div class="p-3"><div class="flex justify-between"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span><span class="text-xs text-gray-400">${fmtDateTH(v.date)}</span></div>
+            <div class="p-2"><div class="flex justify-between"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span><span class="text-xs text-gray-400">${fmtDateTH(v.date)}</span></div>
             <div class="text-xs text-gray-500">→ ${esc(v.referTo||'-')} · ${esc(v.referReason||'')}</div>
-            <button onclick="printReferral('${v.vn}')" class="text-xs text-brand-blueMain mt-1"><i class="ph ph-printer"></i> พิมพ์ใบส่งตัว</button></div>`; }).join('')
-            : `<div class="p-8 text-center text-gray-400 text-sm"><i class="ph ph-ambulance text-2xl block mb-1"></i>ยังไม่มีประวัติส่งต่อ</div>`;
+            <div class="flex gap-3 mt-1"><button onclick="loadReferForEdit('${v.vn}')" class="text-xs text-brand-teal"><i class="ph ph-pencil-simple"></i> แก้ไข</button><button onclick="printReferral('${v.vn}')" class="text-xs text-brand-blueMain"><i class="ph ph-printer"></i> พิมพ์</button></div></div>`; }).join('')
+            : `<div class="p-6 text-center text-gray-400 text-sm"><i class="ph ph-ambulance text-2xl block mb-1"></i>ยังไม่มีประวัติส่งต่อ</div>`;
+        renderReferPreview();
+        if(!window._referResize){ window._referResize=true; window.addEventListener('resize', fitReferPreview); }
+    }
+    /* รวมข้อความการรักษาที่ให้ไว้แล้วจาก visit (ยา + หัตถการ) */
+    function referTreatText(v){
+        const meds=(v.meds||[]).map(m=>esc(m.name)+(m.dose?(' '+esc(m.dose)):'')+(m.sig?(' '+esc(m.sig)):'')).join('\n');
+        return [meds, v.treatment].filter(Boolean).join('\n');
+    }
+    function nextRefNo(){
+        const n = State.visits.filter(v=>v.refNo).length + 1;
+        return String(n).padStart(3,'0')+'/'+(new Date().getFullYear()+543);
+    }
+    /* เลือกผู้ป่วย → ดึงข้อมูล visit ล่าสุดมาเติมอัตโนมัติ */
+    function referPickPatient(){
+        const hn=$('#ref_patient').value; if(!hn){ renderReferPreview(); return; }
+        const p=patientByHN(hn)||{};
+        const vs=State.visits.filter(v=>v.hn===hn).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+        const v=vs[0]||{};
+        $('#ref_history').value=[v.cc?('CC: '+v.cc):'', v.pi?('PI: '+v.pi):'', v.ph?('PH: '+v.ph):'', p.disease?('โรคประจำตัว: '+p.disease):'', p.allergy?('แพ้ยา: '+p.allergy):''].filter(Boolean).join('\n');
+        $('#ref_current').value=v.pe||'';
+        $('#ref_lab').value=v.lab||'';
+        $('#ref_dx').value=v.dx||'';
+        $('#ref_treatment').value=referTreatText(v);
+        $('#ref_reason').value=v.referReason||v.dx||'';
+        if(!$('#ref_no').value) $('#ref_no').value=nextRefNo();
+        if(!$('#ref_date').value) $('#ref_date').value=todayISO();
+        $('#ref_p_treat').checked=true;
+        renderReferPreview();
+    }
+    /* โหลดใบส่งตัวเดิมกลับมาแก้ไข */
+    function loadReferForEdit(vn){
+        const v=visitByVN(vn); if(!v) return;
+        $('#ref_patient').value=v.hn;
+        $('#ref_no').value=v.refNo||''; $('#ref_date').value=dateKey(v.referAt||v.date)||todayISO();
+        $('#ref_dear').value=v.refDear||'นายแพทย์ผู้เกี่ยวข้อง'; $('#ref_to').value=v.referTo||''; $('#ref_attach').value=v.refAttach||'';
+        $('#ref_p_treat').checked=/รักษาต่อ/.test(v.refPurpose||''); $('#ref_p_dx').checked=/วินิจฉัย/.test(v.refPurpose||'');
+        $('#ref_history').value=v.refHistory||''; $('#ref_current').value=v.pe||''; $('#ref_lab').value=v.lab||'';
+        $('#ref_dx').value=v.dx||''; $('#ref_treatment').value=v.treatment||''; $('#ref_reason').value=v.referReason||''; $('#ref_other').value=v.refOther||'';
+        $('#ref_signer').value=v.refSigner||''; $('#ref_license').value=v.refLicense||'';
+        renderReferPreview();
+        $('#section-referral').scrollIntoView({behavior:'smooth'});
+    }
+    /* อ่านค่าจากฟอร์ม + ข้อมูลผู้ป่วย เป็น object สำหรับสร้างใบ */
+    function referGather(){
+        const hn=$('#ref_patient').value; const p=patientByHN(hn)||{};
+        return { hn, name:pname(p), gender:p.gender||'', age:(p.birthDate?age(p.birthDate):''), phone:p.phone||'', allergy:p.allergy||'ไม่มี',
+            refNo:$('#ref_no').value, date:$('#ref_date').value, dear:$('#ref_dear').value, to:$('#ref_to').value, attach:$('#ref_attach').value,
+            pTreat:$('#ref_p_treat').checked, pDx:$('#ref_p_dx').checked,
+            history:$('#ref_history').value, current:$('#ref_current').value, lab:$('#ref_lab').value,
+            dx:$('#ref_dx').value, treatment:$('#ref_treatment').value, reason:$('#ref_reason').value, other:$('#ref_other').value,
+            signer:$('#ref_signer').value, license:$('#ref_license').value };
+    }
+    function referDataFromVisit(v){
+        const p=patientByHN(v.hn)||{};
+        return { hn:v.hn, name:pname(p), gender:p.gender||'', age:(p.birthDate?age(p.birthDate):''), phone:p.phone||'', allergy:p.allergy||'ไม่มี',
+            refNo:v.refNo||'', date:dateKey(v.referAt||v.date), dear:v.refDear||'นายแพทย์ผู้เกี่ยวข้อง', to:v.referTo||'', attach:v.refAttach||'',
+            pTreat:/รักษาต่อ/.test(v.refPurpose||''), pDx:/วินิจฉัย/.test(v.refPurpose||''),
+            history:v.refHistory||'', current:v.pe||'', lab:v.lab||'', dx:v.dx||'', treatment:v.treatment||'', reason:v.referReason||'', other:v.refOther||'',
+            signer:v.refSigner||'', license:v.refLicense||'' };
+    }
+    /* สร้าง HTML ใบส่งตัว (A4 แนวตั้ง) */
+    function buildReferralHtml(d){
+        const NAVY='#0f3d91';
+        const line=(v,mw)=>`<span style="border-bottom:1px dotted #555;padding:0 6px;min-width:${mw||40}px;display:inline-block;font-weight:500">${esc(v||'')}</span>`;
+        const chk=on=>`<span style="display:inline-block;width:13px;height:13px;border:1.4px solid ${NAVY};text-align:center;line-height:12px;font-size:11px;vertical-align:middle">${on?'✓':''}</span>`;
+        const para=v=>esc(v||'').replace(/\n/g,'<br>');
+        const sec=(t,v)=>`<div style="margin:5px 0"><b style="color:${NAVY}">${t}</b><div style="border:1px solid #ccc;border-radius:5px;min-height:32px;padding:4px 8px;margin-top:2px;white-space:pre-wrap">${para(v)}</div></div>`;
+        return `<div style="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif;color:#111;font-size:15px;line-height:1.55">
+            <div style="text-align:center;border:2px solid ${NAVY};border-radius:12px;padding:6px 10px;margin-bottom:8px">
+                <div style="font-size:20px;font-weight:700;color:${NAVY};line-height:1.2">${CLINIC.name}</div>
+                <div style="font-size:13px;font-weight:600;color:${NAVY}">${CLINIC.address}</div>
+                <div style="font-size:13px;font-weight:600;color:${NAVY}">โทร. ${CLINIC.phone}</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:4px">
+                <div style="font-size:18px;font-weight:700;color:${NAVY}">ใบส่งตัวผู้ป่วยไปรับการตรวจหรือรักษาต่อ</div>
+                <div style="font-size:14px">เลขที่ ${line(d.refNo,70)}</div>
+            </div>
+            <div style="margin:4px 0"><b style="color:${NAVY}">เรียน</b> ${line(d.dear,200)}</div>
+            <div style="margin:4px 0"><b style="color:${NAVY}">ส่งต่อไปยัง</b> ${line(d.to,320)}</div>
+            <div style="margin:4px 0"><b style="color:${NAVY}">สิ่งที่แนบมาด้วย</b> ${line(d.attach,360)}</div>
+            <div style="margin:4px 0"><b style="color:${NAVY}">ชื่อผู้ป่วย</b> ${line(d.name,190)} &nbsp;<b style="color:${NAVY}">เพศ</b> ${line(d.gender,40)} &nbsp;<b style="color:${NAVY}">อายุ</b> ${line(d.age,34)} ปี &nbsp;<b style="color:${NAVY}">HN</b> ${line(d.hn,80)}</div>
+            <div style="margin:4px 0"><b style="color:${NAVY}">โทร.</b> ${line(d.phone,130)} &nbsp;<b style="color:${NAVY}">ประวัติแพ้ยา</b> ${line(d.allergy,200)}</div>
+            <div style="margin:6px 0"><b style="color:${NAVY}">มาเพื่อ</b> &nbsp; ${chk(d.pTreat)} รับการรักษาต่อ &nbsp;&nbsp; ${chk(d.pDx)} รับการตรวจวินิจฉัยเพิ่มเติม</div>
+            ${sec('1. ประวัติการป่วย', d.history)}
+            ${sec('2. การป่วยปัจจุบัน', d.current)}
+            ${sec('3. ผลการตรวจวินิจฉัยทางห้องปฏิบัติการที่สำคัญ', d.lab)}
+            ${sec('4. การตรวจวินิจฉัยโรคเบื้องต้น', d.dx)}
+            ${sec('5. การรักษาที่ให้ไว้แล้ว', d.treatment)}
+            ${sec('6. สาเหตุที่ส่ง', d.reason)}
+            ${sec('7. รายละเอียดอื่นๆ', d.other)}
+            <div style="margin-top:22px;width:62%;margin-left:38%;text-align:center;font-size:15px">
+                <div>จึงเรียนมาเพื่อพิจารณา</div>
+                <div style="margin-top:14px">ลงชื่อ ...............................................</div>
+                <div>( ${esc(d.signer||'')} )</div>
+                <div>เลขที่ใบอนุญาตประกอบวิชาชีพ ${esc(d.license||'..................')}</div>
+                <div>วันที่ ${d.date?fmtDateTH(d.date):'..................'}</div>
+            </div>
+        </div>`;
+    }
+    function renderReferPreview(){
+        const host=$('#referPreviewSheet'); if(!host) return;
+        host.innerHTML=`<div class="refsheet" style="width:210mm;min-height:297mm;background:#fff;padding:12mm;box-sizing:border-box">${buildReferralHtml(referGather())}</div>`;
+        fitReferPreview();
+    }
+    function fitReferPreview(){
+        const wrap=$('#referPreviewWrap'), sheet=document.querySelector('#referPreviewSheet .refsheet'); if(!wrap||!sheet) return;
+        const avail=wrap.clientWidth, sw=210*MM;
+        const k=Math.min(1, avail/sw);
+        sheet.style.transformOrigin='top left';
+        sheet.style.transform=`scale(${k})`;
+        wrap.style.height=(sheet.offsetHeight*k)+'px';
+    }
+    function printReferDoc(d){
+        printHTML(`<div style="width:210mm;min-height:297mm;padding:12mm;box-sizing:border-box"><style>@page{size:A4 portrait;margin:0;}</style>${buildReferralHtml(d)}</div>`);
+    }
+    function printReferPreview(){
+        if(!$('#ref_patient').value){ showToast('เลือกผู้รับบริการก่อน','error'); return; }
+        printReferDoc(referGather());
     }
     async function saveReferral(event){
         event.preventDefault();
         const hn=$('#ref_patient').value; const p=patientByHN(hn); if(!p){ showToast('เลือกผู้รับบริการ','error'); return; }
-        let v = todayVisits().find(x=>x.hn===hn && ![STATUS.DONE,STATUS.REFER].includes(x.status));
+        let v = todayVisits().find(x=>x.hn===hn && x.status!==STATUS.DONE);
         if(!v){ v = { vn:nextVN(), hn, date:todayISO(), createdAt:nowISO(), meds:[], medTotal:0, total:0 }; State.visits.push(v); }
-        Object.assign(v, { referTo:$('#ref_to').value.trim(), referReason:$('#ref_reason').value.trim(), treatment:$('#ref_treatment').value.trim()||v.treatment, status:STATUS.REFER, referAt:nowISO() });
-        try{ await Store.saveVisit(v); Store.localSave(); showToast('บันทึกการส่งต่อแล้ว'); printReferral(v.vn); $('#referForm').reset(); renderReferral(); updateBadges(); }
+        const d=referGather();
+        if(!$('#ref_no').value){ $('#ref_no').value=nextRefNo(); d.refNo=$('#ref_no').value; }
+        Object.assign(v, {
+            referTo:d.to.trim(), referReason:d.reason.trim(), treatment:d.treatment.trim()||v.treatment,
+            dx:d.dx.trim()||v.dx, lab:d.lab.trim()||v.lab, pe:d.current.trim()||v.pe,
+            refNo:d.refNo, refDear:d.dear, refAttach:d.attach,
+            refPurpose:[d.pTreat?'รักษาต่อ':'', d.pDx?'ตรวจวินิจฉัยเพิ่มเติม':''].filter(Boolean).join(', '),
+            refHistory:d.history, refOther:d.other, refSigner:d.signer, refLicense:d.license,
+            status:STATUS.REFER, referAt:nowISO()
+        });
+        try{ await Store.saveVisit(v); Store.localSave(); showToast('บันทึกใบส่งตัวแล้ว'); renderReferral(); updateBadges(); }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
     }
 
@@ -2352,17 +2515,8 @@
             <p style="font-size:12px;color:#666">วันที่ ${fmtDateTH(v.date)} · ผู้จ่ายยา: พยาบาลวิชาชีพ</p></div>`);
     }
     function printReferral(vn){
-        const v=visitByVN(vn); const p=patientByHN(v.hn)||{};
-        printHTML(`<div style="font-family:'Noto Sans Thai',sans-serif;max-width:600px;margin:auto">
-            <h2 style="text-align:center;color:#2792E8;margin:0">✚ ${CLINIC.name}</h2>
-            <p style="text-align:center;color:#666;font-size:12px;margin:4px 0 10px">แบบฟอร์มส่งต่อผู้ป่วย (Referral Form)</p><hr>
-            <p style="font-size:13px"><b>วันที่:</b> ${fmtDateTH(v.date)}</p>
-            <p style="font-size:13px"><b>ส่งต่อไปยัง:</b> ${esc(v.referTo||'-')}</p>
-            <p style="font-size:13px"><b>ผู้ป่วย:</b> ${esc(pname(p))} (${esc(v.hn)}) · ${age(p.birthDate)} ปี · ☎ ${esc(p.phone||'-')}</p>
-            <p style="font-size:13px"><b>ประวัติแพ้ยา:</b> ${esc(p.allergy||'ไม่มี')}</p>
-            <p style="font-size:13px"><b>เหตุผล/การวินิจฉัย:</b> ${esc(v.referReason||'-')}</p>
-            <p style="font-size:13px"><b>การรักษาที่ให้:</b> ${esc(v.treatment||'-')}</p><hr>
-            <p style="font-size:13px;margin-top:30px;text-align:right">ลงชื่อ ......................................... ผู้ส่งต่อ</p></div>`);
+        const v=visitByVN(vn); if(!v) return;
+        printReferDoc(referDataFromVisit(v));
     }
 
     /* ============================================================ SETTINGS */
