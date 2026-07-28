@@ -482,6 +482,11 @@
                             <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">PE :</label><textarea id="pe" rows="2" placeholder="การตรวจร่างกาย (Physical Examination)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-gray-50/50 shadow-sm"></textarea></div>
                         </div>
 
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-2 px-2 mt-4">
+                            <label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0">ผู้ตรวจ/ลงชื่อ :</label>
+                            <select id="triage_signer" class="w-full sm:w-72 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50/50 shadow-sm"></select>
+                        </div>
+
                         <div class="flex justify-end space-x-3 border-t border-gray-100 pt-6 mt-6">
                             <button type="button" onclick="navTo('patients')" class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">ยกเลิก</button>
                             <button type="submit" class="px-5 py-2.5 bg-brand-greenMain hover:bg-brand-greenDark text-white rounded-lg text-sm font-medium transition-colors shadow-md flex items-center"><i class="ph ph-arrow-right mr-2 text-lg"></i> บันทึก & ส่งห้องตรวจ</button>
@@ -1230,7 +1235,7 @@
                 <div><b style="color:${NAVY}">Rx :</b> ${fill(meds,600)}</div>
                 <div><b style="color:${NAVY}">Treatment :</b> ${fill(v.treatment,540)}</div>
                 <div><b style="color:${NAVY}">Follow Up :</b> ${fill(v.followUpDate?(fmtDateTH(v.followUpDate)+' '+(v.followUpNote||'')):'',520)}</div>
-                <div>${(()=>{ const u=Auth.get(); const rec=u?referSignRec(u.name):null; const sImg=rec?driveImg(rec.signUrl):''; return sImg?`<span style="display:inline-flex;align-items:flex-end;gap:6px"><b style="color:${NAVY}">Signature :</b> <img src="${esc(sImg)}" style="height:34px;width:auto;object-fit:contain" onerror="this.style.display='none'"> <span style="border-bottom:1px dotted #333;min-width:200px;text-align:center;padding-bottom:2px">${esc(u.name||'')}</span></span>`:`<b style="color:${NAVY}">Signature :</b> ${fill('',540)}`; })()}</div>
+                <div>${(()=>{ const u=Auth.get(); const nm=v.signer||(u?u.name:''); const rec=nm?referSignRec(nm):null; const sImg=rec?driveImg(rec.signUrl):''; return sImg?`<span style="display:inline-flex;align-items:flex-end;gap:6px"><b style="color:${NAVY}">Signature :</b> <img src="${esc(sImg)}" style="height:34px;width:auto;object-fit:contain" onerror="this.style.display='none'"> <span style="border-bottom:1px dotted #333;min-width:200px;text-align:center;padding-bottom:2px">${esc(nm||'')}</span></span>`:`<b style="color:${NAVY}">Signature :</b> ${fill('',540)}`; })()}</div>
             </div>
         </div>`;
     }
@@ -1695,6 +1700,10 @@
         $('#triagePatientStrip').innerHTML = patientStrip(p, v);
         ['bp_sys','bp_dia','bt','pr','weight','height','bmi','cc','pi','ph','pe'].forEach(f=>{ if($('#'+f)) $('#'+f).value = v[f]||''; });
         ['cc_dur','cc_unit','pi_dur','pi_unit'].forEach(f=>{ if($('#'+f)) $('#'+f).value=''; });
+        // ดรอปดาวน์ผู้ตรวจ/ลงชื่อ จากชีต Sign (ค่าเริ่มต้น = ผู้ล็อกอิน)
+        const u=Auth.get();
+        $('#triage_signer').innerHTML = `<option value="">— เลือกผู้ลงชื่อ —</option>` + (State.signs||[]).map(s=>`<option value="${esc(s.name)}">${esc(s.name)}${s.position?(' · '+esc(s.position)):''}</option>`).join('');
+        $('#triage_signer').value = v.signer || (u && (State.signs||[]).some(s=>s.name===u.name) ? u.name : '');
         calculateBMI();
     }
     function calculateBMI(){
@@ -1716,7 +1725,7 @@
         // PI: ระยะเวลาไว้ต้นประโยค + "ก่อนมาคลินิก"
         let pi=$('#pi').value.trim(); const piDur=$('#pi_dur').value.trim(), piU=$('#pi_unit').value;
         if(piDur && piU) pi=piDur+' '+piU+' ก่อนมาคลินิก'+(pi?' '+pi:'');
-        const patch = { bp_sys:$('#bp_sys').value, bp_dia:$('#bp_dia').value, bt:$('#bt').value, pr:$('#pr').value, weight:$('#weight').value, height:$('#height').value, bmi:$('#bmi').value, cc:cc, pi:pi, ph:$('#ph').value.trim(), pe:$('#pe').value.trim(), status:STATUS.EXAM, triageAt:nowISO() };
+        const patch = { bp_sys:$('#bp_sys').value, bp_dia:$('#bp_dia').value, bt:$('#bt').value, pr:$('#pr').value, weight:$('#weight').value, height:$('#height').value, bmi:$('#bmi').value, cc:cc, pi:pi, ph:$('#ph').value.trim(), pe:$('#pe').value.trim(), signer:$('#triage_signer').value, status:STATUS.EXAM, triageAt:nowISO() };
         try{
             await Store.saveVisit(Object.assign({}, v, patch));   // บันทึกก่อน
             Object.assign(v, patch);                              // เปลี่ยนสถานะเฉพาะเมื่อสำเร็จ
