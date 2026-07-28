@@ -26,7 +26,7 @@ var HEADERS = {
   Appointments: ['id','hn','name','date','time','type','status','createdAt'],
   Users: ['username','password','name','role','active'],
   Inventory: ['code','name','unit','price','stock','minStock','category','updatedAt','dbName','opdName'],
-  Sign: ['name','license','signUrl'],
+  Sign: ['name','position','license','signUrl'],
   Logo: ['name','url']
 };
 var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code', Sign:'name', Logo:'name' };

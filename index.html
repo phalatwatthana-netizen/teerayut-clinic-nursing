@@ -2325,7 +2325,7 @@
         // ดรอปดาวน์ผู้ส่งต่อจากชีต Sign (ชื่อ + ลายเซ็น)
         const curSign=$('#ref_signer').value;
         const signs=State.signs||[];
-        $('#ref_signer').innerHTML = `<option value="">-- เลือกผู้ส่งต่อ --</option>` + signs.map(s=>`<option value="${esc(s.name)}">${esc(s.name)}${s.license?(' · '+esc(s.license)):''}</option>`).join('');
+        $('#ref_signer').innerHTML = `<option value="">-- เลือกผู้ส่งต่อ --</option>` + signs.map(s=>`<option value="${esc(s.name)}">${esc(s.name)}${s.position?(' · '+esc(s.position)):''}</option>`).join('');
         if(curSign) $('#ref_signer').value=curSign;
         else { const u=Auth.get(); if(u && signs.some(s=>s.name===u.name)) $('#ref_signer').value=u.name; }
         referPickSigner();
@@ -2453,6 +2453,7 @@
                 <div>จึงเรียนมาเพื่อพิจารณา</div>
                 ${signImg?`<div style="margin-top:6px">${signImg}</div><div>ลงชื่อ</div>`:'<div style="margin-top:14px">ลงชื่อ ...............................................</div>'}
                 <div>( ${esc(d.signer||'')} )</div>
+                ${(referSignRec(d.signer)||{}).position?`<div>ตำแหน่ง ${esc(referSignRec(d.signer).position)}</div>`:''}
                 <div>เลขที่ใบอนุญาตประกอบวิชาชีพ ${esc(d.license||'..................')}</div>
                 <div>วันที่ ${d.date?fmtDateTH(d.date):'..................'}</div>
             </div>
