@@ -2448,14 +2448,14 @@
         const para=v=>esc(v||'').replace(/\n/g,'<br>');
         const sec=(t,v)=>`<div style="margin:5px 0"><b style="color:${NAVY}">${t}</b><div style="border:1px solid #ccc;border-radius:5px;min-height:32px;padding:4px 8px;margin-top:2px;white-space:pre-wrap">${para(v)}</div></div>`;
         const logo=currentLogo();
-        const logoImg = logo ? `<img src="${esc(logo)}" alt="logo" style="height:150px;width:auto;max-width:100%;object-fit:contain;display:block;margin:0 auto 4px" onerror="this.style.display='none'">` : '';
+        const logoImg = logo ? `<img src="${esc(logo)}" alt="logo" style="height:150px;width:auto;max-width:100%;object-fit:contain;display:block;margin:-12px auto -8px" onerror="this.style.display='none'">` : '';
         const signUrl = driveImg((referSignRec(d.signer)||{}).signUrl);
         const signImg = signUrl ? `<img src="${esc(signUrl)}" alt="sign" style="height:48px;width:auto;object-fit:contain;margin:2px auto -6px" onerror="this.style.display='none'">` : '';
         return `<div style="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif;color:#111;font-size:15px;line-height:1.55">
             <div style="text-align:center;margin-bottom:8px">
                 ${logoImg}
-                <div style="font-size:14px;font-weight:600;color:${NAVY}">${CLINIC.address}</div>
-                <div style="font-size:14px;font-weight:600;color:${NAVY}">โทร. ${CLINIC.phone}</div>
+                <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.25">${CLINIC.address}</div>
+                <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.25">โทร. ${CLINIC.phone}</div>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:4px">
                 <div style="font-size:18px;font-weight:700;color:${NAVY}">ใบส่งตัวผู้ป่วยไปรับการตรวจหรือรักษาต่อ</div>
