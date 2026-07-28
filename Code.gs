@@ -18,6 +18,7 @@ var SHEET_USERS = 'Users';
 var SHEET_INV = 'Inventory';
 var SHEET_SIGN = 'Sign';
 var SHEET_LOGO = 'Logo';
+var SHEET_REFER = 'Referrals';
 var DRIVE_FOLDER = 'ThirayutClinic_Files';
 
 var HEADERS = {
@@ -27,9 +28,10 @@ var HEADERS = {
   Users: ['username','password','name','role','active'],
   Inventory: ['code','name','unit','price','stock','minStock','category','updatedAt','dbName','opdName'],
   Sign: ['name','position','license','signUrl'],
-  Logo: ['name','url']
+  Logo: ['name','url'],
+  Referrals: ['id','hn','patientName','date','refNo','dear','referTo','attach','purpose','history','current','lab','dx','treatment','reason','other','signer','position','license','createdAt','updatedAt']
 };
-var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code', Sign:'name', Logo:'name' };
+var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code', Sign:'name', Logo:'name', Referrals:'id' };
 /* คอลัมน์ที่ต้องเก็บเป็นข้อความ (กัน Google Sheets ตัดเลข 0 นำหน้า) */
 var TEXT_COLS = { Patients:['cid','phone','emPhone'], Users:['username','password'], Inventory:['code'] };
 
@@ -58,6 +60,8 @@ function doPost(e) {
     if (action === 'deleteAppointment') return json(deleteRecord(SHEET_APPTS, data.id));
     if (action === 'saveInventory')     return json(upsert(SHEET_INV, data));
     if (action === 'deleteInventory')   return json(deleteRecord(SHEET_INV, data.code));
+    if (action === 'saveReferral')      return json(upsert(SHEET_REFER, data));
+    if (action === 'deleteReferral')    return json(deleteRecord(SHEET_REFER, data.id));
     if (action === 'saveVisitPdf')      return json(saveVisitPdf(data));
     return json({ status: 'error', message: 'unknown action: ' + action });
   } catch (err) {
@@ -112,7 +116,8 @@ function loadAll() {
     appointments: readAll(SHEET_APPTS),
     inventory: readAll(SHEET_INV),
     signs: readAll(SHEET_SIGN),
-    logos: readAll(SHEET_LOGO)
+    logos: readAll(SHEET_LOGO),
+    referrals: readAll(SHEET_REFER)
   };
 }
 
@@ -176,6 +181,7 @@ function setupSheets() {
   getSheet(SHEET_INV);
   getSheet(SHEET_SIGN);
   getSheet(SHEET_LOGO);
+  getSheet(SHEET_REFER);
   var users = getSheet(SHEET_USERS);
   if (users.getLastRow() < 2) {
     // username, password, name, role, active
@@ -188,7 +194,7 @@ function setupSheets() {
 
 /* ---------- ซ่อมหัวตารางทุกชีตให้ตรงลำดับ HEADERS (รันเองถ้าต้องการ) ---------- */
 function syncHeaders() {
-  ['Patients','Visits','Appointments','Users','Inventory','Sign','Logo'].forEach(function(name){
+  ['Patients','Visits','Appointments','Users','Inventory','Sign','Logo','Referrals'].forEach(function(name){
     var sh = getSheet(name);
     sh.getRange(1, 1, 1, HEADERS[name].length).setValues([HEADERS[name]]);
   });

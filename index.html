@@ -554,11 +554,13 @@
                         <div class="flex items-center justify-between mb-3">
                             <h4 class="font-semibold text-brand-blueDark flex items-center"><i class="ph-fill ph-note-pencil mr-2"></i> ออกใบส่งตัว</h4>
                             <div class="flex gap-2">
+                                <button type="button" onclick="newReferral()" class="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 flex items-center"><i class="ph ph-file-plus mr-1"></i> ใหม่</button>
                                 <button type="button" onclick="printReferPreview()" class="px-3 py-1.5 border border-brand-blueMain text-brand-blueMain rounded-lg text-xs font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-printer mr-1"></i> พิมพ์</button>
                                 <button type="submit" form="referForm" class="px-3 py-1.5 bg-brand-blueMain hover:bg-brand-teal text-white rounded-lg text-xs font-medium flex items-center"><i class="ph ph-floppy-disk mr-1"></i> บันทึก</button>
                             </div>
                         </div>
                         <form id="referForm" onsubmit="saveReferral(event)" class="space-y-2.5 text-sm">
+                            <input type="hidden" id="ref_id">
                             <div><label class="block text-xs font-medium text-gray-600 mb-1">ผู้รับบริการ <span class="text-red-500">*</span></label>
                                 <select id="ref_patient" required onchange="referPickPatient()" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-brand-bg/50"></select></div>
                             <div class="grid grid-cols-2 gap-2">
@@ -827,7 +829,7 @@
     const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbykhJnniKpuPO1HzIOMn_HBViixcAwWH961Kw1HerVgSTz9vIgrpQksCbuuCKHwQ-6k/exec';
 
     /* ---------- State ---------- */
-    const State = { patients:[], visits:[], appointments:[], inventory:[], signs:[], logos:[], current:{} };
+    const State = { patients:[], visits:[], appointments:[], inventory:[], signs:[], logos:[], referrals:[], current:{} };
 
     /* ---------- API / Store ---------- */
     const Store = {
@@ -854,7 +856,7 @@
             if(Store.online()){
                 const r = await fetch(Store.url()+'?action=load&t='+Date.now());
                 const d = await r.json(); if(d.status==='error') throw new Error(d.message);
-                return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[], inventory:d.inventory||[], signs:d.signs||[], logos:d.logos||[] };
+                return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[], inventory:d.inventory||[], signs:d.signs||[], logos:d.logos||[], referrals:d.referrals||[] };
             }
             return {
                 patients: JSON.parse(localStorage.getItem('clinic_patients')||'[]'),
@@ -862,7 +864,8 @@
                 appointments: JSON.parse(localStorage.getItem('clinic_appts')||'[]'),
                 inventory: JSON.parse(localStorage.getItem('clinic_inventory')||'[]'),
                 signs: JSON.parse(localStorage.getItem('clinic_signs')||'[]'),
-                logos: JSON.parse(localStorage.getItem('clinic_logos')||'[]')
+                logos: JSON.parse(localStorage.getItem('clinic_logos')||'[]'),
+                referrals: JSON.parse(localStorage.getItem('clinic_referrals')||'[]')
             };
         },
         localSave(){
@@ -872,6 +875,7 @@
             localStorage.setItem('clinic_inventory', JSON.stringify(State.inventory));
             localStorage.setItem('clinic_signs', JSON.stringify(State.signs));
             localStorage.setItem('clinic_logos', JSON.stringify(State.logos));
+            localStorage.setItem('clinic_referrals', JSON.stringify(State.referrals));
         },
         async savePatient(p){ if(Store.online()) return Store.post('savePatient', p); Store.localSave(); return { status:'success', hn:p.hn }; },
         async saveVisit(v){ if(Store.online()) return Store.post('saveVisit', v); Store.localSave(); return { status:'success', vn:v.vn }; },
@@ -880,7 +884,9 @@
         async deleteVisit(vn){ if(Store.online()) return Store.post('deleteVisit', {vn}); Store.localSave(); return { status:'success' }; },
         async deletePatient(hn){ if(Store.online()) return Store.post('deletePatient', {hn}); Store.localSave(); return { status:'success' }; },
         async saveInventory(it){ if(Store.online()) return Store.post('saveInventory', it); Store.localSave(); return { status:'success', code:it.code }; },
-        async deleteInventory(code){ if(Store.online()) return Store.post('deleteInventory', {code}); Store.localSave(); return { status:'success' }; }
+        async deleteInventory(code){ if(Store.online()) return Store.post('deleteInventory', {code}); Store.localSave(); return { status:'success' }; },
+        async saveReferral(r){ if(Store.online()) return Store.post('saveReferral', r); Store.localSave(); return { status:'success', id:r.id }; },
+        async deleteReferral(id){ if(Store.online()) return Store.post('deleteReferral', {id}); Store.localSave(); return { status:'success' }; }
     };
 
     /* ---------- Utils ---------- */
@@ -987,7 +993,7 @@
     function dashDateToday(){ $('#dashDate').value = todayISO(); renderDashboard(); }
     async function reloadData(btn){
         const orig=btn?btn.innerHTML:''; if(btn){ btn.innerHTML='<i class="ph ph-spinner animate-spin"></i>'; btn.disabled=true; }
-        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; normalizePhones(); Store.localSave(); renderDashboard(); updateBadges(); showToast('โหลดข้อมูลล่าสุดแล้ว'); }
+        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; State.referrals=d.referrals||[]; normalizePhones(); Store.localSave(); renderDashboard(); updateBadges(); showToast('โหลดข้อมูลล่าสุดแล้ว'); }
         catch(e){ showToast('โหลดไม่สำเร็จ: '+e.message,'error'); }
         finally{ if(btn){ btn.innerHTML=orig; btn.disabled=false; } }
     }
@@ -1759,7 +1765,7 @@
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
         finally{ btn.innerHTML=orig; btn.disabled=false; }
     }
-    function openReferFromExam(){ const v=visitByVN(State.current.vn); if(!v) return; navTo('referral'); setTimeout(()=>{ $('#ref_patient').value=v.hn; $('#ref_reason').value=v.dx||v.cc||''; $('#ref_treatment').value=v.treatment||''; },50); }
+    function openReferFromExam(){ const v=visitByVN(State.current.vn); if(!v) return; navTo('referral'); setTimeout(()=>{ newReferral(); $('#ref_patient').value=v.hn; referPickPatient(); if(!$('#ref_reason').value) $('#ref_reason').value=v.dx||v.cc||''; renderReferPreview(); },60); }
 
     /* ============================================================ PHARMACY */
     function renderPharmacyQueue(){
@@ -2329,11 +2335,16 @@
         if(curSign) $('#ref_signer').value=curSign;
         else { const u=Auth.get(); if(u && signs.some(s=>s.name===u.name)) $('#ref_signer').value=u.name; }
         referPickSigner();
-        const refs = State.visits.filter(v=>v.status===STATUS.REFER).sort((a,b)=>(b.referAt||'').localeCompare(a.referAt||''));
-        $('#referHistory').innerHTML = refs.length ? refs.map(v=>{ const p=patientByHN(v.hn)||{}; return `
-            <div class="p-2"><div class="flex justify-between"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span><span class="text-xs text-gray-400">${fmtDateTH(v.date)}</span></div>
-            <div class="text-xs text-gray-500">→ ${esc(v.referTo||'-')} · ${esc(v.referReason||'')}</div>
-            <div class="flex gap-3 mt-1"><button onclick="loadReferForEdit('${v.vn}')" class="text-xs text-brand-teal"><i class="ph ph-pencil-simple"></i> แก้ไข</button><button onclick="printReferral('${v.vn}')" class="text-xs text-brand-blueMain"><i class="ph ph-printer"></i> พิมพ์</button></div></div>`; }).join('')
+        const refs = [...State.referrals].sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
+        const editingId=$('#ref_id').value;
+        $('#referHistory').innerHTML = refs.length ? refs.map(r=>`
+            <div class="p-2 ${String(r.id)===String(editingId)?'bg-brand-bluePale/20 rounded-lg':''}"><div class="flex justify-between"><span class="text-sm font-semibold text-gray-800">${esc(r.patientName||'-')}${r.refNo?` <span class="text-xs text-gray-400">#${esc(r.refNo)}</span>`:''}</span><span class="text-xs text-gray-400">${fmtDateTH(r.date)}</span></div>
+            <div class="text-xs text-gray-500">→ ${esc(r.referTo||'-')} · ${esc(r.reason||'')}</div>
+            <div class="flex gap-3 mt-1">
+                <button onclick="editReferral('${r.id}')" class="text-xs text-brand-teal"><i class="ph ph-pencil-simple"></i> แก้ไข</button>
+                <button onclick="printReferral('${r.id}')" class="text-xs text-brand-blueMain"><i class="ph ph-printer"></i> พิมพ์</button>
+                <button onclick="deleteReferralRec('${r.id}')" class="text-xs text-red-500"><i class="ph ph-trash"></i> ลบ</button>
+            </div></div>`).join('')
             : `<div class="p-6 text-center text-gray-400 text-sm"><i class="ph ph-ambulance text-2xl block mb-1"></i>ยังไม่มีประวัติส่งต่อ</div>`;
         renderReferPreview();
         if(!window._referResize){ window._referResize=true; window.addEventListener('resize', fitReferPreview); }
@@ -2344,7 +2355,7 @@
         return [meds, v.treatment].filter(Boolean).join('\n');
     }
     function nextRefNo(){
-        const n = State.visits.filter(v=>v.refNo).length + 1;
+        const n = (State.referrals||[]).length + 1;
         return String(n).padStart(3,'0')+'/'+(new Date().getFullYear()+543);
     }
     /* แปลงลิงก์ Google Drive ให้เป็น URL รูปภาพที่ฝัง <img> ได้ */
@@ -2380,18 +2391,36 @@
         $('#ref_p_treat').checked=true;
         renderReferPreview();
     }
-    /* โหลดใบส่งตัวเดิมกลับมาแก้ไข */
-    function loadReferForEdit(vn){
-        const v=visitByVN(vn); if(!v) return;
-        $('#ref_patient').value=v.hn;
-        $('#ref_no').value=v.refNo||''; $('#ref_date').value=dateKey(v.referAt||v.date)||todayISO();
-        $('#ref_dear').value=v.refDear||'นายแพทย์ผู้เกี่ยวข้อง'; $('#ref_to').value=v.referTo||''; $('#ref_attach').value=v.refAttach||'';
-        $('#ref_p_treat').checked=/รักษาต่อ/.test(v.refPurpose||''); $('#ref_p_dx').checked=/วินิจฉัย/.test(v.refPurpose||'');
-        $('#ref_history').value=v.refHistory||''; $('#ref_current').value=v.pe||''; $('#ref_lab').value=v.lab||'';
-        $('#ref_dx').value=v.dx||''; $('#ref_treatment').value=v.treatment||''; $('#ref_reason').value=v.referReason||''; $('#ref_other').value=v.refOther||'';
-        $('#ref_signer').value=v.refSigner||''; $('#ref_license').value=v.refLicense||'';
-        renderReferPreview();
+    /* เริ่มใบส่งตัวใหม่ (ล้างฟอร์ม) */
+    function newReferral(){
+        $('#ref_id').value=''; $('#ref_patient').value=''; $('#ref_no').value=''; $('#ref_date').value=todayISO();
+        $('#ref_dear').value='นายแพทย์ผู้เกี่ยวข้อง'; $('#ref_to').value=''; $('#ref_attach').value='';
+        $('#ref_p_treat').checked=false; $('#ref_p_dx').checked=false;
+        ['ref_history','ref_current','ref_lab','ref_dx','ref_treatment','ref_reason','ref_other'].forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
+        $('#ref_signer').value=''; $('#ref_license').value='';
+        renderReferral();
+    }
+    /* โหลดใบส่งตัวเดิมจากประวัติมาแก้ไข */
+    function editReferral(id){
+        const r=(State.referrals||[]).find(x=>String(x.id)===String(id)); if(!r) return;
+        $('#ref_id').value=r.id; $('#ref_patient').value=r.hn||'';
+        $('#ref_no').value=r.refNo||''; $('#ref_date').value=dateKey(r.date)||todayISO();
+        $('#ref_dear').value=r.dear||'นายแพทย์ผู้เกี่ยวข้อง'; $('#ref_to').value=r.referTo||''; $('#ref_attach').value=r.attach||'';
+        $('#ref_p_treat').checked=/รักษาต่อ/.test(r.purpose||''); $('#ref_p_dx').checked=/วินิจฉัย/.test(r.purpose||'');
+        $('#ref_history').value=r.history||''; $('#ref_current').value=r.current||''; $('#ref_lab').value=r.lab||'';
+        $('#ref_dx').value=r.dx||''; $('#ref_treatment').value=r.treatment||''; $('#ref_reason').value=r.reason||''; $('#ref_other').value=r.other||'';
+        $('#ref_signer').value=r.signer||''; $('#ref_license').value=r.license||'';
+        renderReferral();
         $('#section-referral').scrollIntoView({behavior:'smooth'});
+    }
+    async function deleteReferralRec(id){
+        if(!await confirmDialog('ลบใบส่งตัวนี้ออกจากประวัติ?', {title:'ลบใบส่งตัว', okText:'ลบ', cancelText:'ยกเลิก', danger:true, icon:'ph-trash'})) return;
+        try{
+            await Store.deleteReferral(id);
+            State.referrals=State.referrals.filter(x=>String(x.id)!==String(id));
+            Store.localSave(); showToast('ลบใบส่งตัวแล้ว');
+            if(String($('#ref_id').value)===String(id)) newReferral(); else renderReferral();
+        }catch(e){ showToast('ลบไม่สำเร็จ: '+e.message,'error'); }
     }
     /* อ่านค่าจากฟอร์ม + ข้อมูลผู้ป่วย เป็น object สำหรับสร้างใบ */
     function referGather(){
@@ -2403,13 +2432,13 @@
             dx:$('#ref_dx').value, treatment:$('#ref_treatment').value, reason:$('#ref_reason').value, other:$('#ref_other').value,
             signer:$('#ref_signer').value, license:$('#ref_license').value };
     }
-    function referDataFromVisit(v){
-        const p=patientByHN(v.hn)||{};
-        return { hn:v.hn, name:pname(p), gender:p.gender||'', age:(p.birthDate?age(p.birthDate):''), phone:p.phone||'', allergy:p.allergy||'ไม่มี',
-            refNo:v.refNo||'', date:dateKey(v.referAt||v.date), dear:v.refDear||'นายแพทย์ผู้เกี่ยวข้อง', to:v.referTo||'', attach:v.refAttach||'',
-            pTreat:/รักษาต่อ/.test(v.refPurpose||''), pDx:/วินิจฉัย/.test(v.refPurpose||''),
-            history:v.refHistory||'', current:v.pe||'', lab:v.lab||'', dx:v.dx||'', treatment:v.treatment||'', reason:v.referReason||'', other:v.refOther||'',
-            signer:v.refSigner||'', license:v.refLicense||'' };
+    function referDataFromRecord(r){
+        const p=patientByHN(r.hn)||{};
+        return { hn:r.hn, name:r.patientName||pname(p), gender:p.gender||'', age:(p.birthDate?age(p.birthDate):''), phone:p.phone||'', allergy:p.allergy||'ไม่มี',
+            refNo:r.refNo||'', date:dateKey(r.date), dear:r.dear||'นายแพทย์ผู้เกี่ยวข้อง', to:r.referTo||'', attach:r.attach||'',
+            pTreat:/รักษาต่อ/.test(r.purpose||''), pDx:/วินิจฉัย/.test(r.purpose||''),
+            history:r.history||'', current:r.current||'', lab:r.lab||'', dx:r.dx||'', treatment:r.treatment||'', reason:r.reason||'', other:r.other||'',
+            signer:r.signer||'', license:r.license||'' };
     }
     /* สร้าง HTML ใบส่งตัว (A4 แนวตั้ง) */
     function buildReferralHtml(d){
@@ -2482,19 +2511,22 @@
     async function saveReferral(event){
         event.preventDefault();
         const hn=$('#ref_patient').value; const p=patientByHN(hn); if(!p){ showToast('เลือกผู้รับบริการ','error'); return; }
-        let v = todayVisits().find(x=>x.hn===hn && x.status!==STATUS.DONE);
-        if(!v){ v = { vn:nextVN(), hn, date:todayISO(), createdAt:nowISO(), meds:[], medTotal:0, total:0 }; State.visits.push(v); }
+        if(!$('#ref_no').value) $('#ref_no').value=nextRefNo();
         const d=referGather();
-        if(!$('#ref_no').value){ $('#ref_no').value=nextRefNo(); d.refNo=$('#ref_no').value; }
-        Object.assign(v, {
-            referTo:d.to.trim(), referReason:d.reason.trim(), treatment:d.treatment.trim()||v.treatment,
-            dx:d.dx.trim()||v.dx, lab:d.lab.trim()||v.lab, pe:d.current.trim()||v.pe,
-            refNo:d.refNo, refDear:d.dear, refAttach:d.attach,
-            refPurpose:[d.pTreat?'รักษาต่อ':'', d.pDx?'ตรวจวินิจฉัยเพิ่มเติม':''].filter(Boolean).join(', '),
-            refHistory:d.history, refOther:d.other, refSigner:d.signer, refLicense:d.license,
-            status:STATUS.REFER, referAt:nowISO()
+        const id=$('#ref_id').value;
+        const existing = id ? State.referrals.find(x=>String(x.id)===String(id)) : null;
+        const rec = existing || { id:'R'+Date.now(), createdAt:nowISO() };
+        const srec=referSignRec(d.signer)||{};
+        Object.assign(rec, {
+            hn, patientName:pname(p), date:d.date||todayISO(), refNo:d.refNo,
+            dear:d.dear, referTo:d.to, attach:d.attach,
+            purpose:[d.pTreat?'รักษาต่อ':'', d.pDx?'ตรวจวินิจฉัยเพิ่มเติม':''].filter(Boolean).join(', '),
+            history:d.history, current:d.current, lab:d.lab, dx:d.dx, treatment:d.treatment, reason:d.reason, other:d.other,
+            signer:d.signer, position:srec.position||'', license:d.license, updatedAt:nowISO()
         });
-        try{ await Store.saveVisit(v); Store.localSave(); showToast('บันทึกใบส่งตัวแล้ว'); renderReferral(); updateBadges(); }
+        if(!existing) State.referrals.push(rec);
+        $('#ref_id').value=rec.id;
+        try{ await Store.saveReferral(rec); Store.localSave(); showToast(existing?'อัปเดตใบส่งตัวแล้ว':'บันทึกใบส่งตัวแล้ว'); renderReferral(); }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
     }
 
@@ -2506,7 +2538,7 @@
             {ic:'ph-users',col:'blueMain',label:'ผู้รับบริการสะสม',val:State.patients.length},
             {ic:'ph-clipboard-text',col:'teal',label:'การมารับบริการ',val:State.visits.length},
             {ic:'ph-coins',col:'greenMain',label:'รายได้สะสม',val:money(income)+' ฿'},
-            {ic:'ph-ambulance',col:'greenLight',label:'ส่งต่อ',val:State.visits.filter(v=>v.status===STATUS.REFER).length}
+            {ic:'ph-ambulance',col:'greenLight',label:'ส่งต่อ',val:(State.referrals||[]).length}
         ];
         $('#reportKpi').innerHTML = kpis.map(k=>`<div class="bg-white p-4 rounded-xl shadow-sm border border-brand-bluePale/20 flex items-center"><div class="w-10 h-10 rounded-full bg-brand-${k.col}/20 text-brand-${k.col} flex items-center justify-center text-xl mr-3 shrink-0"><i class="ph-fill ${k.ic}"></i></div><div><p class="text-xs text-gray-500">${k.label}</p><p class="text-xl font-bold text-gray-800">${k.val}</p></div></div>`).join('');
         // 7-day chart
@@ -2549,9 +2581,9 @@
             <div style="font-size:13px">วินิจฉัย: ${esc(v.dx||'-')}</div><hr>${meds}<hr>
             <p style="font-size:12px;color:#666">วันที่ ${fmtDateTH(v.date)} · ผู้จ่ายยา: พยาบาลวิชาชีพ</p></div>`);
     }
-    function printReferral(vn){
-        const v=visitByVN(vn); if(!v) return;
-        printReferDoc(referDataFromVisit(v));
+    function printReferral(id){
+        const r=(State.referrals||[]).find(x=>String(x.id)===String(id)); if(!r) return;
+        printReferDoc(referDataFromRecord(r));
     }
 
     /* ============================================================ SETTINGS */
@@ -2660,7 +2692,7 @@
     function updateDate(){ const el=$('#currentDateDisplay'); if(el) el.innerText=new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }
     async function boot(){
         updateConnBox();
-        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; normalizePhones(); Store.localSave(); }
+        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; State.referrals=d.referrals||[]; normalizePhones(); Store.localSave(); }
         catch(e){ showToast('โหลดข้อมูลไม่สำเร็จ: '+e.message,'error'); }
         const cur = document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard';
         renderView(cur); updateBadges();
