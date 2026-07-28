@@ -33,7 +33,7 @@ var HEADERS = {
 };
 var KEY = { Patients:'hn', Visits:'vn', Appointments:'id', Inventory:'code', Sign:'name', Logo:'name', Referrals:'id' };
 /* คอลัมน์ที่ต้องเก็บเป็นข้อความ (กัน Google Sheets ตัดเลข 0 นำหน้า) */
-var TEXT_COLS = { Patients:['cid','phone','emPhone'], Users:['username','password'], Inventory:['code'] };
+var TEXT_COLS = { Patients:['cid','phone','emPhone'], Users:['username','password'], Inventory:['code'], Referrals:['id','refNo'] };
 
 /* ---------- HTTP entry points ---------- */
 function doGet(e) {

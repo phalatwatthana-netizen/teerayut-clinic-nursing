@@ -2371,7 +2371,7 @@
         if(q) refs=refs.filter(r=>[r.patientName,r.refNo,r.referTo,r.reason,r.dx,fmtDateTH(r.date)].some(x=>String(x||'').toLowerCase().includes(q)));
         const editingId=$('#ref_id').value;
         $('#referHistory').innerHTML = refs.length ? refs.map(r=>`
-            <div class="p-2 ${String(r.id)===String(editingId)?'bg-brand-bluePale/20 rounded-lg':''}"><div class="flex justify-between"><span class="text-sm font-semibold text-gray-800">${esc(r.patientName||'-')}${r.refNo?` <span class="text-xs text-gray-400">#${esc(r.refNo)}</span>`:''}</span><span class="text-xs text-gray-400">${fmtDateTH(r.date)}</span></div>
+            <div class="p-2 ${String(r.id)===String(editingId)?'bg-brand-bluePale/20 rounded-lg':''}"><div class="flex justify-between"><span class="text-sm font-semibold text-gray-800">${esc(r.patientName||'-')}${cleanRefNo(r.refNo)?` <span class="text-xs text-gray-400">#${esc(cleanRefNo(r.refNo))}</span>`:''}</span><span class="text-xs text-gray-400">${fmtDateTH(r.date)}</span></div>
             <div class="text-xs text-gray-500">→ ${esc(r.referTo||'-')} · ${esc(r.reason||'')}</div>
             <div class="flex gap-3 mt-1">
                 <button onclick="editReferral('${r.id}')" class="text-xs text-brand-teal"><i class="ph ph-pencil-simple"></i> แก้ไข</button>
@@ -2385,6 +2385,8 @@
         const meds=(v.meds||[]).map(m=>esc(m.name)+(m.dose?(' '+esc(m.dose)):'')+(m.sig?(' '+esc(m.sig)):'')).join('\n');
         return [meds, v.treatment].filter(Boolean).join('\n');
     }
+    /* กันเลขที่เก่าที่ถูก Google Sheets แปลงเป็นวันที่ (ISO) ไม่ให้แสดง */
+    function cleanRefNo(x){ x=String(x||''); return /^\d{4}-\d\d-\d\dT/.test(x) ? '' : x; }
     function nextRefNo(){
         const n = (State.referrals||[]).length + 1;
         return String(n).padStart(2,'0')+'/'+(new Date().getFullYear()+543);
@@ -2457,7 +2459,7 @@
     function editReferral(id){
         const r=(State.referrals||[]).find(x=>String(x.id)===String(id)); if(!r) return;
         $('#ref_id').value=r.id; $('#ref_patient').value=r.hn?`${r.hn} — ${r.patientName||pname(patientByHN(r.hn))}`:''; if(r.hn) referLoadVisitOptions(r.hn);
-        $('#ref_no').value=r.refNo||''; $('#ref_date').value=dateKey(r.date)||todayISO();
+        $('#ref_no').value=cleanRefNo(r.refNo)||''; $('#ref_date').value=dateKey(r.date)||todayISO();
         $('#ref_dear').value=r.dear||'นายแพทย์ผู้เกี่ยวข้อง'; $('#ref_to').value=r.referTo||''; $('#ref_attach').value=r.attach||'';
         $('#ref_p_treat').checked=/รักษาต่อ/.test(r.purpose||''); $('#ref_p_dx').checked=/วินิจฉัย/.test(r.purpose||'');
         $('#ref_history').value=r.history||''; $('#ref_current').value=r.current||''; $('#ref_lab').value=r.lab||'';
@@ -2488,7 +2490,7 @@
     function referDataFromRecord(r){
         const p=patientByHN(r.hn)||{};
         return { hn:r.hn, name:r.patientName||pname(p), gender:p.gender||'', age:(p.birthDate?age(p.birthDate):''), phone:p.phone||'', allergy:p.allergy||'ไม่มี',
-            refNo:r.refNo||'', date:dateKey(r.date), dear:r.dear||'นายแพทย์ผู้เกี่ยวข้อง', to:r.referTo||'', attach:r.attach||'',
+            refNo:cleanRefNo(r.refNo), date:dateKey(r.date), dear:r.dear||'นายแพทย์ผู้เกี่ยวข้อง', to:r.referTo||'', attach:r.attach||'',
             pTreat:/รักษาต่อ/.test(r.purpose||''), pDx:/วินิจฉัย/.test(r.purpose||''),
             history:r.history||'', current:r.current||'', lab:r.lab||'', dx:r.dx||'', treatment:r.treatment||'', reason:r.reason||'', other:r.other||'',
             signer:r.signer||'', license:r.license||'' };
@@ -2631,7 +2633,7 @@
     }
 
     /* ============================================================ PRINT */
-    function printHTML(html){ $('#print-area').innerHTML=html; window.print(); }
+    function printHTML(html){ const pa=$('#print-area'); pa.innerHTML=html; pa.classList.remove('hidden'); window.print(); setTimeout(()=>{ pa.classList.add('hidden'); pa.innerHTML=''; }, 500); }
     function printReceipt(vn){
         const v=visitByVN(vn); const p=patientByHN(v.hn)||{};
         const meds=(v.meds||[]).map(m=>`<tr><td>${esc(m.name)}</td><td style="text-align:center">${m.qty}</td><td style="text-align:right">${money(m.qty*m.price)}</td></tr>`).join('');
