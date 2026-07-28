@@ -445,7 +445,7 @@
                     <div id="triagePatientStrip" class="mb-4"></div>
                     <form id="triageForm" onsubmit="saveTriage(event)">
                         <div class="bg-brand-bg/40 p-5 rounded-xl border border-brand-bluePale/30 mb-6">
-                            <h4 class="text-brand-greenDark font-semibold mb-4 flex items-center text-sm border-b border-white/50 pb-2"><i class="ph-fill ph-activity mr-2 text-lg"></i> สัญญาณชีพ (Vital Signs)</h4>
+                            <h4 class="text-brand-greenDark font-semibold mb-4 flex items-center text-sm border-b border-white/50 pb-2"><i class="ph-fill ph-activity mr-2 text-lg"></i> สัญญาณชีพ (Vital Signs) — ครั้งที่ 1</h4>
                             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                                 <div class="col-span-2 md:col-span-1"><label class="block text-xs font-bold text-brand-blueDark mb-1">BP (mmHg)</label>
                                     <div class="flex items-center">
@@ -460,6 +460,9 @@
                                 <div><label class="block text-xs font-bold text-brand-teal mb-1">BMI</label><input type="text" id="bmi" readonly placeholder="Auto" class="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-semibold text-gray-500 text-center shadow-sm"></div>
                             </div>
                         </div>
+
+                        <div id="vitalsExtra" class="space-y-4 mb-4"></div>
+                        <button type="button" id="addVitalBtn" onclick="addVitalSet()" class="mb-6 px-4 py-2 border border-dashed border-brand-greenMain text-brand-greenDark rounded-lg text-sm font-medium hover:bg-brand-greenMain/10 flex items-center"><i class="ph ph-plus-circle mr-2 text-lg"></i> เพิ่มการวัดสัญญาณชีพ (ครั้งที่ 2)</button>
 
                         <div class="space-y-4 px-2">
                             <div class="flex flex-col sm:flex-row sm:items-start gap-2"><label class="sm:w-32 text-sm font-bold text-brand-blueDark shrink-0 pt-2">CC :</label>
@@ -1227,6 +1230,7 @@
             </div>
             <div style="border:1.5px solid ${NAVY};border-radius:10px;padding:8px 12px;margin-top:6px">
                 <div style="margin-bottom:2px"><b style="color:${NAVY}">BP</b> ${fill(v.bp_sys,26)}/${fill(v.bp_dia,26)} <b style="color:${NAVY}">mmHg</b> &nbsp; <b style="color:${NAVY}">BT</b> ${fill(v.bt,32)}<b style="color:${NAVY}">°C</b> &nbsp; <b style="color:${NAVY}">PR</b> ${fill(v.pr,32)}<b style="color:${NAVY}">/min</b> &nbsp; <b style="color:${NAVY}">Weight</b> ${fill(v.weight,38)}<b style="color:${NAVY}">kg</b> &nbsp; <b style="color:${NAVY}">Height</b> ${fill(v.height,38)}<b style="color:${NAVY}">cm.</b> &nbsp; <b style="color:${NAVY}">Date</b> ${fill(fmtDateTH(v.date),64)}</div>
+                ${(()=>{ let ex=[]; try{ ex=Array.isArray(v.vitalsExtra)?v.vitalsExtra:JSON.parse(v.vitalsExtra||'[]'); }catch(e){} return ex.map((d,i)=>`<div style="margin-top:2px;font-size:13px"><b style="color:${NAVY}">ครั้งที่ ${i+2}:</b> BP ${esc(d.bp_sys||'-')}/${esc(d.bp_dia||'-')} mmHg &nbsp; BT ${esc(d.bt||'-')}°C &nbsp; PR ${esc(d.pr||'-')}/min &nbsp; W ${esc(d.weight||'-')}kg &nbsp; H ${esc(d.height||'-')}cm</div>`).join(''); })()}
                 <div><b style="color:${NAVY}">CC :</b> ${fill(v.cc,600)}</div>
                 <div><b style="color:${NAVY}">PI :</b> ${fill(v.pi,600)}</div>
                 <div><b style="color:${NAVY}">PH :</b> ${fill(v.ph,600)}</div>
@@ -1704,6 +1708,11 @@
         const u=Auth.get();
         $('#triage_signer').innerHTML = `<option value="">— เลือกผู้ลงชื่อ —</option>` + (State.signs||[]).map(s=>`<option value="${esc(s.name)}">${esc(s.name)}${s.position?(' · '+esc(s.position)):''}</option>`).join('');
         $('#triage_signer').value = v.signer || (u && (State.signs||[]).some(s=>s.name===u.name) ? u.name : '');
+        // สัญญาณชีพเพิ่มเติม (ครั้งที่ 2-3)
+        $('#vitalsExtra').innerHTML='';
+        let extra=[]; try{ extra=Array.isArray(v.vitalsExtra)?v.vitalsExtra:JSON.parse(v.vitalsExtra||'[]'); }catch(e){ extra=[]; }
+        extra.slice(0,2).forEach(d=>addVitalSet(d));
+        updateAddVitalBtn();
         calculateBMI();
     }
     function calculateBMI(){
@@ -1713,6 +1722,45 @@
             if(bmi<18.5) cls='border-blue-300 bg-blue-50 text-blue-700'; else if(bmi<=22.9) cls='border-green-300 bg-green-50 text-green-700'; else if(bmi<=24.9) cls='border-yellow-300 bg-yellow-50 text-yellow-700'; else cls='border-red-300 bg-red-50 text-red-700';
             out.className=`w-full px-3 py-2 border ${cls} rounded-lg text-sm font-semibold text-center shadow-sm`;
         } else { out.value=''; out.className='w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-semibold text-gray-500 text-center shadow-sm'; }
+    }
+    /* ---------- สัญญาณชีพเพิ่มเติม (ครั้งที่ 2-3) ---------- */
+    const VITAL_INP='w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain bg-white shadow-sm';
+    function vitalSetHtml(n, d){
+        d=d||{};
+        return `<div class="vital-set bg-brand-bg/40 p-5 rounded-xl border border-brand-bluePale/30">
+            <div class="flex items-center justify-between mb-4 border-b border-white/50 pb-2">
+                <h4 class="text-brand-greenDark font-semibold flex items-center text-sm"><i class="ph-fill ph-activity mr-2 text-lg"></i> สัญญาณชีพ (Vital Signs) — ครั้งที่ ${n}</h4>
+                <button type="button" onclick="removeVitalSet(this)" class="text-red-500 hover:bg-red-50 rounded p-1" title="ลบครั้งนี้"><i class="ph ph-trash text-lg"></i></button>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div class="col-span-2 md:col-span-1"><label class="block text-xs font-bold text-brand-blueDark mb-1">BP (mmHg)</label>
+                    <div class="flex items-center">
+                        <input type="number" class="v-bp_sys w-full px-2 py-2 border border-gray-200 rounded-l-lg text-sm text-center bg-white shadow-sm" placeholder="Sys" value="${esc(d.bp_sys||'')}">
+                        <span class="bg-gray-100 px-2 py-2 border-y border-gray-200 text-gray-500 text-sm">/</span>
+                        <input type="number" class="v-bp_dia w-full px-2 py-2 border border-gray-200 rounded-r-lg text-sm text-center bg-white shadow-sm" placeholder="Dia" value="${esc(d.bp_dia||'')}">
+                    </div></div>
+                <div><label class="block text-xs font-bold text-brand-blueDark mb-1">PR (/min)</label><input type="number" class="v-pr ${VITAL_INP}" placeholder="80" value="${esc(d.pr||'')}"></div>
+                <div><label class="block text-xs font-bold text-brand-blueDark mb-1">BT (°C)</label><input type="number" step="0.1" class="v-bt ${VITAL_INP}" placeholder="36.5" value="${esc(d.bt||'')}"></div>
+                <div><label class="block text-xs font-bold text-brand-blueDark mb-1">Weight (kg)</label><input type="number" step="0.1" oninput="rowBMI(this)" class="v-weight ${VITAL_INP}" placeholder="50.0" value="${esc(d.weight||'')}"></div>
+                <div><label class="block text-xs font-bold text-brand-blueDark mb-1">Height (cm)</label><input type="number" step="0.1" oninput="rowBMI(this)" class="v-height ${VITAL_INP}" placeholder="160.0" value="${esc(d.height||'')}"></div>
+                <div><label class="block text-xs font-bold text-brand-teal mb-1">BMI</label><input type="text" readonly class="v-bmi w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-semibold text-gray-500 text-center shadow-sm" placeholder="Auto" value="${esc(d.bmi||'')}"></div>
+            </div>
+        </div>`;
+    }
+    function rowBMI(el){
+        const set=el.closest('.vital-set'); const w=parseFloat(set.querySelector('.v-weight').value), h=parseFloat(set.querySelector('.v-height').value);
+        const out=set.querySelector('.v-bmi'); out.value=(w>0&&h>0)?(w/((h/100)*(h/100))).toFixed(2):'';
+    }
+    function vitalSetCount(){ return document.querySelectorAll('#vitalsExtra .vital-set').length; }
+    function updateAddVitalBtn(){ const n=vitalSetCount(); const btn=$('#addVitalBtn'); if(!btn) return; btn.classList.toggle('hidden', n>=2); btn.innerHTML=`<i class="ph ph-plus-circle mr-2 text-lg"></i> เพิ่มการวัดสัญญาณชีพ (ครั้งที่ ${n+2})`; }
+    function addVitalSet(d){ if(vitalSetCount()>=2) return; $('#vitalsExtra').insertAdjacentHTML('beforeend', vitalSetHtml(vitalSetCount()+2, d)); updateAddVitalBtn(); }
+    function removeVitalSet(btn){ btn.closest('.vital-set').remove(); renumberVitalSets(); updateAddVitalBtn(); }
+    function renumberVitalSets(){ document.querySelectorAll('#vitalsExtra .vital-set h4').forEach((h,i)=>{ h.innerHTML=`<i class="ph-fill ph-activity mr-2 text-lg"></i> สัญญาณชีพ (Vital Signs) — ครั้งที่ ${i+2}`; }); }
+    function collectVitalsExtra(){
+        return [...document.querySelectorAll('#vitalsExtra .vital-set')].map(s=>({
+            bp_sys:s.querySelector('.v-bp_sys').value, bp_dia:s.querySelector('.v-bp_dia').value, pr:s.querySelector('.v-pr').value,
+            bt:s.querySelector('.v-bt').value, weight:s.querySelector('.v-weight').value, height:s.querySelector('.v-height').value, bmi:s.querySelector('.v-bmi').value
+        })).filter(x=>x.bp_sys||x.bp_dia||x.pr||x.bt||x.weight||x.height);
     }
     async function saveTriage(event){
         event.preventDefault();
@@ -1725,7 +1773,7 @@
         // PI: ระยะเวลาไว้ต้นประโยค + "ก่อนมาคลินิก"
         let pi=$('#pi').value.trim(); const piDur=$('#pi_dur').value.trim(), piU=$('#pi_unit').value;
         if(piDur && piU) pi=piDur+' '+piU+' ก่อนมาคลินิก'+(pi?' '+pi:'');
-        const patch = { bp_sys:$('#bp_sys').value, bp_dia:$('#bp_dia').value, bt:$('#bt').value, pr:$('#pr').value, weight:$('#weight').value, height:$('#height').value, bmi:$('#bmi').value, cc:cc, pi:pi, ph:$('#ph').value.trim(), pe:$('#pe').value.trim(), signer:$('#triage_signer').value, status:STATUS.EXAM, triageAt:nowISO() };
+        const patch = { bp_sys:$('#bp_sys').value, bp_dia:$('#bp_dia').value, bt:$('#bt').value, pr:$('#pr').value, weight:$('#weight').value, height:$('#height').value, bmi:$('#bmi').value, cc:cc, pi:pi, ph:$('#ph').value.trim(), pe:$('#pe').value.trim(), signer:$('#triage_signer').value, vitalsExtra:JSON.stringify(collectVitalsExtra()), status:STATUS.EXAM, triageAt:nowISO() };
         try{
             await Store.saveVisit(Object.assign({}, v, patch));   // บันทึกก่อน
             Object.assign(v, patch);                              // เปลี่ยนสถานะเฉพาะเมื่อสำเร็จ
