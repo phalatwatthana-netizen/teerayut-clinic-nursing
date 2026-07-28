@@ -9,6 +9,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Phosphor Icons (CDN) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- สร้างรูป/PDF ฝั่งเบราว์เซอร์ (ใบส่งตัว) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Google Fonts: Noto Sans Thai -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- ข้อมูลเขตการปกครองไทย (ฝังในโปรเจกต์ ไม่ต้องพึ่ง CDN ภายนอก) -->
@@ -556,6 +559,8 @@
                             <div class="flex gap-2">
                                 <button type="button" onclick="newReferral()" class="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 flex items-center"><i class="ph ph-file-plus mr-1"></i> ใหม่</button>
                                 <button type="button" onclick="printReferPreview()" class="px-3 py-1.5 border border-brand-blueMain text-brand-blueMain rounded-lg text-xs font-medium hover:bg-brand-bluePale/30 flex items-center"><i class="ph ph-printer mr-1"></i> พิมพ์</button>
+                                <button type="button" onclick="saveReferFile('pdf',this)" class="px-3 py-1.5 border border-red-400 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 flex items-center"><i class="ph ph-file-pdf mr-1"></i> PDF</button>
+                                <button type="button" onclick="saveReferFile('jpg',this)" class="px-3 py-1.5 border border-amber-400 text-amber-600 rounded-lg text-xs font-medium hover:bg-amber-50 flex items-center"><i class="ph ph-image mr-1"></i> JPG</button>
                                 <button type="submit" form="referForm" class="px-3 py-1.5 bg-brand-blueMain hover:bg-brand-teal text-white rounded-lg text-xs font-medium flex items-center"><i class="ph ph-floppy-disk mr-1"></i> บันทึก</button>
                             </div>
                         </div>
@@ -2530,8 +2535,37 @@
         printHTML(`<div style="width:210mm;min-height:297mm;padding:4mm 12mm 12mm;box-sizing:border-box"><style>@page{size:A4 portrait;margin:0;}</style>${buildReferralHtml(d)}</div>`);
     }
     function printReferPreview(){
-        if(!$('#ref_patient').value){ showToast('เลือกผู้รับบริการก่อน','error'); return; }
+        if(!refSelectedHN()){ showToast('เลือกผู้รับบริการก่อน','error'); return; }
         printReferDoc(referGather());
+    }
+    function downloadDataUrl(url,name){ const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
+    /* บันทึกใบส่งตัวเป็น PDF/JPG ตรงตามพรีวิวเป๊ะ (เรนเดอร์เต็มขนาด A4) */
+    async function saveReferFile(type, btn){
+        if(!refSelectedHN()){ showToast('เลือกผู้รับบริการก่อน','error'); return; }
+        if(typeof html2canvas==='undefined' || !window.jspdf){ showToast('ไลบรารียังโหลดไม่เสร็จ ลองใหม่อีกครั้ง','error'); return; }
+        const d=referGather();
+        const orig=btn.innerHTML; btn.innerHTML='<i class="ph ph-spinner animate-spin"></i>'; btn.disabled=true;
+        const holder=document.createElement('div');
+        holder.style.cssText='position:fixed;left:-10000px;top:0;background:#fff;z-index:-1';
+        holder.innerHTML=`<div id="__refExport" style="width:210mm;min-height:297mm;background:#fff;padding:4mm 12mm 12mm;box-sizing:border-box">${buildReferralHtml(d)}</div>`;
+        document.body.appendChild(holder);
+        try{
+            await Promise.all([...holder.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(r=>{ img.onload=img.onerror=r; })));
+            const el=holder.querySelector('#__refExport');
+            const canvas=await html2canvas(el, { scale:2, useCORS:true, backgroundColor:'#fff' });
+            const fname=`ใบส่งตัว_${String(d.name||'').replace(/\s+/g,'')}_${String(d.refNo||'').replace(/\//g,'-')}`;
+            if(type==='jpg'){
+                downloadDataUrl(canvas.toDataURL('image/jpeg',0.95), fname+'.jpg');
+            }else{
+                const { jsPDF }=window.jspdf;
+                const pdf=new jsPDF('p','mm','a4');
+                const w=210, h=canvas.height*w/canvas.width;
+                pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,w,Math.min(h,297));
+                pdf.save(fname+'.pdf');
+            }
+            showToast('บันทึก'+(type==='jpg'?'รูป JPG':'ไฟล์ PDF')+'แล้ว');
+        }catch(e){ showToast('บันทึกไม่สำเร็จ (รูปโลโก้/ลายเซ็นอาจติดสิทธิ์ CORS): '+(e.message||''),'error'); }
+        finally{ document.body.removeChild(holder); btn.innerHTML=orig; btn.disabled=false; }
     }
     async function saveReferral(event){
         event.preventDefault();
