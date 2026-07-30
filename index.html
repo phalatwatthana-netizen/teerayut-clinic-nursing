@@ -1742,8 +1742,8 @@
         });
         // ที่อยู่ = ส่วนที่มีคำบ่งชี้ หรือส่วนที่ยาวสุดที่เหลือ
         let addrIdx=-1;
-        parts.forEach((p,i)=>{ if(!used[i] && /(หมู่|ม\.|ต\.|ตำบล|อ\.|อำเภอ|จ\.|จังหวัด|แขวง|เขต|ซอย|ถนน|\d{5})/.test(p)){ if(addrIdx<0||p.length>parts[addrIdx].length) addrIdx=i; } });
-        if(addrIdx<0){ let mx=0; parts.forEach((p,i)=>{ if(!used[i] && p.length>mx){ mx=p.length; addrIdx=i; } }); }
+        parts.forEach((p,i)=>{ if(!used[i] && /[ก-๙]/.test(p) && /(หมู่|ม\.|ต\.|ตำบล|อ\.|อำเภอ|จ\.|จังหวัด|แขวง|เขต|ซอย|ถนน|\d{5})/.test(p)){ if(addrIdx<0||p.length>parts[addrIdx].length) addrIdx=i; } });
+        if(addrIdx<0){ let mx=0; parts.forEach((p,i)=>{ if(!used[i] && /[ก-๙]/.test(p) && p.length>mx){ mx=p.length; addrIdx=i; } }); }
         if(addrIdx>=0){ d.address=parts[addrIdx]; used[addrIdx]=true; }
         // ชื่อ = โทเคนภาษาไทยล้วน (ไม่มีตัวเลข/อังกฤษ) ตัวแรกที่เหลือ → กัน EFULL(อังกฤษ)/อายุ/เวลาปน
         let nameStr='';
