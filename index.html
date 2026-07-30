@@ -1705,8 +1705,24 @@
     /* ---------- อ่านบัตรประชาชนผ่าน SIAM-ID (โหมด Auto-type) ----------
        SIAM-ID จะพิมพ์ข้อมูลลงช่องที่ cursor อยู่ → โฟกัสช่องเลขบัตรแล้วแตะบัตร
        ถ้าเลขบัตรครบ 13 หลักตรงกับผู้ป่วยเดิม จะดึงประวัติมาเติมให้อัตโนมัติ */
-    /* เปิดช่องรับข้อมูลบัตร (SIAM-ID Fill Form พิมพ์ CSV บรรทัดเดียวมาที่นี่) */
-    function readIdCard(){
+    /* อ่านบัตร: ลองดึงตรงจาก card-agent (localhost:8765) ก่อน ถ้าไม่มีค่อย fallback SIAM-ID */
+    const ID_CARD_AGENT_URL = 'http://127.0.0.1:8765/read';
+    async function readIdCard(){
+        showToast('กำลังอ่านบัตรจากเครื่องอ่าน...','info');
+        try{
+            const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),15000);
+            const r=await fetch(ID_CARD_AGENT_URL,{signal:ctrl.signal}); clearTimeout(to);
+            const d=await r.json();
+            if(d.status && d.status!=='success') throw new Error(d.message||'อ่านบัตรไม่สำเร็จ');
+            fillFromIdCard(d); if(d.cid) onCidInput($('#cid'));
+            showToast('อ่านบัตรสำเร็จ — ตรวจสอบข้อมูลก่อนบันทึก');
+        }catch(e){
+            // ไม่มี card-agent → ใช้ช่องรับ SIAM-ID (auto-type/วาง)
+            openCardCaptureModal();
+        }
+    }
+    /* ช่องรับข้อมูลบัตร (SIAM-ID Fill Form พิมพ์ CSV/วางเอง) */
+    function openCardCaptureModal(){
         openModal('แตะบัตรประชาชน (SIAM-ID)', `
             <div class="text-sm space-y-3">
                 <p class="text-gray-600">วางเคอร์เซอร์ในช่องนี้แล้ว <b>แตะบัตร</b> — SIAM-ID จะพิมพ์ข้อมูลเข้ามาเอง ระบบจะแยกลงฟอร์มให้อัตโนมัติ</p>
