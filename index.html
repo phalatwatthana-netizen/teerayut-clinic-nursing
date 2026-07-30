@@ -339,7 +339,7 @@
                                     <input type="text" id="hnInput" placeholder="เว้นว่าง = อัตโนมัติ" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:border-brand-blueMain bg-brand-bg/50"></div>
                                 <div class="lg:col-span-2"><label class="block text-xs font-medium text-gray-600 mb-1">เลขบัตรประชาชน <span class="text-red-500">*</span></label>
                                     <div class="flex gap-2">
-                                        <input type="text" id="cid" maxlength="13" required class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
+                                        <input type="text" id="cid" maxlength="13" required oninput="onCidInput(this)" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain focus:ring-1 focus:ring-brand-blueMain bg-brand-bg/50">
                                         <button type="button" onclick="readIdCard()" title="อ่านข้อมูลจากเครื่องอ่านบัตรประชาชน (USB)" class="shrink-0 px-3 py-2 bg-brand-teal text-white rounded-lg text-xs font-medium hover:bg-brand-blueDark transition-colors flex items-center shadow-sm"><i class="ph ph-identification-card mr-1 text-base"></i> อ่านบัตร</button>
                                     </div></div>
                                 <div><label class="block text-xs font-medium text-gray-600 mb-1">คำนำหน้า <span class="text-red-500">*</span></label>
@@ -1702,26 +1702,26 @@
         closeCamera(); showToast('จับภาพเรียบร้อย');
     }
 
-    /* ---------- เครื่องอ่านบัตรประชาชน USB (ผ่าน local agent) ----------
-       ต้องรันโปรแกรม card-agent ในเครื่อง (ดูโฟลเดอร์ card-agent/) แล้วเปิด
-       เว็บนี้จะเรียกอ่านข้อมูลจาก http://localhost:8765/read มากรอกฟอร์มให้ */
-    const ID_CARD_AGENT_URL = 'http://localhost:8765/read';
-    async function readIdCard(){
-        showToast('กำลังอ่านบัตร... เสียบบัตรที่เครื่องอ่าน','info');
-        try{
-            const ctrl = new AbortController(); const to=setTimeout(()=>ctrl.abort(), 15000);
-            const r = await fetch(ID_CARD_AGENT_URL, { signal: ctrl.signal });
-            clearTimeout(to);
-            const d = await r.json();
-            if(d.status && d.status!=='success') throw new Error(d.message||'อ่านบัตรไม่สำเร็จ');
-            fillFromIdCard(d);
-            showToast('อ่านบัตรสำเร็จ — ตรวจสอบข้อมูลก่อนบันทึก');
-        }catch(e){
-            const msg = (e.name==='AbortError') ? 'หมดเวลา — ตรวจว่าเสียบบัตรแล้ว'
-                : 'เชื่อมต่อเครื่องอ่านบัตรไม่ได้ — ยังไม่ได้เปิดโปรแกรม card-agent ในเครื่องนี้';
-            showToast(msg,'error');
+    /* ---------- อ่านบัตรประชาชนผ่าน SIAM-ID (โหมด Auto-type) ----------
+       SIAM-ID จะพิมพ์ข้อมูลลงช่องที่ cursor อยู่ → โฟกัสช่องเลขบัตรแล้วแตะบัตร
+       ถ้าเลขบัตรครบ 13 หลักตรงกับผู้ป่วยเดิม จะดึงประวัติมาเติมให้อัตโนมัติ */
+    function readIdCard(){
+        const cid=$('#cid'); if(!cid) return;
+        cid.value=''; cid.focus(); cid.select();
+        showToast('แตะบัตรที่เครื่องอ่าน — SIAM-ID จะพิมพ์ข้อมูลให้อัตโนมัติ','info');
+    }
+    /* เมื่อเลขบัตรครบ 13 หลัก ลองจับคู่ผู้ป่วยเดิมมาเติมฟอร์ม */
+    function onCidInput(el){
+        const cid=String(el.value||'').replace(/\D/g,'');
+        if(cid.length!==13) return;
+        const p=State.patients.find(x=>String(x.cid).replace(/\D/g,'')===cid);
+        if(p && !$('#firstName').value){
+            fillFromIdCard({ cid:p.cid, prefix:p.prefix, firstName:p.firstName, lastName:p.lastName, gender:p.gender, birthDate:p.birthDate, address:p.address });
+            showToast('พบประวัติเดิม: '+pname(p)+' — ดึงข้อมูลมาให้แล้ว','info');
         }
     }
+    /* เก็บของเดิมไว้เผื่อมี local agent ในอนาคต (ไม่ใช้กับ SIAM-ID Auto-type) */
+    function fillFromIdCardAuto(d){ fillFromIdCard(d); }
     /* เติมข้อมูลจากบัตรลงฟอร์ม (รองรับทั้งภาษาไทยและโครงสร้างมาตรฐาน) */
     function fillFromIdCard(d){
         if(d.cid) $('#cid').value=d.cid;
