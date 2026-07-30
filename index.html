@@ -1705,10 +1705,61 @@
     /* ---------- อ่านบัตรประชาชนผ่าน SIAM-ID (โหมด Auto-type) ----------
        SIAM-ID จะพิมพ์ข้อมูลลงช่องที่ cursor อยู่ → โฟกัสช่องเลขบัตรแล้วแตะบัตร
        ถ้าเลขบัตรครบ 13 หลักตรงกับผู้ป่วยเดิม จะดึงประวัติมาเติมให้อัตโนมัติ */
+    /* เปิดช่องรับข้อมูลบัตร (SIAM-ID Fill Form พิมพ์ CSV บรรทัดเดียวมาที่นี่) */
     function readIdCard(){
-        const cid=$('#cid'); if(!cid) return;
-        cid.value=''; cid.focus(); cid.select();
-        showToast('แตะบัตรที่เครื่องอ่าน — SIAM-ID จะพิมพ์ข้อมูลให้อัตโนมัติ','info');
+        openModal('แตะบัตรประชาชน (SIAM-ID)', `
+            <div class="text-sm space-y-3">
+                <p class="text-gray-600">วางเคอร์เซอร์ในช่องนี้แล้ว <b>แตะบัตร</b> — SIAM-ID จะพิมพ์ข้อมูลเข้ามาเอง ระบบจะแยกลงฟอร์มให้อัตโนมัติ</p>
+                <textarea id="cardCapture" rows="3" placeholder="ข้อมูลบัตรจะปรากฏที่นี่..." class="w-full px-3 py-2 border border-brand-teal rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-teal"></textarea>
+                <div class="flex justify-end gap-2"><button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ยกเลิก</button><button type="button" onclick="applyCardCapture()" class="px-5 py-2 bg-brand-teal text-white rounded-lg font-medium">ใส่ลงฟอร์ม</button></div>
+                <p class="text-[11px] text-gray-400">* ตั้ง SIAM-ID: ตัวคั่น = Standard CSV [ , ] และให้พิมพ์ครบบรรทัดเดียว (ไม่ใช้ Tab)</p>
+            </div>`);
+        const t=$('#cardCapture'); setTimeout(()=>t.focus(),60);
+        // ถ้าพิมพ์ครบและมีคอมมา จะใส่ให้อัตโนมัติ
+        t.addEventListener('input', ()=>{ if((t.value.match(/,/g)||[]).length>=3){ clearTimeout(t._to); t._to=setTimeout(()=>applyCardCapture(), 400); } });
+    }
+    /* แปลงวันที่ไทย เช่น "13 ธันวาคม 2529" หรือ "13/12/2529" เป็น ISO (พ.ศ.->ค.ศ.) */
+    function thaiDateToISO(s){
+        s=String(s||'').trim(); if(!s) return '';
+        const TH={'มกราคม':1,'ม.ค.':1,'กุมภาพันธ์':2,'ก.พ.':2,'มีนาคม':3,'มี.ค.':3,'เมษายน':4,'เม.ย.':4,'พฤษภาคม':5,'พ.ค.':5,'มิถุนายน':6,'มิ.ย.':6,'กรกฎาคม':7,'ก.ค.':7,'สิงหาคม':8,'ส.ค.':8,'กันยายน':9,'ก.ย.':9,'ตุลาคม':10,'ต.ค.':10,'พฤศจิกายน':11,'พ.ย.':11,'ธันวาคม':12,'ธ.ค.':12};
+        let m=s.match(/(\d{1,2})\s+([ก-๙.]+)\s+(\d{4})/);
+        let dd,mm,yy;
+        if(m){ dd=+m[1]; mm=TH[m[2]]||0; yy=+m[3]; }
+        else { m=s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/); if(!m) return ''; dd=+m[1]; mm=+m[2]; yy=+m[3]; }
+        if(!mm) return '';
+        if(yy>2400) yy-=543;   // พ.ศ. -> ค.ศ.
+        return yy+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+    }
+    /* แยกข้อมูลบัตรแบบ CSV ตามรูปแบบข้อมูล (ไม่อิงลำดับ) */
+    function parseCardData(raw){
+        const parts=String(raw||'').split(/[,\t]/).map(s=>s.trim()).filter(Boolean);
+        const d={}; const used=new Array(parts.length).fill(false);
+        parts.forEach((p,i)=>{
+            const digits=p.replace(/\D/g,'');
+            if(!d.cid && digits.length===13){ d.cid=digits; used[i]=true; }
+            else if(!d.gender && (p==='ชาย'||p==='หญิง')){ d.gender=p; used[i]=true; }
+            else if(!d.birthDate && (/[ก-๙]+\s+\d{4}/.test(p) || /\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}/.test(p))){ d.birthDate=thaiDateToISO(p); used[i]=true; }
+        });
+        // ที่อยู่ = ส่วนที่มีคำบ่งชี้ หรือส่วนที่ยาวสุดที่เหลือ
+        let addrIdx=-1;
+        parts.forEach((p,i)=>{ if(!used[i] && /(หมู่|ม\.|ต\.|ตำบล|อ\.|อำเภอ|จ\.|จังหวัด|แขวง|เขต|ซอย|ถนน|\d{5})/.test(p)){ if(addrIdx<0||p.length>parts[addrIdx].length) addrIdx=i; } });
+        if(addrIdx<0){ let mx=0; parts.forEach((p,i)=>{ if(!used[i] && p.length>mx){ mx=p.length; addrIdx=i; } }); }
+        if(addrIdx>=0){ d.address=parts[addrIdx]; used[addrIdx]=true; }
+        // ชื่อ = ส่วนข้อความที่เหลือ (ตัดคำนำหน้าแล้ว) รวมกัน
+        const nameStr=parts.filter((p,i)=>!used[i] && /[ก-๙a-zA-Z]/.test(p) && !/^\d+$/.test(p)).join(' ').trim();
+        if(nameStr){ const sp=nameStr.split(/\s+/); d.firstName=sp.shift(); d.lastName=sp.join(' '); }
+        if(d.gender && !d.prefix){ d.prefix = d.gender==='ชาย'?'นาย':''; }  // หญิงเว้นไว้ (นาง/นางสาว)
+        return d;
+    }
+    function applyCardCapture(){
+        const raw=$('#cardCapture').value;
+        if(!raw.trim()){ showToast('ยังไม่มีข้อมูลบัตร','error'); return; }
+        const d=parseCardData(raw);
+        if(!d.cid && !d.firstName){ showToast('อ่านข้อมูลบัตรไม่สำเร็จ ตรวจรูปแบบ SIAM-ID','error'); return; }
+        closeModal();
+        fillFromIdCard(d);
+        showToast('ใส่ข้อมูลบัตรลงฟอร์มแล้ว — ตรวจสอบก่อนบันทึก');
+        if(d.cid) onCidInput($('#cid'));
     }
     /* เมื่อเลขบัตรครบ 13 หลัก ลองจับคู่ผู้ป่วยเดิมมาเติมฟอร์ม */
     function onCidInput(el){
