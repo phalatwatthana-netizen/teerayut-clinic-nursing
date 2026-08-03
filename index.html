@@ -1746,34 +1746,31 @@
         if(yy>2400) yy-=543;   // พ.ศ. -> ค.ศ.
         return yy+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
     }
-    /* แยกข้อมูลบัตรแบบ "ตามตำแหน่ง" — เลขบัตร → ชื่อ → วันเกิด → เพศ → ที่อยู่
-       ใช้ได้แม้ไม่มีตัวคั่น (SIAM-ID พิมพ์ติดกัน) เพราะอาศัยลำดับ+รูปแบบข้อมูล */
+    /* แยกข้อมูลบัตรแบบ CSV ตามรูปแบบข้อมูล (ไม่อิงลำดับ) */
     function parseCardData(raw){
-        let s=String(raw||'').replace(/[#\t\r\n]+/g,' ').replace(/\s+/g,' ').trim();
-        const d={};
-        // 1) เลขบัตร: ชุดตัวเลข 13 หลักชุดแรก (มีเว้นวรรค/ขีดคั่นได้)
-        const cidM=s.match(/(?:\d[ \-]*){13}/);
-        let cidEnd=0;
-        if(cidM){ const dg=cidM[0].replace(/\D/g,''); if(dg.length>=13){ d.cid=dg.slice(0,13); cidEnd=cidM.index+cidM[0].length; } }
-        // 2) วันเกิด: วันที่ไทยชุดแรก เช่น "13 ธันวาคม 2529" หรือ 13/12/2529
-        let bStart=-1,bEnd=-1;
-        let bM=s.match(/(\d{1,2})\s*([ก-๙]{2,}|[ก-๙]\.[ก-๙]\.)\s*(25\d{2}|\d{4})/);
-        if(!bM) bM=s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
-        if(bM){ d.birthDate=thaiDateToISO(bM[0]); bStart=bM.index; bEnd=bM.index+bM[0].length; }
-        // 3) ชื่อ-สกุล: ข้อความระหว่างเลขบัตรกับวันเกิด
-        if(bStart>=0 && bStart>=cidEnd){
-            let nm=s.slice(cidEnd,bStart).replace(/[a-zA-Z0-9.]/g,' ').replace(/\s+/g,' ').trim();
-            if(nm){ const sp=nm.split(' '); const PMAP={'นาย':'นาย','นาง':'นาง','นางสาว':'นางสาว','ด.ช.':'ด.ช.','ด.ญ.':'ด.ญ.','เด็กชาย':'ด.ช.','เด็กหญิง':'ด.ญ.'};
-                if(PMAP[sp[0]]){ d.prefix=PMAP[sp[0]]; sp.shift(); }
-                d.firstName=sp.shift()||''; d.lastName=sp.join(' '); }
+        const parts=String(raw||'').split(/[,\t\r\n]+/).map(s=>s.trim()).filter(Boolean);
+        const d={}; const used=new Array(parts.length).fill(false);
+        parts.forEach((p,i)=>{
+            const digits=p.replace(/\D/g,'');
+            if(!d.cid && digits.length===13){ d.cid=digits; used[i]=true; }
+            else if(!d.gender && (p==='ชาย'||p==='หญิง')){ d.gender=p; used[i]=true; }
+            else if(!d.birthDate && (/[ก-๙]+\s+\d{4}/.test(p) || /\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}/.test(p))){ d.birthDate=thaiDateToISO(p); used[i]=true; }
+        });
+        // ที่อยู่ = ส่วนที่มีคำบ่งชี้ หรือส่วนที่ยาวสุดที่เหลือ
+        let addrIdx=-1;
+        parts.forEach((p,i)=>{ if(!used[i] && /[ก-๙]/.test(p) && /(หมู่|ม\.|ต\.|ตำบล|อ\.|อำเภอ|จ\.|จังหวัด|แขวง|เขต|ซอย|ถนน|\d{5})/.test(p)){ if(addrIdx<0||p.length>parts[addrIdx].length) addrIdx=i; } });
+        if(addrIdx<0){ let mx=0; parts.forEach((p,i)=>{ if(!used[i] && /[ก-๙]/.test(p) && p.length>mx){ mx=p.length; addrIdx=i; } }); }
+        if(addrIdx>=0){ d.address=parts[addrIdx]; used[addrIdx]=true; }
+        // ชื่อ = โทเคนภาษาไทยล้วน (ไม่มีตัวเลข/อังกฤษ) ตัวแรกที่เหลือ → กัน EFULL(อังกฤษ)/อายุ/เวลาปน
+        let nameStr='';
+        for(let i=0;i<parts.length;i++){ if(!used[i] && /[ก-๙]/.test(parts[i]) && !/[a-zA-Z0-9]/.test(parts[i])){ nameStr=parts[i]; used[i]=true; break; } }
+        if(nameStr){
+            const sp=nameStr.split(/\s+/);
+            const PMAP={'นาย':'นาย','นาง':'นาง','นางสาว':'นางสาว','ด.ช.':'ด.ช.','ด.ญ.':'ด.ญ.','เด็กชาย':'ด.ช.','เด็กหญิง':'ด.ญ.'};
+            if(PMAP[sp[0]]){ d.prefix=PMAP[sp[0]]; sp.shift(); }
+            d.firstName=sp.shift()||''; d.lastName=sp.join(' ');
         }
-        // 4) เพศ + 5) ที่อยู่ (หลังวันเกิด)
-        let after = bEnd>=0 ? s.slice(bEnd) : s;
-        const gM=after.match(/(ชาย|หญิง)/);
-        if(gM){ d.gender=gM[1]; after=after.slice(gM.index+gM[1].length); }
-        const addr=after.replace(/^[\s,]+/,'').trim();
-        if(addr && /[ก-๙]/.test(addr)) d.address=addr;
-        if(d.gender && !d.prefix) d.prefix = d.gender==='ชาย'?'นาย':'';
+        if(d.gender && !d.prefix){ d.prefix = d.gender==='ชาย'?'นาย':''; }  // หญิงเว้นไว้ (นาง/นางสาว)
         return d;
     }
     function applyCardCapture(){
