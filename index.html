@@ -1710,7 +1710,7 @@
     async function readIdCard(){
         showToast('กำลังอ่านบัตรจากเครื่องอ่าน...','info');
         try{
-            const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),15000);
+            const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),3000);
             const r=await fetch(ID_CARD_AGENT_URL,{signal:ctrl.signal}); clearTimeout(to);
             const d=await r.json();
             if(d.status && d.status!=='success') throw new Error(d.message||'อ่านบัตรไม่สำเร็จ');
@@ -1728,11 +1728,11 @@
                 <p class="text-gray-600">วางเคอร์เซอร์ในช่องนี้แล้ว <b>แตะบัตร</b> — SIAM-ID จะพิมพ์ข้อมูลเข้ามาเอง ระบบจะแยกลงฟอร์มให้อัตโนมัติ</p>
                 <textarea id="cardCapture" rows="4" placeholder="ข้อมูลบัตรจะปรากฏที่นี่..." onkeydown="if(event.key==='Tab'){event.preventDefault();const s=this.selectionStart;this.value=this.value.slice(0,s)+'\t'+this.value.slice(this.selectionEnd);this.selectionStart=this.selectionEnd=s+1;}" class="w-full px-3 py-2 border border-brand-teal rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-teal"></textarea>
                 <div class="flex justify-end gap-2"><button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ยกเลิก</button><button type="button" onclick="applyCardCapture()" class="px-5 py-2 bg-brand-teal text-white rounded-lg font-medium">ใส่ลงฟอร์ม</button></div>
-                <p class="text-[11px] text-gray-400">* ตั้ง SIAM-ID: ตัวคั่น = Standard CSV [ , ] และให้พิมพ์ครบบรรทัดเดียว (ไม่ใช้ Tab)</p>
+                <p class="text-[11px] text-gray-400">* กด "แตะบัตร" ที่เครื่องอ่าน SIAM-ID จะพิมพ์เข้ามาเอง แล้วระบบแยกลงฟอร์มให้อัตโนมัติ</p>
             </div>`);
         const t=$('#cardCapture'); setTimeout(()=>t.focus(),60);
-        // ถ้าพิมพ์ครบและมีคอมมา จะใส่ให้อัตโนมัติ
-        t.addEventListener('input', ()=>{ if((t.value.match(/[,\t\n]/g)||[]).length>=3){ clearTimeout(t._to); t._to=setTimeout(()=>applyCardCapture(), 500); } });
+        // พิมพ์เข้ามาแล้วหยุดพิมพ์ ~700ms → ลองแยกข้อมูล ถ้าได้ก็ใส่ให้อัตโนมัติ
+        t.addEventListener('input', ()=>{ clearTimeout(t._to); t._to=setTimeout(()=>{ const d=parseCardData(t.value); if(d.cid||d.firstName) applyCardCapture(); }, 700); });
     }
     /* แปลงวันที่ไทย เช่น "13 ธันวาคม 2529" หรือ "13/12/2529" เป็น ISO (พ.ศ.->ค.ศ.) */
     function thaiDateToISO(s){
