@@ -1518,6 +1518,40 @@
         const t=a.tambon.find(x=>x.name_th===$('#addr_tambon').value);
         $('#addr_zip').value = (t && t.zip_code) ? t.zip_code : '';
     }
+    /* เลือก option ใน select ตามชื่อ (ตรง หรือใกล้เคียง) */
+    function selectByName(id, name){
+        const el=$('#'+id); if(!el||!name) return false;
+        const norm=s=>String(s).replace(/\s/g,'');
+        const opt=[...el.options].find(o=>o.value===name)
+            || [...el.options].find(o=>norm(o.value)===norm(name))
+            || [...el.options].find(o=>o.value && (norm(o.value).includes(norm(name))||norm(name).includes(norm(o.value))));
+        if(opt){ el.value=opt.value; return true; }
+        return false;
+    }
+    /* แยกที่อยู่จากบัตร (สตริงเดียว) ลงช่องย่อย + ไล่ cascade จังหวัด/อำเภอ/ตำบล */
+    async function fillAddressFromCard(addr){
+        if(!addr) return;
+        if(!State.thaiGeo) await loadThaiAddress();
+        const s=String(addr).replace(/\s+/g,' ').trim();
+        const prov=(s.match(/จังหวัด\s*([ก-๙]+)/)||s.match(/จ\.\s*([ก-๙]+)/)||[])[1]||'';
+        const amph=(s.match(/(?:อำเภอ|เขต)\s*([ก-๙]+)/)||s.match(/อ\.\s*([ก-๙]+)/)||[])[1]||'';
+        const tamb=(s.match(/(?:ตำบล|แขวง)\s*([ก-๙]+)/)||s.match(/ต\.\s*([ก-๙]+)/)||[])[1]||'';
+        const pre=s.split(/ตำบล|แขวง|ต\./)[0].trim();   // ส่วนหน้า = บ้านเลขที่/หมู่/ถนน
+        const moo=(pre.match(/หมู่(?:ที่)?\s*(\d+)/)||[])[1]||'';
+        const road=(pre.match(/(?:ถนน|ถ\.)\s*([ก-๙A-Za-z0-9]+)/)||[])[1]||'';
+        const soi=(pre.match(/(?:ซอย|ซ\.)\s*([ก-๙A-Za-z0-9]+)/)||[])[1]||'';
+        const houseNo=(pre.match(/^(\d+(?:\/\d+)?)/)||[])[1]||'';
+        if(houseNo) $('#addr_no').value=houseNo;
+        if(moo && $('#addr_building')) $('#addr_building').value='หมู่ '+moo;
+        if((road||soi) && $('#addr_road')) $('#addr_road').value=[road?('ถ.'+road):'', soi?('ซ.'+soi):''].filter(Boolean).join(' ');
+        if(prov && selectByName('addr_province',prov)){
+            onProvinceChange();
+            if(amph && selectByName('addr_amphure',amph)){
+                onAmphureChange();
+                if(tamb && selectByName('addr_tambon',tamb)) onTambonChange();
+            }
+        }
+    }
     /* ตั้งค่าที่อยู่จากข้อมูลเดิม (ตอนแก้ไข) โดยไล่ cascade ให้ครบ */
     function setAddressFromPatient(p){
         if(!State.thaiGeo) return;
@@ -1803,7 +1837,7 @@
         if(d.lastName) $('#lastName').value=d.lastName;
         if(d.gender){ const g=String(d.gender); $('#gender').value = (g==='1'||g==='ชาย')?'ชาย':(g==='2'||g==='หญิง')?'หญิง':''; }
         if(d.birthDate){ setBirthDateFromISO(d.birthDate); }
-        if(d.address){ $('#addr_no').value=d.address; }  // ที่อยู่รวมจากบัตร ใส่ช่องบ้านเลขที่/รายละเอียด
+        if(d.address){ fillAddressFromCard(d.address); }  // แยกที่อยู่ลงช่องย่อย + cascade
         if(d.photoBase64){ setPendingPhoto('data:image/jpeg;base64,'+d.photoBase64, 'idcard_photo.jpg', 'image/jpeg'); }
     }
     async function sendToTriage(hn){
