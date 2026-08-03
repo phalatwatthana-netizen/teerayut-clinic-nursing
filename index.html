@@ -1748,7 +1748,7 @@
             const r=await fetch(ID_CARD_AGENT_URL,{signal:ctrl.signal}); clearTimeout(to);
             const d=await r.json();
             if(d.status && d.status!=='success') throw new Error(d.message||'อ่านบัตรไม่สำเร็จ');
-            fillFromIdCard(d); if(d.cid) onCidInput($('#cid'));
+            await applyCardToForm(d);
             showToast('อ่านบัตรสำเร็จ — ตรวจสอบข้อมูลก่อนบันทึก');
         }catch(e){
             // ไม่มี card-agent → ใช้ช่องรับ SIAM-ID (auto-type/วาง)
@@ -1807,24 +1807,33 @@
         if(d.gender && !d.prefix){ d.prefix = d.gender==='ชาย'?'นาย':''; }  // หญิงเว้นไว้ (นาง/นางสาว)
         return d;
     }
-    function applyCardCapture(){
+    async function applyCardCapture(){
         const raw=$('#cardCapture').value;
         if(!raw.trim()){ showToast('ยังไม่มีข้อมูลบัตร','error'); return; }
         const d=parseCardData(raw);
         if(!d.cid && !d.firstName){ showToast('อ่านข้อมูลบัตรไม่สำเร็จ ตรวจรูปแบบ SIAM-ID','error'); return; }
         closeModal();
-        fillFromIdCard(d);
+        await applyCardToForm(d);
         showToast('ใส่ข้อมูลบัตรลงฟอร์มแล้ว — ตรวจสอบก่อนบันทึก');
-        if(d.cid) onCidInput($('#cid'));
     }
-    /* เมื่อเลขบัตรครบ 13 หลัก ลองจับคู่ผู้ป่วยเดิมมาเติมฟอร์ม */
+    /* ใส่ข้อมูลบัตรลงฟอร์ม: ถ้ามีประวัติเดิม (เลขบัตรตรงกัน) โหลดมาแก้ไข แล้วอัปเดตเฉพาะฟิลด์ที่อ่านจากบัตร */
+    async function applyCardToForm(d){
+        const cid=String(d.cid||'').replace(/\D/g,'');
+        const ex = cid.length===13 && State.patients.find(x=>String(x.cid).replace(/\D/g,'')===cid);
+        if(ex){
+            await openPatientForm(ex.hn);   // โหลดประวัติเดิมเข้าฟอร์ม (โหมดแก้ไข, ข้อมูลอื่นคงไว้)
+            showToast('พบประวัติเดิม '+pname(ex)+' — อัปเดตเฉพาะข้อมูลจากบัตร','info');
+        }
+        fillFromIdCard(d);   // ทับเฉพาะฟิลด์ที่บัตรอ่านได้ (เลขบัตร/ชื่อ/เพศ/วันเกิด/ที่อยู่/รูป)
+    }
+    /* เมื่อพิมพ์เลขบัตรครบ 13 หลักเอง → ถ้าเจอประวัติเดิม โหลดมาแก้ไขได้ */
     function onCidInput(el){
         const cid=String(el.value||'').replace(/\D/g,'');
         if(cid.length!==13) return;
         const p=State.patients.find(x=>String(x.cid).replace(/\D/g,'')===cid);
-        if(p && !$('#firstName').value){
-            fillFromIdCard({ cid:p.cid, prefix:p.prefix, firstName:p.firstName, lastName:p.lastName, gender:p.gender, birthDate:p.birthDate, address:p.address });
-            showToast('พบประวัติเดิม: '+pname(p)+' — ดึงข้อมูลมาให้แล้ว','info');
+        if(p && $('#editHn').value!==p.hn){
+            openPatientForm(p.hn);
+            showToast('พบประวัติเดิม: '+pname(p)+' — โหลดมาแก้ไขแล้ว','info');
         }
     }
     /* เก็บของเดิมไว้เผื่อมี local agent ในอนาคต (ไม่ใช้กับ SIAM-ID Auto-type) */
