@@ -108,8 +108,8 @@ $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add('http://127.0.0.1:8765/')
 $listener.Start()
 Write-Host '==================================================='
-Write-Host ' idcard-agent (PowerShell) พร้อมใช้งานที่ http://localhost:8765'
-Write-Host ' * เปิดหน้าต่างนี้ค้างไว้ระหว่างใช้งาน *'
+Write-Host ' idcard-agent (PowerShell) ready at http://localhost:8765'
+Write-Host ' * Keep this window open while using *'
 Write-Host '==================================================='
 
 while($listener.IsListening){
@@ -122,10 +122,10 @@ while($listener.IsListening){
         try {
             $raw = [ThaiID]::Read()
             $json = (Convert-Card $raw) | ConvertTo-Json -Compress
-            Write-Host ("อ่านบัตรสำเร็จ: " + $raw['cid'])
+            Write-Host ("Read OK: " + $raw['cid'])
         } catch {
             $json = @{ status='error'; message=$_.Exception.Message } | ConvertTo-Json -Compress
-            Write-Host ("อ่านบัตรไม่สำเร็จ: " + $_.Exception.Message)
+            Write-Host ("Read FAILED: " + $_.Exception.Message)
         }
     } else {
         $json = @{ status='ok'; message='idcard-agent ทำงานอยู่ — เรียก /read' } | ConvertTo-Json -Compress
