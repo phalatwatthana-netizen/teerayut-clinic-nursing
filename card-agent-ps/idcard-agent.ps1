@@ -28,7 +28,7 @@ public class ThaiID {
 
     [StructLayout(LayoutKind.Sequential)] public struct IO_REQ { public uint proto; public uint len; }
 
-    const uint SCOPE_USER=0, SHARE_SHARED=2, T0=1, T1=2, LEAVE=0;
+    const uint SCOPE_USER=0, SHARE_EXCL=1, SHARE_SHARED=2, T0=1, T1=2, LEAVE=0;
 
     static byte[] SELECT = { 0x00,0xA4,0x04,0x00,0x08,0xA0,0x00,0x00,0x00,0x54,0x48,0x00,0x01 };
 
@@ -59,8 +59,12 @@ public class ThaiID {
             int lr=SCardListReadersA(ctx, null, rb, ref len); if(lr!=0) throw new Exception("No reader found (SCardListReaders 0x"+lr.ToString("X")+")");
             string reader = Encoding.ASCII.GetString(rb, 0, (int)len).Split('\0')[0];
             if(string.IsNullOrEmpty(reader)) throw new Exception("No reader found (empty list)");
-            IntPtr card; uint proto;
-            int cn=SCardConnectA(ctx, reader, SHARE_SHARED, T0|T1, out card, out proto); if(cn!=0) throw new Exception("Connect failed 0x"+cn.ToString("X")+" (no card inserted / reader busy) reader="+reader);
+            // ลองต่อหลายโหมด/โปรโตคอลจนสำเร็จ (กัน PROTO_MISMATCH / reader busy)
+            IntPtr card=IntPtr.Zero; uint proto=0; int cn=-1;
+            uint[] shares = { SHARE_SHARED, SHARE_EXCL };
+            uint[] protos = { T0|T1, T0, T1 };
+            foreach(uint sh in shares){ foreach(uint pr in protos){ cn=SCardConnectA(ctx, reader, sh, pr, out card, out proto); if(cn==0) break; } if(cn==0) break; }
+            if(cn!=0) throw new Exception("Connect failed 0x"+cn.ToString("X")+" (close SIAM-ID / check card) reader="+reader);
             try{
                 Tx(card, proto, SELECT);
                 outp["cid"]     = TIS(Field(card, proto, new byte[]{0x80,0xb0,0x00,0x04,0x02,0x00,0x0d}));
