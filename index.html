@@ -1751,8 +1751,11 @@
             await applyCardToForm(d);
             showToast('อ่านบัตรสำเร็จ — ตรวจสอบข้อมูลก่อนบันทึก');
         }catch(e){
-            // ไม่มี card-agent → ใช้ช่องรับ SIAM-ID (auto-type/วาง)
-            openCardCaptureModal();
+            const offline = (e.name==='AbortError') || (e instanceof TypeError);
+            const msg = offline
+                ? 'เชื่อมต่อเครื่องอ่านบัตรไม่ได้ — เปิดโปรแกรม idcard-agent (START.bat) ค้างไว้ แล้วเสียบบัตร'
+                : ('อ่านบัตรไม่สำเร็จ: '+(e.message||'')+' — เสียบบัตรให้แน่น/ตรวจเครื่องอ่าน');
+            showToast(msg,'error');
         }
     }
     /* ช่องรับข้อมูลบัตร (SIAM-ID Fill Form พิมพ์ CSV/วางเอง) */
