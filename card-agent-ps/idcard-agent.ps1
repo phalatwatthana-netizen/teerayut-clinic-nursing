@@ -24,6 +24,7 @@ public class ThaiID {
     [DllImport("winscard.dll", CharSet=CharSet.Ansi)] static extern int SCardListReadersA(IntPtr ctx, byte[] groups, byte[] readers, ref uint len);
     [DllImport("winscard.dll", CharSet=CharSet.Ansi)] static extern int SCardConnectA(IntPtr ctx, string reader, uint share, uint proto, out IntPtr card, out uint active);
     [DllImport("winscard.dll")] static extern int SCardDisconnect(IntPtr card, uint disp);
+    [DllImport("winscard.dll")] static extern int SCardReconnect(IntPtr card, uint share, uint proto, uint init, out uint active);
     [DllImport("winscard.dll")] static extern int SCardTransmit(IntPtr card, ref IO_REQ send, byte[] sbuf, uint slen, IntPtr rpci, byte[] rbuf, ref uint rlen);
 
     [StructLayout(LayoutKind.Sequential)] public struct IO_REQ { public uint proto; public uint len; }
@@ -64,7 +65,16 @@ public class ThaiID {
             uint[] shares = { SHARE_SHARED, SHARE_EXCL };
             uint[] protos = { T0|T1, T0, T1 };
             foreach(uint sh in shares){ foreach(uint pr in protos){ cn=SCardConnectA(ctx, reader, sh, pr, out card, out proto); if(cn==0) break; } if(cn==0) break; }
-            if(cn!=0) throw new Exception("Connect failed 0x"+cn.ToString("X")+" (close SIAM-ID / check card) reader="+reader);
+            if(cn!=0){
+                // ไม้ตาย: ต่อแบบ DIRECT แล้ว reset การ์ด (แย่งคืนจากโปรแกรมอื่นที่ค้าง)
+                int dc = SCardConnectA(ctx, reader, 3, 0, out card, out proto);
+                if(dc==0){
+                    cn = SCardReconnect(card, SHARE_SHARED, T0|T1, 1, out proto);
+                    if(cn!=0){ cn = SCardReconnect(card, SHARE_EXCL, T0|T1, 1, out proto); }
+                    if(cn!=0){ SCardDisconnect(card, LEAVE); }
+                }
+            }
+            if(cn!=0) throw new Exception("Connect failed 0x"+cn.ToString("X")+" (close SIAM-ID via Task Manager / replug reader) reader="+reader);
             try{
                 Tx(card, proto, SELECT);
                 outp["cid"]     = TIS(Field(card, proto, new byte[]{0x80,0xb0,0x00,0x04,0x02,0x00,0x0d}));
