@@ -113,24 +113,31 @@ Write-Host ' * Keep this window open while using *'
 Write-Host '==================================================='
 
 while($listener.IsListening){
-    $ctx = $listener.GetContext()
-    $res = $ctx.Response
-    $res.Headers.Add('Access-Control-Allow-Origin','*')
-    $res.ContentType = 'application/json; charset=utf-8'
-    $json = ''
-    if($ctx.Request.Url.AbsolutePath -like '/read*'){
-        try {
-            $raw = [ThaiID]::Read()
-            $json = (Convert-Card $raw) | ConvertTo-Json -Compress
-            Write-Host ("Read OK: " + $raw['cid'])
-        } catch {
-            $json = @{ status='error'; message=$_.Exception.Message } | ConvertTo-Json -Compress
-            Write-Host ("Read FAILED: " + $_.Exception.Message)
+    # กัน agent ดับทั้งตัวเมื่อเจอ error รายคำขอ — จับทุก error แล้วรับคำขอต่อไป
+    try {
+        $ctx = $listener.GetContext()
+    } catch { continue }
+    try {
+        $res = $ctx.Response
+        $res.Headers.Add('Access-Control-Allow-Origin','*')
+        $res.ContentType = 'application/json; charset=utf-8'
+        $json = ''
+        if($ctx.Request.Url.AbsolutePath -like '/read*'){
+            try {
+                $raw = [ThaiID]::Read()
+                $json = (Convert-Card $raw) | ConvertTo-Json -Compress
+                Write-Host ("Read OK: " + $raw['cid'])
+            } catch {
+                $json = @{ status='error'; message=$_.Exception.Message } | ConvertTo-Json -Compress
+                Write-Host ("Read FAILED: " + $_.Exception.Message)
+            }
+        } else {
+            $json = @{ status='ok'; message='idcard-agent running - call /read' } | ConvertTo-Json -Compress
         }
-    } else {
-        $json = @{ status='ok'; message='idcard-agent ทำงานอยู่ — เรียก /read' } | ConvertTo-Json -Compress
+        $buf = [System.Text.Encoding]::UTF8.GetBytes($json)
+        $res.OutputStream.Write($buf, 0, $buf.Length)
+        $res.Close()
+    } catch {
+        Write-Host ("Request error (ignored): " + $_.Exception.Message)
     }
-    $buf = [System.Text.Encoding]::UTF8.GetBytes($json)
-    $res.OutputStream.Write($buf, 0, $buf.Length)
-    $res.Close()
 }
