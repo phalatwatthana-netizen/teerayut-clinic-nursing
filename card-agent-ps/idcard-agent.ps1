@@ -53,14 +53,14 @@ public class ThaiID {
     public static Dictionary<string,string> Read(){
         var outp = new Dictionary<string,string>();
         IntPtr ctx;
-        if(SCardEstablishContext(SCOPE_USER, IntPtr.Zero, IntPtr.Zero, out ctx)!=0) throw new Exception("เปิดบริการสมาร์ทการ์ดไม่ได้");
+        if(SCardEstablishContext(SCOPE_USER, IntPtr.Zero, IntPtr.Zero, out ctx)!=0) throw new Exception("SCardEstablishContext failed");
         try{
             uint len = 4096; byte[] rb = new byte[len];
-            if(SCardListReadersA(ctx, null, rb, ref len)!=0) throw new Exception("ไม่พบเครื่องอ่านบัตร");
+            int lr=SCardListReadersA(ctx, null, rb, ref len); if(lr!=0) throw new Exception("No reader found (SCardListReaders 0x"+lr.ToString("X")+")");
             string reader = Encoding.ASCII.GetString(rb, 0, (int)len).Split('\0')[0];
-            if(string.IsNullOrEmpty(reader)) throw new Exception("ไม่พบเครื่องอ่านบัตร");
+            if(string.IsNullOrEmpty(reader)) throw new Exception("No reader found (empty list)");
             IntPtr card; uint proto;
-            if(SCardConnectA(ctx, reader, SHARE_SHARED, T0|T1, out card, out proto)!=0) throw new Exception("ยังไม่ได้เสียบบัตร");
+            int cn=SCardConnectA(ctx, reader, SHARE_SHARED, T0|T1, out card, out proto); if(cn!=0) throw new Exception("Connect failed 0x"+cn.ToString("X")+" (no card inserted / reader busy) reader="+reader);
             try{
                 Tx(card, proto, SELECT);
                 outp["cid"]     = TIS(Field(card, proto, new byte[]{0x80,0xb0,0x00,0x04,0x02,0x00,0x0d}));
