@@ -1590,9 +1590,24 @@
                 <td class="p-4 text-right space-x-1 flex justify-end">
                     <button onclick="sendToTriage('${p.hn}')" class="p-1.5 text-orange-500 hover:bg-orange-50 rounded" title="ส่งเข้าคิวซักประวัติ"><i class="ph ph-heartbeat text-lg"></i></button>
                     <button onclick="openPatientForm('${p.hn}')" class="p-1.5 text-gray-500 hover:text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="แก้ไข/ดูประวัติ"><i class="ph ph-pencil-simple text-lg"></i></button>
+                    <button onclick="deletePatientRec('${esc(p.hn)}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="ลบผู้รับบริการ"><i class="ph ph-trash text-lg"></i></button>
                 </td>
             </tr>`;
         }).join('') : `<tr><td colspan="6" class="p-8 text-center text-gray-400"><i class="ph ph-user-list text-3xl block mb-2"></i>${q?'ไม่พบผู้รับบริการ':'ยังไม่มีผู้รับบริการ — กด "เพิ่มประวัติใหม่"'}</td></tr>`;
+    }
+    /* ลบผู้รับบริการ (พร้อม popup ยืนยัน) — ลบ visit ที่เกี่ยวข้องด้วย */
+    async function deletePatientRec(hn){
+        const p=patientByHN(hn); if(!p) return;
+        const nVisit=State.visits.filter(v=>v.hn===hn).length;
+        const warn='ลบผู้รับบริการ '+pname(p)+' (HN '+hn+')?'+(nVisit?('\nจะลบประวัติการรับบริการ '+nVisit+' ครั้งด้วย'):'')+'\nการลบนี้ถาวร กู้คืนไม่ได้';
+        if(!await confirmDialog(warn, {title:'ลบผู้รับบริการ', okText:'ลบถาวร', cancelText:'ยกเลิก', danger:true, icon:'ph-trash'})) return;
+        try{
+            for(const v of State.visits.filter(x=>x.hn===hn)){ try{ await Store.deleteVisit(v.vn); }catch(e){} }
+            await Store.deletePatient(hn);
+            State.visits=State.visits.filter(x=>x.hn!==hn);
+            State.patients=State.patients.filter(x=>x.hn!==hn);
+            Store.localSave(); showToast('ลบผู้รับบริการแล้ว'); renderPatientsTable(); updateBadges();
+        }catch(e){ showToast('ลบไม่สำเร็จ: '+e.message,'error'); }
     }
     function togglePatientForm(show){ $('#patient-list-view').classList.toggle('hidden', show); $('#patient-form-view').classList.toggle('hidden', !show); }
     const ADDR_FIELDS=['addr_no','addr_building','addr_road','addr_province','addr_amphure','addr_tambon','addr_zip'];
