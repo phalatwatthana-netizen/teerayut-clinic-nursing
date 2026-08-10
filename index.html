@@ -211,7 +211,7 @@
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8" id="main-content">
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8" id="main-content">
 
             <!-- ===== DASHBOARD ===== -->
             <section id="section-dashboard" class="app-section active">
@@ -824,6 +824,16 @@
         </div>
     </main>
 
+    <!-- Bottom navigation (มือถือเท่านั้น) -->
+    <nav id="mobileNav" class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] flex justify-around items-stretch no-print" style="padding-bottom:env(safe-area-inset-bottom)">
+        <button onclick="navTo('dashboard')" data-mnav="dashboard" class="flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-squares-four text-xl"></i><span class="text-[10px] mt-0.5">หน้าหลัก</span></button>
+        <button onclick="navTo('patients')" data-mnav="patients" class="flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-identification-card text-xl"></i><span class="text-[10px] mt-0.5">ห้องบัตร</span></button>
+        <button onclick="navTo('triage')" data-mnav="triage" class="relative flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-heartbeat text-xl"></i><span class="text-[10px] mt-0.5">ซักประวัติ</span><span id="mbadge-triage" class="absolute top-0.5 right-3 text-[9px] bg-red-500 text-white px-1 rounded-full hidden">0</span></button>
+        <button onclick="navTo('examination')" data-mnav="examination" class="relative flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-stethoscope text-xl"></i><span class="text-[10px] mt-0.5">ห้องตรวจ</span><span id="mbadge-examination" class="absolute top-0.5 right-3 text-[9px] bg-red-500 text-white px-1 rounded-full hidden">0</span></button>
+        <button onclick="navTo('pharmacy')" data-mnav="pharmacy" class="relative flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-pill text-xl"></i><span class="text-[10px] mt-0.5">ห้องยา</span><span id="mbadge-pharmacy" class="absolute top-0.5 right-3 text-[9px] bg-red-500 text-white px-1 rounded-full hidden">0</span></button>
+        <button onclick="toggleSidebar()" class="flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-list text-xl"></i><span class="text-[10px] mt-0.5">เมนู</span></button>
+    </nav>
+
     <!-- Camera Modal (USB webcam ถ่ายสด) -->
     <div id="cameraModal" class="fixed inset-0 bg-black/70 z-50 hidden items-center justify-center p-4 no-print">
         <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
@@ -1059,6 +1069,7 @@
         const target = $('#section-'+sectionId); if(target) target.classList.add('active');
         document.querySelectorAll('#nav-menu button').forEach(b=>{ b.classList.remove('bg-white/20','text-white','font-semibold'); b.classList.add('text-[#B7D0E4]'); });
         const ab = $('#nav-'+sectionId); if(ab){ ab.classList.remove('text-[#B7D0E4]'); ab.classList.add('bg-white/20','text-white','font-semibold'); }
+        document.querySelectorAll('#mobileNav button[data-mnav]').forEach(b=>{ b.classList.toggle('text-brand-blueMain', b.dataset.mnav===sectionId); b.classList.toggle('text-gray-400', b.dataset.mnav!==sectionId); });
         $('#header-title').innerText = pageTitles[sectionId] || '';
         if(window.innerWidth<768){ const sb=$('#sidebar'); if(!sb.classList.contains('-translate-x-full')) toggleSidebar(); }
         renderView(sectionId);
@@ -1083,7 +1094,7 @@
 
     function updateBadges(){
         const map = { triage:STATUS.TRIAGE, examination:STATUS.EXAM, pharmacy:STATUS.PHARM, billing:STATUS.BILL };
-        Object.entries(map).forEach(([k,st])=>{ const n=todayVisits().filter(v=>v.status===st).length; const b=$('#badge-'+k); if(b){ b.textContent=n; b.classList.toggle('hidden', n===0); } });
+        Object.entries(map).forEach(([k,st])=>{ const n=todayVisits().filter(v=>v.status===st).length; const b=$('#badge-'+k); if(b){ b.textContent=n; b.classList.toggle('hidden', n===0); } const mb=$('#mbadge-'+k); if(mb){ mb.textContent=n; mb.classList.toggle('hidden', n===0); } });
         const lowN = State.inventory.filter(it=>Number(it.stock)<=Number(it.minStock||0)).length;
         const ib=$('#badge-inventory'); if(ib){ ib.textContent=lowN; ib.classList.toggle('hidden', lowN===0); }
     }
