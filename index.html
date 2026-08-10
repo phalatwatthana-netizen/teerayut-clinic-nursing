@@ -2826,19 +2826,22 @@
     function printAppt(id){
         const a=State.appointments.find(x=>x.id===id); if(!a) return;
         const NAVY='#0f3d91'; const logo=currentLogo();
-        printHTML(`<div style="width:148mm;padding:8mm;box-sizing:border-box;font-family:'TH Sarabun New','Sarabun','Noto Sans Thai',sans-serif;color:#111"><style>@page{size:A5 landscape;margin:0;}</style>
-            <div style="text-align:center;border-bottom:2px solid ${NAVY};padding-bottom:6px;margin-bottom:10px">
-                ${logo?`<img src="${esc(logo)}" style="height:60px;object-fit:contain;display:block;margin:0 auto 2px" onerror="this.style.display='none'">`:''}
-                <div style="font-size:20px;font-weight:700;color:${NAVY}">${esc(CLINIC.name)}</div>
-                <div style="font-size:13px;color:${NAVY}">${esc(CLINIC.address)} โทร.${esc(CLINIC.phone)}</div>
+        const FONT="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif";
+        const logoImg = logo ? `<img src="${esc(logo)}" alt="logo" style="height:150px;width:auto;max-width:100%;object-fit:contain;display:block;margin:-12px auto -8px" onerror="this.style.display='none'">` : '';
+        const head = `<div style="text-align:center;margin-bottom:10px">
+                ${logoImg}
+                <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.25">${CLINIC.address}</div>
+                <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.25">โทร. ${CLINIC.phone}</div>
+            </div>`;
+        printHTML(`<div style="width:148mm;min-height:210mm;padding:12mm 14mm;box-sizing:border-box;${FONT};color:#111"><style>@page{size:A5 portrait;margin:0;}</style>
+            ${head}
+            <div style="text-align:center;font-size:20px;font-weight:700;color:${NAVY};margin:6px 0 16px">ใบนัดหมาย</div>
+            <div style="font-size:18px;line-height:2.2">
+                <div><b style="color:${NAVY}">ชื่อ-สกุล</b> ${esc(a.name||'-')}</div>
+                <div><b style="color:${NAVY}">นัดวันที่</b> <span style="font-size:21px;font-weight:700">${fmtDateThFull(a.date)}</span> ${a.time?('เวลา '+esc(a.time)+' น.'):''}</div>
+                <div><b style="color:${NAVY}">เพื่อ</b> ${esc(a.type||'-')}</div>
             </div>
-            <div style="text-align:center;font-size:19px;font-weight:700;margin-bottom:12px">ใบนัดหมาย</div>
-            <div style="font-size:17px;line-height:2">
-                <div><b style="color:${NAVY}">ชื่อ-สกุล:</b> ${esc(a.name||'-')}</div>
-                <div><b style="color:${NAVY}">นัดวันที่:</b> <span style="font-size:20px;font-weight:700">${fmtDateThFull(a.date)}</span> ${a.time?('เวลา '+esc(a.time)+' น.'):''}</div>
-                <div><b style="color:${NAVY}">เพื่อ:</b> ${esc(a.type||'-')}</div>
-            </div>
-            <div style="margin-top:16px;font-size:14px;color:#555">* กรุณามาตามวันและเวลานัด หากมาไม่ได้โปรดแจ้งล่วงหน้า โทร.${esc(CLINIC.phone)}</div>
+            <div style="margin-top:24px;font-size:14px;color:#555">* กรุณามาตามวันและเวลานัด หากมาไม่ได้โปรดแจ้งล่วงหน้า โทร.${esc(CLINIC.phone)}</div>
         </div>`);
     }
     async function deleteAppt(id){
