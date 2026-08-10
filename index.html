@@ -2843,8 +2843,8 @@
     }
     /* ใบนัด (พิมพ์) */
     /* เนื้อหาใบนัด (ใช้ร่วมกันทั้งพิมพ์และบันทึก PDF/JPG) — A5 แนวตั้ง */
-    function buildApptHtml(a){
-        const NAVY='#0f3d91'; const logo=currentLogo();
+    function buildApptHtml(a, logoOverride){
+        const NAVY='#0f3d91'; const logo=(logoOverride!==undefined)?logoOverride:currentLogo();
         const FONT="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif";
         const logoImg = logo ? `<img src="${esc(logo)}" alt="logo" style="height:150px;width:auto;max-width:100%;object-fit:contain;display:block;margin:-12px auto -8px" onerror="this.style.display='none'">` : '';
         const head = `<div style="text-align:center;margin-bottom:10px">
@@ -2890,7 +2890,8 @@
         if(typeof html2canvas==='undefined') return;
         const holder=document.createElement('div');
         holder.style.cssText='position:fixed;left:-10000px;top:0;background:#fff;z-index:-1';
-        holder.innerHTML=`<div id="__apptExport" style="width:148mm;min-height:210mm;background:#fff;box-sizing:border-box">${buildApptHtml(a)}</div>`;
+        const logoData=await currentLogoData();     // ฝังโลโก้เป็น data URL กัน CORS ตอนจับภาพ
+        holder.innerHTML=`<div id="__apptExport" style="width:148mm;min-height:210mm;background:#fff;box-sizing:border-box">${buildApptHtml(a, logoData)}</div>`;
         document.body.appendChild(holder);
         try{
             await Promise.all([...holder.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(r=>{ img.onload=img.onerror=r; })));
@@ -2983,6 +2984,29 @@
     /* หา URL ลายเซ็น/เลขใบอนุญาต จากชื่อผู้ส่งต่อ (ชีต Sign) */
     function referSignRec(name){ return (State.signs||[]).find(s=>s.name===name)||null; }
     function currentLogo(){ const l=(State.logos||[])[0]; return l?driveImg(l.url):''; }
+    /* โหลดรูปเป็น data URL (ต้องมาจาก endpoint ที่อนุญาต CORS) เพื่อให้ html2canvas จับภาพได้ */
+    function imgToDataUrl(url){
+        return new Promise(res=>{
+            if(!url) return res('');
+            const img=new Image(); img.crossOrigin='anonymous';
+            img.onload=()=>{ try{ const c=document.createElement('canvas'); c.width=img.naturalWidth||300; c.height=img.naturalHeight||300; c.getContext('2d').drawImage(img,0,0); res(c.toDataURL('image/png')); }catch(e){ res(''); } };
+            img.onerror=()=>res('');
+            img.src=url;
+        });
+    }
+    /* แปลงลิงก์ Drive เป็น data URL (แคชไว้) — ใช้ lh3.googleusercontent.com ที่รองรับ CORS */
+    const _imgDataCache={};
+    async function driveImgData(url){
+        url=String(url||'').trim(); if(!url) return '';
+        if(_imgDataCache[url]!==undefined) return _imgDataCache[url];
+        const m=url.match(/\/d\/([-\w]{25,})/)||url.match(/[?&]id=([-\w]{25,})/);
+        const id=m?m[1]:null;
+        const cands = id ? ['https://lh3.googleusercontent.com/d/'+id+'=w1000', driveImg(url), url] : [url];
+        let out='';
+        for(const u of cands){ out=await imgToDataUrl(u); if(out) break; }
+        _imgDataCache[url]=out; return out;
+    }
+    async function currentLogoData(){ const l=(State.logos||[])[0]; return l?driveImgData(l.url):''; }
     /* เลือกผู้ส่งต่อ → เติมเลขใบอนุญาต + แสดงลายเซ็นในพรีวิว */
     function referPickSigner(){
         const rec=referSignRec($('#ref_signer').value);
@@ -3186,6 +3210,15 @@
         }catch(e){ if(e && e.name==='AbortError') return 'cancel'; /* ผู้ใช้ยกเลิก */ }
         downloadDataUrl(dataUrl, name); return 'download';
     }
+    /* แทนที่ src ของทุก <img> ในกล่องด้วย data URL (กัน CORS ตอน html2canvas) */
+    async function inlineImages(rootEl){
+        await Promise.all([...rootEl.querySelectorAll('img')].map(async img=>{
+            const src=img.getAttribute('src')||'';
+            if(!src || src.startsWith('data:')) return;
+            const d=await driveImgData(src);
+            if(d) img.setAttribute('src', d); else img.remove();
+        }));
+    }
     /* บันทึกใบส่งตัวเป็น PDF/JPG ตรงตามพรีวิวเป๊ะ (เรนเดอร์เต็มขนาด A4) */
     async function saveReferFile(type, btn){
         if(!refSelectedHN()){ showToast('เลือกผู้รับบริการก่อน','error'); return; }
@@ -3197,8 +3230,9 @@
         holder.innerHTML=`<div id="__refExport" style="width:210mm;min-height:297mm;background:#fff;padding:4mm 12mm 12mm;box-sizing:border-box">${buildReferralHtml(d)}</div>`;
         document.body.appendChild(holder);
         try{
-            await Promise.all([...holder.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(r=>{ img.onload=img.onerror=r; })));
             const el=holder.querySelector('#__refExport');
+            await inlineImages(el);   // ฝังโลโก้/ลายเซ็นเป็น data URL กัน CORS
+            await Promise.all([...holder.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(r=>{ img.onload=img.onerror=r; })));
             const canvas=await html2canvas(el, { scale:2, useCORS:true, backgroundColor:'#fff' });
             const fname=`ใบส่งตัว_${String(d.name||'').replace(/\s+/g,'')}_${String(d.refNo||'').replace(/\//g,'-')}`;
             let r;
