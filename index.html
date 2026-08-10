@@ -2113,11 +2113,15 @@
     /* คลิกผู้ป่วยในคิว "ของห้องที่กำลังอยู่" → เปิดแก้ข้อมูลห้องนั้นได้เลย แม้ผู้ป่วยจะไปห้องอื่นแล้ว */
     function openVisitHere(vn){
         const sec=document.querySelector('.app-section.active')?.id?.replace('section-','');
-        if(sec==='examination') loadExam(vn);
-        else if(sec==='pharmacy') loadPharmacy(vn);
-        else if(sec==='billing') loadBilling(vn);
-        else if(sec==='triage') selectTriage(vn);
-        else openVisitInRoom(vn);
+        let target='';
+        if(sec==='examination'){ loadExam(vn); target='#examForm-wrap'; }
+        else if(sec==='pharmacy'){ loadPharmacy(vn); target='#pharmacyDetail'; }
+        else if(sec==='billing'){ loadBilling(vn); target='#billingDetail'; }
+        else if(sec==='triage'){ selectTriage(vn); target='#triageForm-wrap'; }
+        else { openVisitInRoom(vn); return; }
+        // เลื่อนจอไปที่ฟอร์มให้เห็นชัด (โดยเฉพาะจอเล็ก)
+        const el=document.querySelector(target);
+        if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth', block:'start'}), 80);
     }
     function queueItem(v){
         const p = patientByHN(v.hn)||{};
