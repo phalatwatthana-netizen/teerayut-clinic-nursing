@@ -2746,6 +2746,7 @@
                 <td class="p-4 font-medium text-gray-800">${esc(a.name||'-')}</td><td class="p-4 text-gray-600">${esc(a.type||'-')}</td>
                 <td class="p-4">${statusBadge(a.status||'นัดหมาย')}</td>
                 <td class="p-4 text-right whitespace-nowrap">
+                    <button onclick="openApptForm('${a.id}')" class="p-1.5 text-gray-500 hover:text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="แก้ไข"><i class="ph ph-pencil-simple text-lg"></i></button>
                     <button onclick="printAppt('${a.id}')" class="p-1.5 text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="พิมพ์ใบนัด"><i class="ph ph-printer text-lg"></i></button>
                     <button onclick="deleteAppt('${a.id}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="ลบ"><i class="ph ph-trash text-lg"></i></button>
                 </td>
@@ -2759,10 +2760,11 @@
     ];
     function addMonths(iso,m){ const d=new Date(iso); d.setMonth(d.getMonth()+m); return d.toLocaleDateString('en-CA'); }
     function addDays(iso,n){ const d=new Date(iso); d.setDate(d.getDate()+n); return d.toLocaleDateString('en-CA'); }
-    function openApptForm(){
+    function openApptForm(id){
         const opts = State.patients.map(p=>`<option value="${esc(p.hn)}">${esc(pname(p))}</option>`).join('');
-        openModal('เพิ่มนัดหมาย', `
+        openModal(id?'แก้ไขนัดหมาย':'เพิ่มนัดหมาย', `
             <form id="apptForm" onsubmit="saveAppt(event)" class="space-y-3 text-sm">
+                <input type="hidden" id="a_id" value="${esc(id||'')}">
                 <div><label class="block text-xs font-medium text-gray-600 mb-1">ประเภทนัด</label>
                     <select id="a_kind" onchange="onApptKind()" class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-brand-bg/50">
                         <option value="normal">นัดทั่วไป</option>
@@ -2784,6 +2786,17 @@
                 <div><label class="block text-xs font-medium text-gray-600 mb-1">ประเภทบริการ/รายละเอียด</label><input id="a_type" placeholder="เช่น ฝากครรภ์, ฉีดวัคซีน, ทำแผล" class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-brand-bg/50"></div>
                 <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ยกเลิก</button><button type="submit" class="px-4 py-2 bg-brand-blueMain text-white rounded-lg font-medium">บันทึกนัด</button></div>
             </form>`);
+        if(id){
+            const a=State.appointments.find(x=>x.id===id); if(!a) return;
+            const isContra=/ฉีดยาคุมกำเนิด/.test(a.type||'');
+            $('#a_kind').value=isContra?'contra':'normal';
+            onApptKind();                       // toggle block (may clobber date/type)
+            $('#a_patient').value=a.hn||'';
+            $('#a_name').value=a.name||'';
+            $('#a_date').value=a.date||'';       // restore saved values after onApptKind
+            $('#a_time').value=a.time||'';
+            $('#a_type').value=a.type||'';
+        }
     }
     function onApptKind(){
         const contra = $('#a_kind').value==='contra';
@@ -2803,8 +2816,10 @@
     const pnameByHN = hn => pname(patientByHN(hn));
     async function saveAppt(event){
         event.preventDefault();
-        const a = { id:'A'+Date.now(), hn:$('#a_patient').value, name:$('#a_name').value.trim(), date:$('#a_date').value, time:$('#a_time').value, type:$('#a_type').value.trim(), status:'นัดหมาย', createdAt:nowISO() };
-        try{ await Store.saveAppointment(a); State.appointments.push(a); Store.localSave(); closeModal(); showToast('บันทึกนัดหมายแล้ว'); renderAppointments(); }
+        const id=$('#a_id').value || ('A'+Date.now());
+        const ex=State.appointments.find(x=>x.id===id);
+        const a = { id, hn:$('#a_patient').value, name:$('#a_name').value.trim(), date:$('#a_date').value, time:$('#a_time').value, type:$('#a_type').value.trim(), status:(ex&&ex.status)||'นัดหมาย', createdAt:(ex&&ex.createdAt)||nowISO() };
+        try{ await Store.saveAppointment(a); const i=State.appointments.findIndex(x=>x.id===id); if(i>=0) State.appointments[i]=a; else State.appointments.push(a); Store.localSave(); closeModal(); showToast('บันทึกนัดหมายแล้ว'); renderAppointments(); }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
     }
     /* ใบนัด (พิมพ์) */
