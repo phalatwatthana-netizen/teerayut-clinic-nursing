@@ -1883,20 +1883,23 @@
 
     /* ============================================================ TRIAGE */
     function renderTriageQueue(){
-        const list = todayVisits().filter(v=>v.status===STATUS.TRIAGE);
+        const list = allActiveVisits();   // คิวรวมทุกห้อง
+        const triageList = list.filter(v=>v.status===STATUS.TRIAGE);
         const sel = $('#triagePatientSelect');
-        sel.innerHTML = `<option value="">--</option>` + list.map(v=>`<option value="${v.vn}"></option>`).join('');
-        // รายชื่อแนวตั้งด้านซ้าย
-        const cur=State.current.vn;
-        $('#triageQueueList').innerHTML = list.length ? list.map((v,i)=>{ const p=patientByHN(v.hn)||{}; const active=String(v.vn)===String(cur);
-            return `<button type="button" onclick="selectTriage('${v.vn}')" class="w-full text-left p-3 flex items-center gap-2 transition-colors ${active?'bg-brand-blueMain text-white':'hover:bg-brand-bluePale/20'}">
-                <span class="w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${active?'bg-white/25 text-white':'bg-brand-bluePale/40 text-brand-blueDark'}">${i+1}</span>
-                <span class="min-w-0"><span class="block text-sm font-semibold truncate ${active?'text-white':'text-gray-800'}">${esc(pname(p))}</span>
-                <span class="block text-xs truncate ${active?'text-white/80':'text-gray-400'}">${esc(v.hn)}${p.allergy&&p.allergy!=='ไม่มี'?' · ⚠ แพ้ยา':''}</span></span>
+        sel.innerHTML = `<option value="">--</option>` + triageList.map(v=>`<option value="${v.vn}"></option>`).join('');
+        const cur=State.current.vn; let n=0;
+        $('#triageQueueList').innerHTML = list.length ? list.map(v=>{ const p=patientByHN(v.hn)||{}; const active=String(v.vn)===String(cur);
+            const isTriage=v.status===STATUS.TRIAGE; if(isTriage) n++;
+            const clickFn = isTriage ? `selectTriage('${v.vn}')` : `openVisitInRoom('${v.vn}')`;
+            return `<button type="button" onclick="${clickFn}" class="w-full text-left p-3 flex items-center gap-2 transition-colors ${active?'bg-brand-blueMain text-white':'hover:bg-brand-bluePale/20'}">
+                <span class="w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${active?'bg-white/25 text-white':(isTriage?'bg-brand-bluePale/40 text-brand-blueDark':'bg-gray-100 text-gray-400')}">${isTriage?n:'•'}</span>
+                <span class="min-w-0 flex-1"><span class="block text-sm font-semibold truncate ${active?'text-white':'text-gray-800'}">${esc(pname(p))}</span>
+                <span class="block text-xs truncate ${active?'text-white/80':'text-gray-400'}">${esc(v.hn)}${p.allergy&&p.allergy!=='ไม่มี'?' · ⚠ แพ้ยา':''}${isTriage?'':' · '+esc(v.status)}</span></span>
             </button>`; }).join('')
-            : `<div class="p-6 text-center text-gray-400 text-sm"><i class="ph ph-user-list text-2xl block mb-1"></i>ไม่มีผู้รอซักประวัติ</div>`;
-        if(cur && list.some(v=>v.vn===cur)){ sel.value=cur; loadTriagePatient(); }
-        else { State.current.vn=null; $('#triageForm-wrap').classList.add('hidden'); $('#triageEmpty').classList.remove('hidden'); }
+            : `<div class="p-6 text-center text-gray-400 text-sm"><i class="ph ph-user-list text-2xl block mb-1"></i>ไม่มีคิว</div>`;
+        const curV=visitByVN(cur);
+        if(curV && curV.status===STATUS.TRIAGE){ sel.value=cur; loadTriagePatient(); }
+        else { $('#triageForm-wrap').classList.add('hidden'); $('#triageEmpty').classList.remove('hidden'); }
     }
     function selectTriage(vn){ State.current.vn=vn; $('#triagePatientSelect').value=vn; renderTriageQueue(); }
     function patientStrip(p, v){
@@ -2087,18 +2090,31 @@
 
     /* ============================================================ EXAMINATION */
     function renderExamQueue(){
-        const list = todayVisits().filter(v=>v.status===STATUS.EXAM);
+        const list = allActiveVisits();
         $('#examQueue').innerHTML = list.length ? list.map(v=>queueItem(v)).join('') : emptyQueue();
-        if(State.current.vn && list.some(v=>v.vn===State.current.vn)) loadExam(State.current.vn);
+        const cur=visitByVN(State.current.vn);
+        if(cur && cur.status===STATUS.EXAM) loadExam(cur.vn);
         else { $('#examForm-wrap').classList.add('hidden'); $('#examEmpty').classList.remove('hidden'); }
+    }
+    /* คิวรวมทุกห้อง: ผู้ป่วยที่กำลังรับบริการทั้งหมดของวันนี้ (ยังไม่เสร็จ/ไม่ส่งต่อ) เรียงตามลำดับห้อง */
+    const STATUS_ORDER = { [STATUS.TRIAGE]:1, [STATUS.EXAM]:2, [STATUS.PHARM]:3, [STATUS.BILL]:4 };
+    function allActiveVisits(){
+        return todayVisits().filter(v=>STATUS_ORDER[v.status])
+            .sort((a,b)=>((STATUS_ORDER[a.status]||9)-(STATUS_ORDER[b.status]||9)) || String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+    }
+    /* คลิกผู้ป่วยในคิว → พาไปห้องที่ถูกต้องตามสถานะ แล้วเปิดเคสให้ */
+    function openVisitInRoom(vn){
+        const v=visitByVN(vn); if(!v) return;
+        const room = { [STATUS.TRIAGE]:'triage', [STATUS.EXAM]:'examination', [STATUS.PHARM]:'pharmacy', [STATUS.BILL]:'billing' }[v.status];
+        if(!room) return;
+        State.current.vn=vn; navTo(room);
     }
     function queueItem(v){
         const p = patientByHN(v.hn)||{};
         const active = State.current.vn===v.vn ? 'bg-brand-bluePale/30' : 'hover:bg-brand-bg';
-        const fn = { [STATUS.EXAM]:'loadExam', [STATUS.PHARM]:'loadPharmacy', [STATUS.BILL]:'loadBilling' }[v.status] || 'loadExam';
-        return `<div onclick="${fn}('${v.vn}')" class="p-3 cursor-pointer ${active} transition-colors">
-            <div class="flex justify-between items-center"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span><span class="text-xs text-gray-400">${fmtTime(v.createdAt)}</span></div>
-            <div class="flex justify-between items-center">
+        return `<div onclick="openVisitInRoom('${v.vn}')" class="p-3 cursor-pointer ${active} transition-colors">
+            <div class="flex justify-between items-center"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span>${statusBadge(v.status)}</div>
+            <div class="flex justify-between items-center mt-0.5">
                 <div class="text-xs text-gray-500">${esc(v.hn)} · ${esc(v.cc||'-')}</div>
                 <div class="flex gap-1 shrink-0" onclick="event.stopPropagation()">
                     ${ ![STATUS.TRIAGE,STATUS.EXAM].includes(v.status) ? `<button type="button" onclick="sendBackPrev('${esc(v.vn)}')" title="ส่งกลับห้องก่อนหน้า" class="p-1 text-amber-500 hover:bg-amber-50 rounded"><i class="ph ph-arrow-arc-left"></i></button>` : '' }
@@ -2120,7 +2136,7 @@
         fillInvDrugList();
         $('#medList').innerHTML=''; (v.meds&&v.meds.length?v.meds:[{}]).forEach(m=>addMedRow(m));
     }
-    function renderExamQueueList(){ const list=todayVisits().filter(v=>v.status===STATUS.EXAM); $('#examQueue').innerHTML = list.length?list.map(v=>queueItem(v)).join(''):emptyQueue(); }
+    function renderExamQueueList(){ const list=allActiveVisits(); $('#examQueue').innerHTML = list.length?list.map(v=>queueItem(v)).join(''):emptyQueue(); }
     /* ---------- Dx / Treatment เพิ่มได้ไม่จำกัด ---------- */
     function addListRow(listId, cls, val, ph){
         const row=document.createElement('div'); row.className='flex gap-2 items-center';
@@ -2190,14 +2206,15 @@
 
     /* ============================================================ PHARMACY */
     function renderPharmacyQueue(){
-        const list=todayVisits().filter(v=>v.status===STATUS.PHARM);
+        const list=allActiveVisits();
         $('#pharmacyQueue').innerHTML = list.length?list.map(v=>queueItem(v)).join(''):emptyQueue();
-        if(State.current.vn && list.some(v=>v.vn===State.current.vn)) loadPharmacy(State.current.vn);
+        const cur=visitByVN(State.current.vn);
+        if(cur && cur.status===STATUS.PHARM) loadPharmacy(cur.vn);
         else { $('#pharmacyDetail').classList.add('hidden'); $('#pharmacyEmpty').classList.remove('hidden'); }
     }
     function loadPharmacy(vn){
         State.current.vn=vn; const v=visitByVN(vn); const p=patientByHN(v.hn)||{};
-        const list=todayVisits().filter(x=>x.status===STATUS.PHARM); $('#pharmacyQueue').innerHTML=list.map(x=>queueItem(x)).join('');
+        $('#pharmacyQueue').innerHTML=allActiveVisits().map(x=>queueItem(x)).join('');
         $('#pharmacyEmpty').classList.add('hidden'); $('#pharmacyDetail').classList.remove('hidden');
         const medRows = (v.meds||[]).length ? v.meds.map(m=>`<tr class="border-b border-gray-50"><td class="py-2">${esc(m.name)}</td><td class="py-2 text-center">${m.qty}</td><td class="py-2 text-right">${money(m.qty*m.price)}</td></tr>`).join('') : `<tr><td colspan="3" class="py-3 text-center text-gray-400 text-sm">— ไม่มีรายการยา —</td></tr>`;
         $('#pharmacyDetail').innerHTML = `
@@ -2647,14 +2664,15 @@
 
     /* ============================================================ BILLING */
     function renderBillingQueue(){
-        const list=todayVisits().filter(v=>v.status===STATUS.BILL);
+        const list=allActiveVisits();
         $('#billingQueue').innerHTML = list.length?list.map(v=>queueItem(v)).join(''):emptyQueue();
-        if(State.current.vn && list.some(v=>v.vn===State.current.vn)) loadBilling(State.current.vn);
+        const cur=visitByVN(State.current.vn);
+        if(cur && cur.status===STATUS.BILL) loadBilling(cur.vn);
         else { $('#billingDetail').classList.add('hidden'); $('#billingEmpty').classList.remove('hidden'); }
     }
     function loadBilling(vn){
         State.current.vn=vn; const v=visitByVN(vn); const p=patientByHN(v.hn)||{};
-        const list=todayVisits().filter(x=>x.status===STATUS.BILL); $('#billingQueue').innerHTML=list.map(x=>queueItem(x)).join('');
+        $('#billingQueue').innerHTML=allActiveVisits().map(x=>queueItem(x)).join('');
         $('#billingEmpty').classList.add('hidden'); $('#billingDetail').classList.remove('hidden');
         $('#billingDetail').innerHTML = `
             ${patientStrip(p, v)}
