@@ -44,6 +44,7 @@ function doGet(e) {
   try {
     var action = (e && e.parameter && e.parameter.action) || 'load';
     if (action === 'load') return json(loadAll());
+    if (action === 'img')  return json(imageData(e.parameter.id, e.parameter.url));
     return json({ status: 'error', message: 'unknown action' });
   } catch (err) {
     return json({ status: 'error', message: String(err) });
@@ -82,6 +83,30 @@ function doPost(e) {
     return json({ status: 'error', message: String(err) });
   } finally {
     lock.releaseLock();
+  }
+}
+
+/* ดึงรูป (โลโก้/ลายเซ็น) จาก Drive ฝั่งเซิร์ฟเวอร์ แล้วคืนเป็น data URL
+   ใช้เลี่ยงปัญหา CORS ที่เบราว์เซอร์อ่านรูปจาก Drive มาทำ html2canvas ไม่ได้ */
+function imageData(id, url) {
+  try {
+    if (!id && url) {
+      var m = String(url).match(/\/d\/([-\w]{25,})/) || String(url).match(/[?&]id=([-\w]{25,})/);
+      if (m) id = m[1];
+    }
+    var blob;
+    if (id) {
+      blob = DriveApp.getFileById(id).getBlob();
+    } else if (url) {
+      blob = UrlFetchApp.fetch(url, { muteHttpExceptions: true }).getBlob();
+    } else {
+      return { status: 'error', message: 'no id/url' };
+    }
+    var b64 = Utilities.base64Encode(blob.getBytes());
+    var mime = blob.getContentType() || 'image/png';
+    return { status: 'success', dataUrl: 'data:' + mime + ';base64,' + b64 };
+  } catch (err) {
+    return { status: 'error', message: String(err) };
   }
 }
 

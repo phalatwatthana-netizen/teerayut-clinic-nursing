@@ -3001,9 +3001,19 @@
         if(_imgDataCache[url]!==undefined) return _imgDataCache[url];
         const m=url.match(/\/d\/([-\w]{25,})/)||url.match(/[?&]id=([-\w]{25,})/);
         const id=m?m[1]:null;
-        const cands = id ? ['https://lh3.googleusercontent.com/d/'+id+'=w1000', driveImg(url), url] : [url];
         let out='';
+        // 1) ลองโหลดตรงจากเบราว์เซอร์ (endpoint ที่อาจรองรับ CORS)
+        const cands = id ? ['https://lh3.googleusercontent.com/d/'+id+'=w1000', driveImg(url), url] : [url];
         for(const u of cands){ out=await imgToDataUrl(u); if(out) break; }
+        // 2) ถ้ายังไม่ได้ (ติด CORS) → ดึงผ่านแบ็กเอนด์ Apps Script (ไม่มีปัญหา CORS)
+        if(!out && Store.url()){
+            try{
+                const q = id ? ('id='+encodeURIComponent(id)) : ('url='+encodeURIComponent(url));
+                const r = await fetch(Store.url()+'?action=img&'+q+'&t='+Date.now());
+                const j = await r.json();
+                if(j && j.status==='success' && j.dataUrl) out=j.dataUrl;
+            }catch(e){ /* เงียบไว้ */ }
+        }
         _imgDataCache[url]=out; return out;
     }
     async function currentLogoData(){ const l=(State.logos||[])[0]; return l?driveImgData(l.url):''; }
