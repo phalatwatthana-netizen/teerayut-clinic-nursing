@@ -211,7 +211,7 @@
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8" id="main-content">
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-44 md:pb-8" id="main-content">
 
             <!-- ===== DASHBOARD ===== -->
             <section id="section-dashboard" class="app-section active">
@@ -825,13 +825,21 @@
     </main>
 
     <!-- Bottom navigation (มือถือเท่านั้น) -->
-    <nav id="mobileNav" class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] flex justify-around items-stretch no-print" style="padding-bottom:env(safe-area-inset-bottom)">
-        <button onclick="navTo('dashboard')" data-mnav="dashboard" class="flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-squares-four text-xl"></i><span class="text-[10px] mt-0.5">หน้าหลัก</span></button>
-        <button onclick="navTo('patients')" data-mnav="patients" class="flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-identification-card text-xl"></i><span class="text-[10px] mt-0.5">ห้องบัตร</span></button>
-        <button onclick="navTo('triage')" data-mnav="triage" class="relative flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-heartbeat text-xl"></i><span class="text-[10px] mt-0.5">ซักประวัติ</span><span id="mbadge-triage" class="absolute top-0.5 right-3 text-[9px] bg-red-500 text-white px-1 rounded-full hidden">0</span></button>
-        <button onclick="navTo('examination')" data-mnav="examination" class="relative flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-stethoscope text-xl"></i><span class="text-[10px] mt-0.5">ห้องตรวจ</span><span id="mbadge-examination" class="absolute top-0.5 right-3 text-[9px] bg-red-500 text-white px-1 rounded-full hidden">0</span></button>
-        <button onclick="navTo('pharmacy')" data-mnav="pharmacy" class="relative flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-pill text-xl"></i><span class="text-[10px] mt-0.5">ห้องยา</span><span id="mbadge-pharmacy" class="absolute top-0.5 right-3 text-[9px] bg-red-500 text-white px-1 rounded-full hidden">0</span></button>
-        <button onclick="toggleSidebar()" class="flex-1 flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-list text-xl"></i><span class="text-[10px] mt-0.5">เมนู</span></button>
+    <nav id="mobileNav" class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] grid grid-cols-5 no-print" style="padding-bottom:env(safe-area-inset-bottom)">
+        <button onclick="navTo('dashboard')" data-mnav="dashboard" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-squares-four text-lg"></i><span class="text-[10px] mt-0.5">หน้าหลัก</span></button>
+        <button onclick="navTo('patients')" data-mnav="patients" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-identification-card text-lg"></i><span class="text-[10px] mt-0.5">ห้องบัตร</span></button>
+        <button onclick="navTo('triage')" data-mnav="triage" class="relative flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-heartbeat text-lg"></i><span class="text-[10px] mt-0.5">ซักประวัติ</span><span id="mbadge-triage" class="absolute top-0.5 right-2 text-[9px] bg-red-500 text-white px-1 rounded-full hidden">0</span></button>
+        <button onclick="navTo('examination')" data-mnav="examination" class="relative flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-stethoscope text-lg"></i><span class="text-[10px] mt-0.5">ห้องตรวจ</span><span id="mbadge-examination" class="absolute top-0.5 right-2 text-[9px] bg-red-500 text-white px-1 rounded-full hidden">0</span></button>
+        <button onclick="navTo('pharmacy')" data-mnav="pharmacy" class="relative flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-pill text-lg"></i><span class="text-[10px] mt-0.5">ห้องยา</span><span id="mbadge-pharmacy" class="absolute top-0.5 right-2 text-[9px] bg-red-500 text-white px-1 rounded-full hidden">0</span></button>
+        <button onclick="navTo('appointments')" data-mnav="appointments" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-calendar-plus text-lg"></i><span class="text-[10px] mt-0.5">ห้องนัด</span></button>
+        <button onclick="navTo('referral')" data-mnav="referral" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-ambulance text-lg"></i><span class="text-[10px] mt-0.5">ห้องส่งต่อ</span></button>
+        <button onclick="navTo('billing')" data-mnav="billing" class="relative flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-receipt text-lg"></i><span class="text-[10px] mt-0.5">ค่าใช้จ่าย</span><span id="mbadge-billing" class="absolute top-0.5 right-2 text-[9px] bg-red-500 text-white px-1 rounded-full hidden">0</span></button>
+        <button onclick="navTo('inventory')" data-mnav="inventory" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-package text-lg"></i><span class="text-[10px] mt-0.5">คลังยา</span></button>
+        <button onclick="navTo('pedidose')" data-mnav="pedidose" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-baby text-lg"></i><span class="text-[10px] mt-0.5">ขนาดยาเด็ก</span></button>
+        <button onclick="navTo('reports')" data-mnav="reports" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-chart-line-up text-lg"></i><span class="text-[10px] mt-0.5">รายงาน</span></button>
+        <button onclick="navTo('staff')" data-mnav="staff" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-identification-badge text-lg"></i><span class="text-[10px] mt-0.5">STAFF</span></button>
+        <button onclick="navTo('settings')" data-mnav="settings" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-gear text-lg"></i><span class="text-[10px] mt-0.5">ตั้งค่า</span></button>
+        <button onclick="toggleSidebar()" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-list text-lg"></i><span class="text-[10px] mt-0.5">เมนู</span></button>
     </nav>
 
     <!-- Camera Modal (USB webcam ถ่ายสด) -->
