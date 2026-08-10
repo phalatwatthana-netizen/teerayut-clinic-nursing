@@ -2880,37 +2880,50 @@
                 <button onclick="saveApptFile('${a.id}','pdf',this)" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium flex items-center gap-1"><i class="ph ph-file-pdf"></i> PDF</button>
                 <button onclick="saveApptFile('${a.id}','jpg',this)" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium flex items-center gap-1"><i class="ph ph-file-image"></i> JPG</button>
             </div>`, 'max-w-2xl');
-        // ย่อ A5 (~559px) ให้พอดีความกว้างช่องพรีวิว
+        // ย่อ A5 (~559px) ให้พอดีความกว้างช่องพรีวิว + เตรียมรูปไว้ล่วงหน้า (กัน iOS บล็อกเมนูแชร์)
         setTimeout(()=>{ const inner=$('#apptPreviewInner'); if(!inner) return; const avail=inner.parentElement.clientWidth-8; const k=Math.min(1, avail/559); inner.style.zoom=k.toFixed(3); },30);
+        _apptExportCache=null; prepareApptExport(a);
     }
-    /* บันทึกใบนัดเป็น PDF/JPG (A5 แนวตั้ง) ตรงตามที่พิมพ์ */
-    async function saveApptFile(id, type, btn){
-        const a=State.appointments.find(x=>x.id===id); if(!a) return;
-        if(typeof html2canvas==='undefined' || !window.jspdf){ showToast('ไลบรารียังโหลดไม่เสร็จ ลองใหม่อีกครั้ง','error'); return; }
-        const orig=btn.innerHTML; btn.innerHTML='<i class="ph ph-spinner animate-spin"></i>'; btn.disabled=true;
+    /* เรนเดอร์ใบนัดเป็น canvas แล้วแคชไว้ (เรียกตอนเปิดพรีวิว) */
+    let _apptExportCache=null;
+    async function prepareApptExport(a){
+        if(typeof html2canvas==='undefined') return;
         const holder=document.createElement('div');
         holder.style.cssText='position:fixed;left:-10000px;top:0;background:#fff;z-index:-1';
         holder.innerHTML=`<div id="__apptExport" style="width:148mm;min-height:210mm;background:#fff;box-sizing:border-box">${buildApptHtml(a)}</div>`;
         document.body.appendChild(holder);
         try{
             await Promise.all([...holder.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(r=>{ img.onload=img.onerror=r; })));
-            const el=holder.querySelector('#__apptExport');
-            const canvas=await html2canvas(el, { scale:2, useCORS:true, backgroundColor:'#fff' });
+            const canvas=await html2canvas(holder.querySelector('#__apptExport'), { scale:2, useCORS:true, backgroundColor:'#fff' });
+            _apptExportCache={ id:a.id, jpg:canvas.toDataURL('image/jpeg',0.95), w:canvas.width, h:canvas.height };
+        }catch(e){ _apptExportCache=null; }
+        finally{ document.body.removeChild(holder); }
+    }
+    /* บันทึกใบนัดเป็น PDF/JPG (A5 แนวตั้ง) ตรงตามที่พิมพ์ */
+    async function saveApptFile(id, type, btn){
+        const a=State.appointments.find(x=>x.id===id); if(!a) return;
+        if(typeof html2canvas==='undefined' || !window.jspdf){ showToast('ไลบรารียังโหลดไม่เสร็จ ลองใหม่อีกครั้ง','error'); return; }
+        const orig=btn.innerHTML;
+        try{
+            // ใช้รูปที่เตรียมไว้ล่วงหน้า → กดแล้วเด้งเมนูแชร์ทันที (iOS ไม่บล็อก)
+            let cache=(_apptExportCache&&_apptExportCache.id===id)?_apptExportCache:null;
+            if(!cache){ btn.innerHTML='<i class="ph ph-spinner animate-spin"></i>'; btn.disabled=true; await prepareApptExport(a); cache=_apptExportCache; }
+            if(!cache) throw new Error('เตรียมรูปไม่สำเร็จ');
             const fname=`ใบนัด_${String(a.name||'').replace(/\s+/g,'')}_${String(a.date||'')}`;
-            let r;
-            if(type==='jpg'){
-                r=await saveFileSmart(canvas.toDataURL('image/jpeg',0.95), fname+'.jpg');
-            }else{
+            let dataUrl, ext;
+            if(type==='jpg'){ dataUrl=cache.jpg; ext='.jpg'; }
+            else{
                 const { jsPDF }=window.jspdf;
-                const pdf=new jsPDF('p','mm','a5');   // A5 148x210
-                let w=148, h=canvas.height*w/canvas.width;
+                const pdf=new jsPDF('p','mm','a5');
+                let w=148, h=cache.h*w/cache.w;
                 if(h>210){ const s=210/h; w=w*s; h=210; }
-                pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',(148-w)/2,0,w,h);
-                r=await saveFileSmart(pdf.output('datauristring'), fname+'.pdf');
+                pdf.addImage(cache.jpg,'JPEG',(148-w)/2,0,w,h);
+                dataUrl=pdf.output('datauristring'); ext='.pdf';
             }
+            const r=await saveFileSmart(dataUrl, fname+ext);
             if(r!=='cancel') showToast(r==='shared'?'เลือกที่บันทึก'+(type==='jpg'?'รูปลงอัลบั้ม/แชร์':'ไฟล์')+'ได้เลย':'บันทึก'+(type==='jpg'?'รูป JPG':'ไฟล์ PDF')+'แล้ว');
         }catch(e){ showToast('บันทึกไม่สำเร็จ (รูปโลโก้อาจติดสิทธิ์ CORS): '+(e.message||''),'error'); }
-        finally{ document.body.removeChild(holder); btn.innerHTML=orig; btn.disabled=false; }
+        finally{ btn.innerHTML=orig; btn.disabled=false; }
     }
     async function deleteAppt(id){
         if(!await confirmDialog('ลบนัดหมายนี้?', {title:'ลบนัดหมาย', okText:'ลบ', danger:true})) return;
