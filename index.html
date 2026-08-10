@@ -2748,6 +2748,8 @@
                 <td class="p-4 text-right whitespace-nowrap">
                     <button onclick="openApptForm('${a.id}')" class="p-1.5 text-gray-500 hover:text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="แก้ไข"><i class="ph ph-pencil-simple text-lg"></i></button>
                     <button onclick="printAppt('${a.id}')" class="p-1.5 text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="พิมพ์ใบนัด"><i class="ph ph-printer text-lg"></i></button>
+                    <button onclick="saveApptFile('${a.id}','pdf',this)" class="p-1.5 text-red-600 hover:bg-red-50 rounded" title="บันทึก PDF"><i class="ph ph-file-pdf text-lg"></i></button>
+                    <button onclick="saveApptFile('${a.id}','jpg',this)" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded" title="บันทึก JPG"><i class="ph ph-file-image text-lg"></i></button>
                     <button onclick="deleteAppt('${a.id}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="ลบ"><i class="ph ph-trash text-lg"></i></button>
                 </td>
             </tr>`).join('') : `<tr><td colspan="6" class="p-8 text-center text-gray-400"><i class="ph ph-calendar-x text-3xl block mb-2"></i>ยังไม่มีนัดหมาย</td></tr>`;
@@ -2823,8 +2825,8 @@
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
     }
     /* ใบนัด (พิมพ์) */
-    function printAppt(id){
-        const a=State.appointments.find(x=>x.id===id); if(!a) return;
+    /* เนื้อหาใบนัด (ใช้ร่วมกันทั้งพิมพ์และบันทึก PDF/JPG) — A5 แนวตั้ง */
+    function buildApptHtml(a){
         const NAVY='#0f3d91'; const logo=currentLogo();
         const FONT="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif";
         const logoImg = logo ? `<img src="${esc(logo)}" alt="logo" style="height:150px;width:auto;max-width:100%;object-fit:contain;display:block;margin:-12px auto -8px" onerror="this.style.display='none'">` : '';
@@ -2833,7 +2835,7 @@
                 <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.25">${CLINIC.address}</div>
                 <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.25">โทร. ${CLINIC.phone}</div>
             </div>`;
-        printHTML(`<div style="width:148mm;min-height:210mm;padding:12mm 14mm;box-sizing:border-box;${FONT};color:#111"><style>@page{size:A5 portrait;margin:0;}</style>
+        return `<div style="width:148mm;min-height:210mm;padding:12mm 14mm;box-sizing:border-box;${FONT};color:#111">
             ${head}
             <div style="text-align:center;font-size:20px;font-weight:700;color:${NAVY};margin:6px 0 16px">ใบนัดหมาย</div>
             <div style="font-size:18px;line-height:2.2">
@@ -2842,7 +2844,39 @@
                 <div><b style="color:${NAVY}">เพื่อ</b> ${esc(a.type||'-')}</div>
             </div>
             <div style="margin-top:24px;font-size:14px;color:#555">* กรุณามาตามวันและเวลานัด หากมาไม่ได้โปรดแจ้งล่วงหน้า โทร.${esc(CLINIC.phone)}</div>
-        </div>`);
+        </div>`;
+    }
+    function printAppt(id){
+        const a=State.appointments.find(x=>x.id===id); if(!a) return;
+        printHTML(`<style>@page{size:A5 portrait;margin:0;}</style>${buildApptHtml(a)}`);
+    }
+    /* บันทึกใบนัดเป็น PDF/JPG (A5 แนวตั้ง) ตรงตามที่พิมพ์ */
+    async function saveApptFile(id, type, btn){
+        const a=State.appointments.find(x=>x.id===id); if(!a) return;
+        if(typeof html2canvas==='undefined' || !window.jspdf){ showToast('ไลบรารียังโหลดไม่เสร็จ ลองใหม่อีกครั้ง','error'); return; }
+        const orig=btn.innerHTML; btn.innerHTML='<i class="ph ph-spinner animate-spin"></i>'; btn.disabled=true;
+        const holder=document.createElement('div');
+        holder.style.cssText='position:fixed;left:-10000px;top:0;background:#fff;z-index:-1';
+        holder.innerHTML=`<div id="__apptExport" style="width:148mm;min-height:210mm;background:#fff;box-sizing:border-box">${buildApptHtml(a)}</div>`;
+        document.body.appendChild(holder);
+        try{
+            await Promise.all([...holder.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(r=>{ img.onload=img.onerror=r; })));
+            const el=holder.querySelector('#__apptExport');
+            const canvas=await html2canvas(el, { scale:2, useCORS:true, backgroundColor:'#fff' });
+            const fname=`ใบนัด_${String(a.name||'').replace(/\s+/g,'')}_${String(a.date||'')}`;
+            if(type==='jpg'){
+                downloadDataUrl(canvas.toDataURL('image/jpeg',0.95), fname+'.jpg');
+            }else{
+                const { jsPDF }=window.jspdf;
+                const pdf=new jsPDF('p','mm','a5');   // A5 148x210
+                let w=148, h=canvas.height*w/canvas.width;
+                if(h>210){ const s=210/h; w=w*s; h=210; }
+                pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',(148-w)/2,0,w,h);
+                pdf.save(fname+'.pdf');
+            }
+            showToast('บันทึก'+(type==='jpg'?'รูป JPG':'ไฟล์ PDF')+'แล้ว');
+        }catch(e){ showToast('บันทึกไม่สำเร็จ (รูปโลโก้อาจติดสิทธิ์ CORS): '+(e.message||''),'error'); }
+        finally{ document.body.removeChild(holder); btn.innerHTML=orig; btn.disabled=false; }
     }
     async function deleteAppt(id){
         if(!await confirmDialog('ลบนัดหมายนี้?', {title:'ลบนัดหมาย', okText:'ลบ', danger:true})) return;
