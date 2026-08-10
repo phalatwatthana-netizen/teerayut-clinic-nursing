@@ -2897,17 +2897,18 @@
             const el=holder.querySelector('#__apptExport');
             const canvas=await html2canvas(el, { scale:2, useCORS:true, backgroundColor:'#fff' });
             const fname=`ใบนัด_${String(a.name||'').replace(/\s+/g,'')}_${String(a.date||'')}`;
+            let r;
             if(type==='jpg'){
-                downloadDataUrl(canvas.toDataURL('image/jpeg',0.95), fname+'.jpg');
+                r=await saveFileSmart(canvas.toDataURL('image/jpeg',0.95), fname+'.jpg');
             }else{
                 const { jsPDF }=window.jspdf;
                 const pdf=new jsPDF('p','mm','a5');   // A5 148x210
                 let w=148, h=canvas.height*w/canvas.width;
                 if(h>210){ const s=210/h; w=w*s; h=210; }
                 pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',(148-w)/2,0,w,h);
-                pdf.save(fname+'.pdf');
+                r=await saveFileSmart(pdf.output('datauristring'), fname+'.pdf');
             }
-            showToast('บันทึก'+(type==='jpg'?'รูป JPG':'ไฟล์ PDF')+'แล้ว');
+            if(r!=='cancel') showToast(r==='shared'?'เลือกที่บันทึก'+(type==='jpg'?'รูปลงอัลบั้ม/แชร์':'ไฟล์')+'ได้เลย':'บันทึก'+(type==='jpg'?'รูป JPG':'ไฟล์ PDF')+'แล้ว');
         }catch(e){ showToast('บันทึกไม่สำเร็จ (รูปโลโก้อาจติดสิทธิ์ CORS): '+(e.message||''),'error'); }
         finally{ document.body.removeChild(holder); btn.innerHTML=orig; btn.disabled=false; }
     }
@@ -3157,6 +3158,21 @@
         printReferMulti(referGather());
     }
     function downloadDataUrl(url,name){ const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
+    function dataUrlToBlob(url){ const [h,b]=url.split(','); const mime=(h.match(/:(.*?);/)||[])[1]||'application/octet-stream'; const bin=atob(b); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); }
+    /* บันทึกไฟล์ไปยังแหล่งเก็บของเครื่อง:
+       - มือถือ/แท็บเล็ตที่รองรับ Web Share → เปิดเมนูให้ "บันทึกลงรูปภาพ/อัลบั้ม" หรือแชร์
+       - อื่นๆ → ดาวน์โหลดไฟล์ตามปกติ */
+    async function saveFileSmart(dataUrl, name){
+        try{
+            const blob=dataUrlToBlob(dataUrl);
+            const file=new File([blob], name, {type:blob.type});
+            if(navigator.canShare && navigator.canShare({files:[file]})){
+                await navigator.share({files:[file], title:name});
+                return 'shared';
+            }
+        }catch(e){ if(e && e.name==='AbortError') return 'cancel'; /* ผู้ใช้ยกเลิก */ }
+        downloadDataUrl(dataUrl, name); return 'download';
+    }
     /* บันทึกใบส่งตัวเป็น PDF/JPG ตรงตามพรีวิวเป๊ะ (เรนเดอร์เต็มขนาด A4) */
     async function saveReferFile(type, btn){
         if(!refSelectedHN()){ showToast('เลือกผู้รับบริการก่อน','error'); return; }
@@ -3172,17 +3188,18 @@
             const el=holder.querySelector('#__refExport');
             const canvas=await html2canvas(el, { scale:2, useCORS:true, backgroundColor:'#fff' });
             const fname=`ใบส่งตัว_${String(d.name||'').replace(/\s+/g,'')}_${String(d.refNo||'').replace(/\//g,'-')}`;
+            let r;
             if(type==='jpg'){
-                downloadDataUrl(canvas.toDataURL('image/jpeg',0.95), fname+'.jpg');
+                r=await saveFileSmart(canvas.toDataURL('image/jpeg',0.95), fname+'.jpg');
             }else{
                 const { jsPDF }=window.jspdf;
                 const pdf=new jsPDF('p','mm','a4');
                 let w=210, h=canvas.height*w/canvas.width;
                 if(h>297){ const s=297/h; w=w*s; h=297; }   // ย่อให้พอดี 1 หน้า
                 pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',(210-w)/2,0,w,h);
-                pdf.save(fname+'.pdf');
+                r=await saveFileSmart(pdf.output('datauristring'), fname+'.pdf');
             }
-            showToast('บันทึก'+(type==='jpg'?'รูป JPG':'ไฟล์ PDF')+'แล้ว');
+            if(r!=='cancel') showToast(r==='shared'?'เลือกที่บันทึก'+(type==='jpg'?'รูปลงอัลบั้ม/แชร์':'ไฟล์')+'ได้เลย':'บันทึก'+(type==='jpg'?'รูป JPG':'ไฟล์ PDF')+'แล้ว');
         }catch(e){ showToast('บันทึกไม่สำเร็จ (รูปโลโก้/ลายเซ็นอาจติดสิทธิ์ CORS): '+(e.message||''),'error'); }
         finally{ document.body.removeChild(holder); btn.innerHTML=orig; btn.disabled=false; }
     }
