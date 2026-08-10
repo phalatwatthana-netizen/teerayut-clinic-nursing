@@ -1886,11 +1886,11 @@
         const list = allActiveVisits();   // คิวรวมทุกห้อง
         const triageList = list.filter(v=>v.status===STATUS.TRIAGE);
         const sel = $('#triagePatientSelect');
-        sel.innerHTML = `<option value="">--</option>` + triageList.map(v=>`<option value="${v.vn}"></option>`).join('');
+        sel.innerHTML = `<option value="">--</option>` + list.map(v=>`<option value="${v.vn}"></option>`).join('');
         const cur=State.current.vn; let n=0;
         $('#triageQueueList').innerHTML = list.length ? list.map(v=>{ const p=patientByHN(v.hn)||{}; const active=String(v.vn)===String(cur);
             const isTriage=v.status===STATUS.TRIAGE; if(isTriage) n++;
-            const clickFn = isTriage ? `selectTriage('${v.vn}')` : `openVisitInRoom('${v.vn}')`;
+            const clickFn = `selectTriage('${v.vn}')`;   // เปิดแก้ข้อมูลซักประวัติได้ทุกคน แม้ไปห้องอื่นแล้ว
             return `<button type="button" onclick="${clickFn}" class="w-full text-left p-3 flex items-center gap-2 transition-colors ${active?'bg-brand-blueMain text-white':'hover:bg-brand-bluePale/20'}">
                 <span class="w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${active?'bg-white/25 text-white':(isTriage?'bg-brand-bluePale/40 text-brand-blueDark':'bg-gray-100 text-gray-400')}">${isTriage?n:'•'}</span>
                 <span class="min-w-0 flex-1"><span class="block text-sm font-semibold truncate ${active?'text-white':'text-gray-800'}">${esc(pname(p))}</span>
@@ -1898,7 +1898,7 @@
             </button>`; }).join('')
             : `<div class="p-6 text-center text-gray-400 text-sm"><i class="ph ph-user-list text-2xl block mb-1"></i>ไม่มีคิว</div>`;
         const curV=visitByVN(cur);
-        if(curV && curV.status===STATUS.TRIAGE){ sel.value=cur; loadTriagePatient(); }
+        if(curV && STATUS_ORDER[curV.status]){ sel.value=cur; loadTriagePatient(); }
         else { $('#triageForm-wrap').classList.add('hidden'); $('#triageEmpty').classList.remove('hidden'); }
     }
     function selectTriage(vn){ State.current.vn=vn; $('#triagePatientSelect').value=vn; renderTriageQueue(); }
@@ -2078,11 +2078,12 @@
         // PI: ระยะเวลาไว้ต้นประโยค + "ก่อนมาคลินิก"
         let pi=$('#pi').value.trim(); const piDur=$('#pi_dur').value.trim(), piU=$('#pi_unit').value;
         if(piDur && piU) pi=piDur+' '+piU+' ก่อนมาคลินิก'+(pi?' '+pi:'');
-        const patch = { bp_sys:$('#bp_sys').value, bp_dia:$('#bp_dia').value, bt:$('#bt').value, pr:$('#pr').value, weight:$('#weight').value, height:$('#height').value, bmi:$('#bmi').value, cc:cc, pi:pi, ph:$('#ph').value.trim(), pe:$('#pe').value.trim(), signer:$('#triage_signer').value, vitalsExtra:JSON.stringify(collectVitalsExtra()), status:STATUS.EXAM, triageAt:nowISO() };
+        const adv = v.status===STATUS.TRIAGE;   // เลื่อนไปห้องตรวจเฉพาะตอนยังอยู่ซักประวัติ
+        const patch = { bp_sys:$('#bp_sys').value, bp_dia:$('#bp_dia').value, bt:$('#bt').value, pr:$('#pr').value, weight:$('#weight').value, height:$('#height').value, bmi:$('#bmi').value, cc:cc, pi:pi, ph:$('#ph').value.trim(), pe:$('#pe').value.trim(), signer:$('#triage_signer').value, vitalsExtra:JSON.stringify(collectVitalsExtra()), status:(adv?STATUS.EXAM:v.status), triageAt:v.triageAt||nowISO() };
         try{
             await Store.saveVisit(Object.assign({}, v, patch));   // บันทึกก่อน
             Object.assign(v, patch);                              // เปลี่ยนสถานะเฉพาะเมื่อสำเร็จ
-            Store.localSave(); showToast('บันทึกซักประวัติแล้ว ส่งห้องตรวจ'); State.current.vn=null; renderTriageQueue(); updateBadges();
+            Store.localSave(); showToast(adv?'บันทึกซักประวัติแล้ว ส่งห้องตรวจ':'บันทึกข้อมูลซักประวัติแล้ว'); State.current.vn=null; renderTriageQueue(); updateBadges();
         }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
         finally{ btn.innerHTML=orig; btn.disabled=false; }
@@ -2093,7 +2094,7 @@
         const list = allActiveVisits();
         $('#examQueue').innerHTML = list.length ? list.map(v=>queueItem(v)).join('') : emptyQueue();
         const cur=visitByVN(State.current.vn);
-        if(cur && cur.status===STATUS.EXAM) loadExam(cur.vn);
+        if(cur && STATUS_ORDER[cur.status]) loadExam(cur.vn);
         else { $('#examForm-wrap').classList.add('hidden'); $('#examEmpty').classList.remove('hidden'); }
     }
     /* คิวรวมทุกห้อง: ผู้ป่วยที่กำลังรับบริการทั้งหมดของวันนี้ (ยังไม่เสร็จ/ไม่ส่งต่อ) เรียงตามลำดับห้อง */
@@ -2109,10 +2110,19 @@
         if(!room) return;
         State.current.vn=vn; navTo(room);
     }
+    /* คลิกผู้ป่วยในคิว "ของห้องที่กำลังอยู่" → เปิดแก้ข้อมูลห้องนั้นได้เลย แม้ผู้ป่วยจะไปห้องอื่นแล้ว */
+    function openVisitHere(vn){
+        const sec=document.querySelector('.app-section.active')?.id?.replace('section-','');
+        if(sec==='examination') loadExam(vn);
+        else if(sec==='pharmacy') loadPharmacy(vn);
+        else if(sec==='billing') loadBilling(vn);
+        else if(sec==='triage') selectTriage(vn);
+        else openVisitInRoom(vn);
+    }
     function queueItem(v){
         const p = patientByHN(v.hn)||{};
         const active = State.current.vn===v.vn ? 'bg-brand-bluePale/30' : 'hover:bg-brand-bg';
-        return `<div onclick="openVisitInRoom('${v.vn}')" class="p-3 cursor-pointer ${active} transition-colors">
+        return `<div onclick="openVisitHere('${v.vn}')" class="p-3 cursor-pointer ${active} transition-colors">
             <div class="flex justify-between items-center"><span class="text-sm font-semibold text-gray-800">${esc(pname(p))}</span>${statusBadge(v.status)}</div>
             <div class="flex justify-between items-center mt-0.5">
                 <div class="text-xs text-gray-500">${esc(v.hn)} · ${esc(v.cc||'-')}</div>
@@ -2193,11 +2203,12 @@
         const dx=collectList('dx-item'), treatment=collectList('tx-item');
         if(!dx){ showToast('กรุณาระบุการวินิจฉัย (Dx)','error'); btn.innerHTML=orig; btn.disabled=false; return; }
         const meds=collectMeds(); const medTotal=meds.reduce((s,m)=>s+m.qty*m.price,0);
-        const patch = { dx, treatment, lab:$('#lab').value.trim(), meds, medTotal, followUpDate:$('#followUpDate').value, followUpNote:$('#followUpNote').value.trim(), status:STATUS.PHARM, examAt:nowISO() };
+        const adv = v.status===STATUS.EXAM;   // ส่งห้องยาเฉพาะตอนยังอยู่ห้องตรวจ
+        const patch = { dx, treatment, lab:$('#lab').value.trim(), meds, medTotal, followUpDate:$('#followUpDate').value, followUpNote:$('#followUpNote').value.trim(), status:(adv?STATUS.PHARM:v.status), examAt:v.examAt||nowISO() };
         try{
             await Store.saveVisit(Object.assign({}, v, patch));
             Object.assign(v, patch);
-            Store.localSave(); showToast('บันทึกการตรวจแล้ว ส่งห้องยา'); State.current.vn=null; renderExamQueue(); updateBadges();
+            Store.localSave(); showToast(adv?'บันทึกการตรวจแล้ว ส่งห้องยา':'บันทึกการตรวจแล้ว'); State.current.vn=null; renderExamQueue(); updateBadges();
         }
         catch(e){ showToast('ไม่สำเร็จ: '+e.message,'error'); }
         finally{ btn.innerHTML=orig; btn.disabled=false; }
@@ -2209,7 +2220,7 @@
         const list=allActiveVisits();
         $('#pharmacyQueue').innerHTML = list.length?list.map(v=>queueItem(v)).join(''):emptyQueue();
         const cur=visitByVN(State.current.vn);
-        if(cur && cur.status===STATUS.PHARM) loadPharmacy(cur.vn);
+        if(cur && STATUS_ORDER[cur.status]) loadPharmacy(cur.vn);
         else { $('#pharmacyDetail').classList.add('hidden'); $('#pharmacyEmpty').classList.remove('hidden'); }
     }
     function loadPharmacy(vn){
@@ -2230,6 +2241,7 @@
     }
     async function dispense(vn){
         const v=visitByVN(vn); if(!v) return;
+        if(v.status!==STATUS.PHARM){ showToast('รายการนี้จ่ายยา/ผ่านห้องยาไปแล้ว','info'); return; }
         const patch = { status:STATUS.BILL, dispenseAt:nowISO() };
         try{
             await Store.saveVisit(Object.assign({}, v, patch));   // บันทึกก่อน
@@ -2667,7 +2679,7 @@
         const list=allActiveVisits();
         $('#billingQueue').innerHTML = list.length?list.map(v=>queueItem(v)).join(''):emptyQueue();
         const cur=visitByVN(State.current.vn);
-        if(cur && cur.status===STATUS.BILL) loadBilling(cur.vn);
+        if(cur && STATUS_ORDER[cur.status]) loadBilling(cur.vn);
         else { $('#billingDetail').classList.add('hidden'); $('#billingEmpty').classList.remove('hidden'); }
     }
     function loadBilling(vn){
