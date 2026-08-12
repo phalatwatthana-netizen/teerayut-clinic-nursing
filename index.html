@@ -946,9 +946,21 @@
         },
         async load(){
             if(Store.online()){
-                const r = await fetch(Store.url()+'?action=load&t='+Date.now());
-                const d = await r.json(); if(d.status==='error') throw new Error(d.message);
-                return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[], inventory:d.inventory||[], signs:d.signs||[], logos:d.logos||[], referrals:d.referrals||[], templates:d.templates||[], formulas:d.formulas||[] };
+                let lastErr;
+                for(let attempt=0; attempt<3; attempt++){
+                    const ctrl=new AbortController();
+                    const to=setTimeout(()=>ctrl.abort(), 20000);   // กันค้าง: ยกเลิกถ้าเกิน 20 วิ
+                    try{
+                        const r = await fetch(Store.url()+'?action=load&t='+Date.now(), { signal: ctrl.signal });
+                        clearTimeout(to);
+                        const d = await r.json(); if(d.status==='error') throw new Error(d.message);
+                        return { patients:d.patients||[], visits:d.visits||[], appointments:d.appointments||[], inventory:d.inventory||[], signs:d.signs||[], logos:d.logos||[], referrals:d.referrals||[], templates:d.templates||[], formulas:d.formulas||[] };
+                    }catch(e){
+                        clearTimeout(to); lastErr = (e.name==='AbortError') ? new Error('โหลดข้อมูลช้า/หมดเวลา') : e;
+                        if(attempt<2) await new Promise(r=>setTimeout(r, 1000*(attempt+1))); // ถอยหลังก่อนลองใหม่
+                    }
+                }
+                throw lastErr;
             }
             return {
                 patients: JSON.parse(localStorage.getItem('clinic_patients')||'[]'),
@@ -2994,8 +3006,9 @@
             img.src=url;
         });
     }
-    /* แปลงลิงก์ Drive เป็น data URL (แคชไว้) — ใช้ lh3.googleusercontent.com ที่รองรับ CORS */
-    const _imgDataCache={};
+    /* แปลงลิงก์ Drive เป็น data URL (แคชทั้งในหน่วยความจำและ localStorage) */
+    const _imgDataCache=(()=>{ try{ return JSON.parse(localStorage.getItem('clinic_imgcache')||'{}'); }catch(e){ return {}; } })();
+    function _imgCachePersist(){ try{ localStorage.setItem('clinic_imgcache', JSON.stringify(_imgDataCache)); }catch(e){ /* เต็ม/ปิดไว้ ไม่เป็นไร */ } }
     async function driveImgData(url){
         url=String(url||'').trim(); if(!url) return '';
         if(_imgDataCache[url]!==undefined) return _imgDataCache[url];
@@ -3014,7 +3027,8 @@
                 if(j && j.status==='success' && j.dataUrl) out=j.dataUrl;
             }catch(e){ /* เงียบไว้ */ }
         }
-        _imgDataCache[url]=out; return out;
+        _imgDataCache[url]=out; if(out) _imgCachePersist();   // เก็บลงเครื่องถ้าได้รูป → ครั้งหน้าเร็ว/ออฟไลน์ได้
+        return out;
     }
     async function currentLogoData(){ const l=(State.logos||[])[0]; return l?driveImgData(l.url):''; }
     /* เลือกผู้ส่งต่อ → เติมเลขใบอนุญาต + แสดงลายเซ็นในพรีวิว */
@@ -3521,6 +3535,8 @@
         catch(e){ showToast('โหลดข้อมูลไม่สำเร็จ: '+e.message,'error'); }
         const cur = document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard';
         renderView(cur); updateBadges();
+        // พรีโหลดโลโก้/ลายเซ็นเป็น data URL เงียบๆ (กดบันทึกครั้งแรกจะเร็ว)
+        setTimeout(()=>{ try{ currentLogoData(); (State.signs||[]).forEach(s=>s.signUrl&&driveImgData(driveImg(s.signUrl))); }catch(e){} }, 1500);
     }
     /* ---------- ซิงก์ข้อมูลอัตโนมัติ (รองรับหลายเครื่องพร้อมกัน) ----------
        ดึงข้อมูลล่าสุดจากชีตเงียบๆ เมื่อสลับกลับมาหน้าจอ + ทุก 30 วิ
