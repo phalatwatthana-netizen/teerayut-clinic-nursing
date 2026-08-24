@@ -2176,7 +2176,9 @@
         $('#examEmpty').classList.add('hidden'); $('#examForm-wrap').classList.remove('hidden');
         $('#examPatientStrip').innerHTML = patientStrip(p, v);
         $('#examVitals').innerHTML = `<b class="text-brand-blueDark">สัญญาณชีพ:</b> BP ${esc(v.bp_sys||'-')}/${esc(v.bp_dia||'-')} · BT ${esc(v.bt||'-')}°C · PR ${esc(v.pr||'-')} · BMI ${esc(v.bmi||'-')} &nbsp;|&nbsp; <b class="text-brand-blueDark">CC:</b> ${esc(v.cc||'-')}${v.pi?` · <b>PI:</b> ${esc(v.pi)}`:''}`;
-        fillDxTx('dxList', addDxRow, v.dx); fillDxTx('txList', addTxRow, v.treatment);
+        fillDxTx('dxList', addDxRow, v.dx);
+        // การพยาบาล/หัตถการ: ถ้ายังไม่เคยบันทึก → เติม 3 รายการที่ตรึงไว้ให้ทุกคน
+        fillDxTx('txList', addTxRow, v.treatment || FIXED_PROCS.join('; '));
         $('#lab').value=v.lab||''; $('#followUpDate').value=v.followUpDate||''; $('#followUpNote').value=v.followUpNote||'';
         fillInvDrugList();
         $('#medList').innerHTML=''; (v.meds&&v.meds.length?v.meds:[{}]).forEach(m=>addMedRow(m));
@@ -2191,14 +2193,17 @@
     }
     function addDxRow(val){ addListRow('dxList','dx-item', val, 'การวินิจฉัย'); }
     function addTxRow(val){ addListRow('txList','tx-item', val, 'การพยาบาล/หัตถการ', 'procList'); renderProcList(); }
+    /* หัตถการที่ตรึงไว้ (มีทุกคนเสมอ ลบไม่ได้) — เติมอัตโนมัติในทุกเวชระเบียนใหม่ */
+    const FIXED_PROCS = ['ประเมินสภาพ','ให้คำแนะนำการปฏิบัติตัว','ให้คำแนะนำการรับประทานยา'];
     /* รายการหัตถการ (เก็บในชีต Templates, type='procedure') */
     function renderProcList(){
         const el=$('#procList'); if(!el) return;
-        const list=(State.templates||[]).filter(t=>t.type==='procedure').map(t=>t.text).filter(Boolean).sort((a,b)=>a.localeCompare(b,'th'));
+        const custom=(State.templates||[]).filter(t=>t.type==='procedure').map(t=>t.text).filter(Boolean);
+        const list=[...FIXED_PROCS, ...custom.filter(t=>!FIXED_PROCS.includes(t)).sort((a,b)=>a.localeCompare(b,'th'))];
         el.innerHTML = list.map(t=>`<option value="${esc(t)}"></option>`).join('');
     }
     function openProcManager(){
-        const list=(State.templates||[]).filter(t=>t.type==='procedure').sort((a,b)=>String(a.text||'').localeCompare(String(b.text||''),'th'));
+        const list=(State.templates||[]).filter(t=>t.type==='procedure' && !FIXED_PROCS.includes((t.text||'').trim())).sort((a,b)=>String(a.text||'').localeCompare(String(b.text||''),'th'));
         openModal('จัดการรายการหัตถการ', `
             <div class="space-y-3 text-sm">
                 <div class="flex gap-2">
@@ -2206,7 +2211,8 @@
                     <button onclick="addProc()" class="px-4 py-2 bg-brand-greenMain text-white rounded-lg font-medium shrink-0"><i class="ph ph-plus"></i> เพิ่ม</button>
                 </div>
                 <div id="procMgrList" class="max-h-[50vh] overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-lg">
-                    ${list.length?list.map(t=>`<div class="flex justify-between items-center px-3 py-2"><span>${esc(t.text)}</span><button onclick="delProc('${esc(t.id)}')" class="text-red-500 hover:bg-red-50 rounded p-1"><i class="ph ph-trash"></i></button></div>`).join(''):'<p class="text-center text-gray-400 py-6">ยังไม่มีรายการหัตถการ</p>'}
+                    ${FIXED_PROCS.map(t=>`<div class="flex justify-between items-center px-3 py-2 bg-brand-bluePale/15"><span class="text-brand-blueDark">${esc(t)} <span class="text-[10px] text-gray-400">(มีทุกคน)</span></span><i class="ph ph-lock-simple text-gray-300"></i></div>`).join('')}
+                    ${list.length?list.map(t=>`<div class="flex justify-between items-center px-3 py-2"><span>${esc(t.text)}</span><button onclick="delProc('${esc(t.id)}')" class="text-red-500 hover:bg-red-50 rounded p-1"><i class="ph ph-trash"></i></button></div>`).join(''):''}
                 </div>
                 <div class="flex justify-end pt-1"><button onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ปิด</button></div>
             </div>`);
@@ -2214,7 +2220,7 @@
     async function addProc(){
         const inp=$('#procNew'); const text=(inp.value||'').trim();
         if(!text){ inp.focus(); return; }
-        if((State.templates||[]).some(t=>t.type==='procedure' && (t.text||'').trim()===text)){ showToast('มีหัตถการนี้อยู่แล้ว','error'); return; }
+        if(FIXED_PROCS.includes(text) || (State.templates||[]).some(t=>t.type==='procedure' && (t.text||'').trim()===text)){ showToast('มีหัตถการนี้อยู่แล้ว','error'); return; }
         const rec={ id:'P'+Date.now(), type:'procedure', text, createdAt:nowISO() };
         State.templates.push(rec);
         try{ await Store.saveTemplate(rec); Store.localSave(); renderProcList(); openProcManager(); showToast('เพิ่มหัตถการแล้ว'); }
