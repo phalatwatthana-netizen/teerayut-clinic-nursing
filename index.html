@@ -695,7 +695,7 @@
                                     <th class="p-3 font-medium">ชื่อในฐานข้อมูล</th>
                                     <th class="p-3 font-medium">ชื่อบน OPD card</th>
                                     <th class="p-3 font-medium">หน่วย</th><th class="p-3 font-medium text-right">ราคา/หน่วย</th>
-                                    <th class="p-3 font-medium text-center">คงเหลือ</th><th class="p-3 font-medium text-right">จัดการ</th>
+                                    <th class="p-3 font-medium text-center">คงเหลือ</th><th class="p-3 font-medium text-center">พรีวิว</th><th class="p-3 font-medium text-right">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody id="invTableBody" class="text-sm divide-y divide-gray-50"></tbody>
@@ -2528,6 +2528,7 @@
                 <td class="p-3 text-gray-600">${esc(it.unit||'-')}</td>
                 <td class="p-3 text-right text-gray-600">${money(it.price)}</td>
                 <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${st}</span></td>
+                <td class="p-3 text-center"><button onclick="openInvPreview('${it.code}')" class="p-1.5 text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="ดูรายละเอียด"><i class="ph ph-eye text-lg"></i></button></td>
                 <td class="p-3 text-right whitespace-nowrap">
                     <button onclick="openInvAdjust('${it.code}',1)" class="p-1.5 text-green-600 hover:bg-green-50 rounded" title="เพิ่มสต๊อก"><i class="ph ph-plus-circle text-lg"></i></button>
                     <button onclick="openInvAdjust('${it.code}',-1)" class="p-1.5 text-orange-500 hover:bg-orange-50 rounded" title="ตัดสต๊อก"><i class="ph ph-minus-circle text-lg"></i></button>
@@ -2535,7 +2536,7 @@
                     <button onclick="deleteInv('${it.code}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="ลบ"><i class="ph ph-trash text-lg"></i></button>
                 </td>
             </tr>`;
-        }).join('') : `<tr><td colspan="8" class="p-8 text-center text-gray-400"><i class="ph ph-package text-3xl block mb-2"></i>${q?'ไม่พบรายการ':'ยังไม่มีรายการ — กด "นำเข้ารายการเริ่มต้น" หรือ "เพิ่มรายการ"'}</td></tr>`;
+        }).join('') : `<tr><td colspan="9" class="p-8 text-center text-gray-400"><i class="ph ph-package text-3xl block mb-2"></i>${q?'ไม่พบรายการ':'ยังไม่มีรายการ — กด "นำเข้ารายการเริ่มต้น" หรือ "เพิ่มรายการ"'}</td></tr>`;
     }
     function openInvPreview(code){
         const it=invByCode(code); if(!it) return;
