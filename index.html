@@ -2521,16 +2521,16 @@
         $('#invTableBody').innerHTML = list.length ? list.map(it=>{
             const st=Number(it.stock)||0, mn=Number(it.minStock||0);
             const cls = st<=0 ? 'text-red-600 bg-red-50' : (st<=mn ? 'text-yellow-700 bg-yellow-50' : 'text-green-700 bg-green-50');
-            return `<tr class="hover:bg-brand-bg transition-colors">
+            return `<tr id="invrow-${esc(it.code)}" class="hover:bg-brand-bg transition-colors">
                 <td class="p-3 font-mono text-brand-blueMain">${esc(it.code)}</td>
-                <td class="p-3 font-medium text-gray-800"><button type="button" onclick="openInvPreview('${esc(it.code)}')" class="text-left text-brand-blueMain hover:underline font-medium">${esc(it.name)}</button>${it.category?` <span class="text-xs text-gray-400">· ${esc(it.category)}</span>`:''}</td>
+                <td class="p-3 font-medium text-gray-800"><button type="button" onclick="toggleInvPreview('${esc(it.code)}')" class="text-left text-brand-blueMain hover:underline font-medium">${esc(it.name)}</button>${it.category?` <span class="text-xs text-gray-400">· ${esc(it.category)}</span>`:''}</td>
                 <td class="p-3 text-brand-teal text-xs">${it.dbName?esc(it.dbName):'<span class="text-gray-300">—</span>'}</td>
                 <td class="p-3 text-gray-700 text-xs">${it.opdName?esc(it.opdName):'<span class="text-gray-300">—</span>'}</td>
                 <td class="p-3 text-gray-700 text-xs">${it.previewName?esc(it.previewName):'<span class="text-gray-300">—</span>'}</td>
                 <td class="p-3 text-gray-600">${esc(it.unit||'-')}</td>
                 <td class="p-3 text-right text-gray-600">${money(it.price)}</td>
                 <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${st}</span></td>
-                <td class="p-3 text-center"><button onclick="openInvPreview('${it.code}')" class="p-1.5 text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="ดูรายละเอียด"><i class="ph ph-eye text-lg"></i></button></td>
+                <td class="p-3 text-center"><button onclick="toggleInvPreview('${it.code}')" class="p-1.5 text-brand-blueMain hover:bg-brand-bluePale/50 rounded" title="กางรายละเอียด"><i class="ph ph-caret-down text-lg"></i></button></td>
                 <td class="p-3 text-right whitespace-nowrap">
                     <button onclick="openInvAdjust('${it.code}',1)" class="p-1.5 text-green-600 hover:bg-green-50 rounded" title="เพิ่มสต๊อก"><i class="ph ph-plus-circle text-lg"></i></button>
                     <button onclick="openInvAdjust('${it.code}',-1)" class="p-1.5 text-orange-500 hover:bg-orange-50 rounded" title="ตัดสต๊อก"><i class="ph ph-minus-circle text-lg"></i></button>
@@ -2540,30 +2540,34 @@
             </tr>`;
         }).join('') : `<tr><td colspan="10" class="p-8 text-center text-gray-400"><i class="ph ph-package text-3xl block mb-2"></i>${q?'ไม่พบรายการ':'ยังไม่มีรายการ — กด "นำเข้ารายการเริ่มต้น" หรือ "เพิ่มรายการ"'}</td></tr>`;
     }
-    function openInvPreview(code){
+    /* กางรายละเอียดใต้แถวคลังยา (ไม่ซ่อนใน popup) */
+    function toggleInvPreview(code){
+        const main=document.getElementById('invrow-'+code); if(!main) return;
+        const existing=document.getElementById('invdetail-'+code);
+        if(existing){ existing.remove(); return; }
         const it=invByCode(code); if(!it) return;
         const st=Number(it.stock)||0, mn=Number(it.minStock||0);
         const stTxt = st<=0 ? '<span class="text-red-600 font-semibold">หมดสต๊อก</span>' : (st<=mn ? '<span class="text-yellow-700 font-semibold">ใกล้หมด</span>' : '<span class="text-green-700 font-semibold">ปกติ</span>');
-        const row=(l,v)=>`<div class="flex justify-between gap-3 py-1.5 border-b border-gray-50"><span class="text-gray-500">${l}</span><span class="text-gray-800 font-medium text-right">${v}</span></div>`;
-        openModal('รายละเอียดรายการคลัง', `
-            <div class="text-sm">
-                <div class="text-lg font-bold text-brand-blueDark mb-1">${esc(it.previewName||it.name||'-')}</div>
-                <div class="text-xs text-gray-400 mb-3 font-mono">รหัส ${esc(it.code||'-')}${it.category?` · ${esc(it.category)}`:''}</div>
-                ${row('ชื่อยา/เวชภัณฑ์', esc(it.name||'-'))}
-                ${row('ชื่อในฐานข้อมูล', it.dbName?esc(it.dbName):'<span class="text-gray-300">—</span>')}
-                ${row('ชื่อบน OPD card', it.opdName?esc(it.opdName):'<span class="text-gray-300">— (ใช้ชื่อยา)</span>')}
-                ${row('ชื่อบนพรีวิว', it.previewName?esc(it.previewName):'<span class="text-gray-300">— (ใช้ชื่อยา)</span>')}
-                ${row('หน่วย', esc(it.unit||'-'))}
-                ${row('ราคา/หน่วย', money(it.price)+' ฿')}
-                ${row('คงเหลือ', st+' '+esc(it.unit||'')+' &nbsp; '+stTxt)}
-                ${row('จุดสั่งซื้อขั้นต่ำ', mn+' '+esc(it.unit||''))}
-                ${row('มูลค่าคงเหลือ', money(st*(Number(it.price)||0))+' ฿')}
-                ${it.updatedAt?row('อัปเดตล่าสุด', fmtDateTH(it.updatedAt)):''}
-                <div class="flex justify-end gap-2 pt-4">
-                    <button onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ปิด</button>
-                    <button onclick="closeModal();openInvForm('${esc(it.code)}')" class="px-4 py-2 bg-brand-blueMain text-white rounded-lg font-medium flex items-center gap-1"><i class="ph ph-pencil-simple"></i> แก้ไข</button>
-                </div>
-            </div>`);
+        const cell=(l,v)=>`<div class="flex justify-between gap-2 py-1 border-b border-gray-100/70"><span class="text-gray-500">${l}</span><span class="text-gray-800 font-medium text-right">${v}</span></div>`;
+        const tr=document.createElement('tr');
+        tr.id='invdetail-'+code;
+        tr.className='bg-brand-bluePale/10';
+        tr.innerHTML=`<td colspan="10" class="px-6 py-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-0 text-sm">
+                ${cell('ชื่อยา/เวชภัณฑ์', esc(it.name||'-'))}
+                ${cell('ชื่อในฐานข้อมูล', it.dbName?esc(it.dbName):'<span class="text-gray-300">—</span>')}
+                ${cell('ชื่อบน OPD card', it.opdName?esc(it.opdName):'<span class="text-gray-300">— (ใช้ชื่อยา)</span>')}
+                ${cell('ชื่อบนพรีวิว', it.previewName?esc(it.previewName):'<span class="text-gray-300">— (ใช้ชื่อยา)</span>')}
+                ${cell('หน่วย', esc(it.unit||'-'))}
+                ${cell('ราคา/หน่วย', money(it.price)+' ฿')}
+                ${cell('คงเหลือ', st+' '+esc(it.unit||'')+' &nbsp; '+stTxt)}
+                ${cell('จุดสั่งซื้อขั้นต่ำ', mn+' '+esc(it.unit||''))}
+                ${cell('มูลค่าคงเหลือ', money(st*(Number(it.price)||0))+' ฿')}
+                ${it.updatedAt?cell('อัปเดตล่าสุด', fmtDateTH(it.updatedAt)):''}
+            </div>
+            <div class="flex justify-end pt-2"><button onclick="openInvForm('${esc(it.code)}')" class="px-3 py-1.5 text-brand-blueMain hover:bg-brand-bluePale/40 rounded text-sm font-medium flex items-center gap-1"><i class="ph ph-pencil-simple"></i> แก้ไข</button></div>
+        </td>`;
+        main.after(tr);
     }
     function openInvForm(code){
         const it = code ? (invByCode(code)||{}) : {};
