@@ -933,19 +933,24 @@
     const Store = {
         url(){ const saved=localStorage.getItem('clinic_api_url'); return (saved!==null?saved:DEFAULT_API_URL) || ''; },
         online(){ return !!Store.url(); },
-        async post(action, data){
+        async post(action, data, opts){
+            opts = opts||{};
+            const timeout = opts.timeout || 30000;      // กันค้าง (ค่าเริ่มต้น 30 วิ)
+            const tries   = opts.tries   || 2;          // จำนวนครั้งที่ลอง
             let lastErr;
-            for(let attempt=0; attempt<2; attempt++){
+            for(let attempt=0; attempt<tries; attempt++){
                 const ctrl = new AbortController();
-                const to = setTimeout(()=>ctrl.abort(), 25000);   // กันค้าง: ยกเลิกถ้าเกิน 25 วิ
+                const to = setTimeout(()=>ctrl.abort(), timeout);
                 try{
                     const r = await fetch(Store.url(), { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action, data }), signal: ctrl.signal });
                     clearTimeout(to);
-                    const d = await r.json(); if(d.status==='error') throw new Error(d.message||'error'); return d;
+                    const txt = await r.text();
+                    let d; try{ d = JSON.parse(txt); }catch(pe){ throw new Error('เชื่อมต่อไม่ถูกต้อง (ตรวจการตั้งค่าเปิดสิทธิ์ Web App = Anyone และ Deploy ใหม่)'); }
+                    if(d.status==='error') throw new Error(d.message||'error'); return d;
                 }catch(e){
                     clearTimeout(to); lastErr = e;
-                    if(e.name==='AbortError'){ lastErr = new Error('เซิร์ฟเวอร์ตอบช้า/หมดเวลา ลองใหม่'); }
-                    if(attempt===0) await new Promise(r=>setTimeout(r,1200)); // retry 1 ครั้ง
+                    if(e.name==='AbortError'){ lastErr = new Error('เซิร์ฟเวอร์ตอบช้า/หมดเวลา (เซิร์ฟเวอร์อาจเพิ่งตื่น ลองอีกครั้ง)'); }
+                    if(attempt<tries-1) await new Promise(r=>setTimeout(r, 1500*(attempt+1))); // ถอยหลังก่อนลองใหม่
                 }
             }
             throw lastErr;
@@ -3620,8 +3625,8 @@
         clear(){ localStorage.removeItem(Auth.key); },
         async login(username, password){
             if(Store.online()){
-                // ตรวจสอบกับชีต Users ผ่าน Google Apps Script
-                const d = await Store.post('login', { username, password });
+                // ตรวจสอบกับชีต Users ผ่าน Google Apps Script (อดทนรอ cold start นานขึ้น)
+                const d = await Store.post('login', { username, password }, { timeout:45000, tries:3 });
                 if(d && d.user) return d.user;
                 throw new Error('เข้าสู่ระบบไม่สำเร็จ');
             }
