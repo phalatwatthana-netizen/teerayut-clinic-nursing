@@ -2599,6 +2599,23 @@
         // เทียบแบบจบคำ (ตามด้วยช่องว่าง) กัน b1 ไปแมตช์ b12
         return _NURSE_RX_KEYS.some(k=>hay.includes(k+' '));
     }
+    /* สถานะจ่ายได้จริง = การยืนยันด้วยตนเองมาก่อน ถ้าไม่ระบุจึงใช้ผลเทียบอัตโนมัติ
+       rxManual: 'yes' = ยืนยันจ่ายได้, 'no' = ระบุว่าจ่ายไม่ได้, '' = อัตโนมัติ */
+    function dispensable(it){
+        if(it.rxManual==='yes') return true;
+        if(it.rxManual==='no')  return false;
+        return isNurseRx(it);
+    }
+    async function setRxManual(code, val){
+        const it=invByCode(code); if(!it) return;
+        it.rxManual=val; it.updatedAt=nowISO();
+        try{ await Store.saveInventory(it); Store.localSave(); }
+        catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message,'error'); }
+        renderInventory();
+        // เปิดแถวรายละเอียดเดิมค้างไว้ให้เห็นผล
+        const open=document.getElementById('invdetail-'+code); if(!open) toggleInvPreview(code);
+        showToast(val==='yes'?'ยืนยันจ่ายได้แล้ว':val==='no'?'ระบุว่าจ่ายไม่ได้':'กลับเป็นอัตโนมัติ');
+    }
     function _titleDrug(s){ return String(s||'').replace(/\b[a-z]/g,c=>c.toUpperCase()); }
     /* คืนชื่อยามาตรฐาน (ตามรายการสภาการพยาบาล) ที่ตรงกับรายการคลังนี้ */
     function nurseRxName(it){
@@ -2614,7 +2631,7 @@
         const stockValue=State.inventory.reduce((s,it)=>s+(Number(it.stock)||0)*(Number(it.price)||0),0);
         const low=State.inventory.filter(it=>Number(it.stock)<=Number(it.minStock||0) && Number(it.stock)>0).length;
         const out=State.inventory.filter(it=>Number(it.stock)<=0).length;
-        const rxCount=State.inventory.filter(isNurseRx).length;
+        const rxCount=State.inventory.filter(dispensable).length;
         const kpis=[
             {ic:'ph-package',col:'blueMain',label:'รายการทั้งหมด',val:totalItems},
             {ic:'ph-coins',col:'greenMain',label:'มูลค่าคงคลัง',val:money(stockValue)+' ฿'},
@@ -2627,11 +2644,13 @@
         $('#invTableBody').innerHTML = list.length ? list.map(it=>{
             const st=Number(it.stock)||0, mn=Number(it.minStock||0);
             const cls = st<=0 ? 'text-red-600 bg-red-50' : (st<=mn ? 'text-yellow-700 bg-yellow-50' : 'text-green-700 bg-green-50');
-            const rx=isNurseRx(it);
-            const rxName = rx ? nurseRxName(it) : '';
+            const rx=dispensable(it);
+            const rxName = isNurseRx(it) ? nurseRxName(it) : '';
             const auto = v => v ? esc(v) : (rxName?`<span class="text-green-600 italic" title="ชื่อมาตรฐานตามสภาการพยาบาล">${esc(rxName)}</span>`:'<span class="text-gray-300">—</span>');
-            const nameCls = rx ? 'text-green-700' : 'text-gray-800';
-            const rxBadge = rx ? ' <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold whitespace-nowrap">✓ จ่ายได้</span>' : '';
+            const nameCls = rx ? 'text-green-700' : (it.rxManual==='no'?'text-red-600':'text-gray-800');
+            const rxBadge = rx
+                ? ` <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold whitespace-nowrap">✓ จ่ายได้${it.rxManual==='yes'?' (ยืนยันเอง)':''}</span>`
+                : (it.rxManual==='no'?' <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold whitespace-nowrap">✗ จ่ายไม่ได้</span>':'');
             return `<tr id="invrow-${esc(it.code)}" class="hover:bg-brand-bg transition-colors">
                 <td class="p-3 font-mono text-brand-blueMain">${esc(it.code)}</td>
                 <td class="p-3 font-medium"><button type="button" onclick="toggleInvPreview('${esc(it.code)}')" class="text-left ${nameCls} hover:underline font-medium">${esc(it.name)}</button>${rxBadge}${it.category?` <span class="text-xs text-gray-400">· ${esc(it.category)}</span>`:''}</td>
@@ -2668,7 +2687,7 @@
         tr.innerHTML=`<td colspan="10" class="px-6 py-3">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-0 text-sm">
                 ${cell('ชื่อยา/เวชภัณฑ์', esc(it.name||'-'))}
-                ${cell('สิทธิ์จ่ายยา (สภาการพยาบาล)', isNurseRx(it)?'<span class="text-green-700 font-semibold">✓ จ่ายได้</span>':'<span class="text-gray-400">ไม่อยู่ในรายการ</span>')}
+                ${cell('สิทธิ์จ่ายยา', dispensable(it)?('<span class="text-green-700 font-semibold">✓ จ่ายได้</span>'+(it.rxManual==='yes'?' <span class="text-[10px] text-gray-400">(ยืนยันเอง)</span>':(isNurseRx(it)?' <span class="text-[10px] text-gray-400">(ตามสภาฯ)</span>':''))):(it.rxManual==='no'?'<span class="text-red-600 font-semibold">✗ จ่ายไม่ได้ (ระบุเอง)</span>':'<span class="text-gray-400">ไม่อยู่ในรายการ</span>'))}
                 ${cell('ชื่อในฐานข้อมูล', autoP(it.dbName))}
                 ${cell('ชื่อบน OPD card', autoP(it.opdName))}
                 ${cell('ชื่อบนพรีวิว', autoP(it.previewName))}
@@ -2679,7 +2698,15 @@
                 ${cell('มูลค่าคงเหลือ', money(st*(Number(it.price)||0))+' ฿')}
                 ${it.updatedAt?cell('อัปเดตล่าสุด', fmtDateTH(it.updatedAt)):''}
             </div>
-            <div class="flex justify-end pt-2"><button onclick="openInvForm('${esc(it.code)}')" class="px-3 py-1.5 text-brand-blueMain hover:bg-brand-bluePale/40 rounded text-sm font-medium flex items-center gap-1"><i class="ph ph-pencil-simple"></i> แก้ไข</button></div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-3 mt-2 border-t border-gray-100">
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-xs text-gray-500 mr-1">ยืนยันสิทธิ์จ่ายยาเอง:</span>
+                    <button onclick="setRxManual('${esc(it.code)}','yes')" class="px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1 ${it.rxManual==='yes'?'bg-green-600 text-white':'bg-green-50 text-green-700 hover:bg-green-100'}"><i class="ph ph-check"></i> จ่ายได้</button>
+                    <button onclick="setRxManual('${esc(it.code)}','no')" class="px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1 ${it.rxManual==='no'?'bg-red-600 text-white':'bg-red-50 text-red-600 hover:bg-red-100'}"><i class="ph ph-x"></i> จ่ายไม่ได้</button>
+                    <button onclick="setRxManual('${esc(it.code)}','')" class="px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1 ${!it.rxManual?'bg-brand-blueMain text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}"><i class="ph ph-arrows-clockwise"></i> อัตโนมัติ</button>
+                </div>
+                <button onclick="openInvForm('${esc(it.code)}')" class="px-3 py-1.5 text-brand-blueMain hover:bg-brand-bluePale/40 rounded text-sm font-medium flex items-center gap-1"><i class="ph ph-pencil-simple"></i> แก้ไข</button>
+            </div>
         </td>`;
         main.after(tr);
     }
