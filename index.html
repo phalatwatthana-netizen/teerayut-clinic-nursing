@@ -171,6 +171,9 @@
             <button onclick="navTo('staff')" id="nav-staff" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
                 <i class="ph ph-identification-badge text-xl mr-3"></i> STAFF (บุคลากร)
             </button>
+            <button onclick="navTo('council')" id="nav-council" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
+                <i class="ph ph-scroll text-xl mr-3"></i> ประกาศสภาการพยาบาล
+            </button>
             <button onclick="navTo('settings')" id="nav-settings" class="w-full flex items-center px-3 py-2.5 text-[#B7D0E4] hover:bg-white/10 hover:text-white rounded-lg transition-colors text-left">
                 <i class="ph ph-gear text-xl mr-3"></i> ตั้งค่า / เชื่อมต่อ
             </button>
@@ -801,6 +804,31 @@
                 </div>
             </section>
 
+            <!-- ===== COUNCIL (ประกาศสภาการพยาบาล) ===== -->
+            <section id="section-council" class="app-section">
+                <div class="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-brand-bluePale/30">
+                    <h3 class="text-lg font-bold text-brand-blueDark flex items-center"><i class="ph-fill ph-scroll text-brand-teal mr-2"></i> ประกาศสภาการพยาบาล</h3>
+                    <p class="text-sm text-gray-600 mt-1">เรื่อง กำหนดรายการยาและสารวินิจฉัย สำหรับพยาบาลวิชาชีพและพยาบาลเวชปฏิบัติในการรักษาโรคเบื้องต้น พ.ศ. 2565</p>
+                    <p class="text-xs text-gray-400 mt-1">ราชกิจจานุเบกษา เล่ม 139 ตอนพิเศษ 257 ง · 31 ตุลาคม 2565 — รายการยาที่พยาบาลจ่ายได้ พร้อมระบุว่ามีในคลังหรือไม่</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 mb-3">
+                    <div class="inline-flex rounded-lg border border-brand-bluePale/50 overflow-hidden text-sm">
+                        <button id="councilTab-practitioner" onclick="renderCouncil('practitioner')" class="px-4 py-2 font-medium">พยาบาลเวชปฏิบัติทั่วไป (120)</button>
+                        <button id="councilTab-professional" onclick="renderCouncil('professional')" class="px-4 py-2 font-medium border-l border-brand-bluePale/50">พยาบาลวิชาชีพ (52)</button>
+                    </div>
+                    <div class="relative flex-1 min-w-[180px]">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="councilSearch" oninput="renderCouncil()" placeholder="ค้นหาชื่อยา..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blueMain">
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3 text-xs text-gray-500">
+                    <span id="councilSummary" class="font-medium text-brand-blueDark"></span>
+                    <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span> มีในคลัง</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-gray-300 inline-block"></span> ยังไม่มีในคลัง</span>
+                </div>
+                <div id="councilList" class="space-y-4"></div>
+            </section>
+
             <!-- ===== SETTINGS ===== -->
             <section id="section-settings" class="app-section">
                 <div class="mb-6"><h3 class="text-xl font-bold text-brand-blueDark">ตั้งค่า / เชื่อมต่อฐานข้อมูล</h3><p class="text-sm text-gray-500">เชื่อมต่อ Google Sheets เพื่อบันทึกข้อมูลจริงและใช้งานหลายเครื่องร่วมกัน</p></div>
@@ -844,6 +872,7 @@
         <button onclick="navTo('pedidose')" data-mnav="pedidose" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-baby text-lg"></i><span class="text-[10px] mt-0.5">ขนาดยาเด็ก</span></button>
         <button onclick="navTo('reports')" data-mnav="reports" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-chart-line-up text-lg"></i><span class="text-[10px] mt-0.5">รายงาน</span></button>
         <button onclick="navTo('staff')" data-mnav="staff" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-identification-badge text-lg"></i><span class="text-[10px] mt-0.5">STAFF</span></button>
+        <button onclick="navTo('council')" data-mnav="council" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-scroll text-lg"></i><span class="text-[10px] mt-0.5">ประกาศสภาฯ</span></button>
         <button onclick="navTo('settings')" data-mnav="settings" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-gear text-lg"></i><span class="text-[10px] mt-0.5">ตั้งค่า</span></button>
         <button onclick="toggleSidebar()" class="flex flex-col items-center justify-center py-1.5 text-gray-400"><i class="ph ph-list text-lg"></i><span class="text-[10px] mt-0.5">เมนู</span></button>
     </nav>
@@ -1094,7 +1123,7 @@
     }
 
     /* ---------- Navigation ---------- */
-    const pageTitles = { dashboard:'หน้าหลัก (Dashboard)', patients:'ห้องบัตร (ทะเบียนผู้รับบริการ)', triage:'ห้องซักประวัติ (Vital Signs)', examination:'ห้องตรวจ (วินิจฉัย/สั่งยา)', pharmacy:'ห้องยา (จัดยา/จ่ายยา)', appointments:'ห้องนัด (ตารางนัดหมาย)', referral:'ห้องส่งต่อ (เอกสารส่งตัว)', billing:'ระบบค่าใช้จ่าย', inventory:'คลังยา / เวชภัณฑ์', pedidose:'ขนาดยาเด็กตามน้ำหนัก', reports:'รายงานสรุป', settings:'ตั้งค่า / เชื่อมต่อ' };
+    const pageTitles = { dashboard:'หน้าหลัก (Dashboard)', patients:'ห้องบัตร (ทะเบียนผู้รับบริการ)', triage:'ห้องซักประวัติ (Vital Signs)', examination:'ห้องตรวจ (วินิจฉัย/สั่งยา)', pharmacy:'ห้องยา (จัดยา/จ่ายยา)', appointments:'ห้องนัด (ตารางนัดหมาย)', referral:'ห้องส่งต่อ (เอกสารส่งตัว)', billing:'ระบบค่าใช้จ่าย', inventory:'คลังยา / เวชภัณฑ์', pedidose:'ขนาดยาเด็กตามน้ำหนัก', reports:'รายงานสรุป', council:'ประกาศสภาการพยาบาล (รายการยาที่จ่ายได้)', settings:'ตั้งค่า / เชื่อมต่อ' };
     function navTo(sectionId){
         document.querySelectorAll('.app-section').forEach(s=>s.classList.remove('active'));
         const target = $('#section-'+sectionId); if(target) target.classList.add('active');
@@ -1118,6 +1147,7 @@
         else if(id==='pedidose') renderPediDose();
         else if(id==='reports') renderReports();
         else if(id==='staff') renderStaff();
+        else if(id==='council') renderCouncil();
         else if(id==='settings') renderSettings();
         updateBadges();
     }
@@ -3583,6 +3613,96 @@
     }
 
     /* ============================================================ SETTINGS */
+    /* ============================================================
+       ประกาศสภาการพยาบาล พ.ศ. 2565 — รายการยาที่จ่ายได้ (จัดหมวด)
+       ============================================================ */
+    const COUNCIL_DATA = {
+        practitioner: [
+            ['1. ยาแก้ปวด ลดไข้ และยาต้านการอักเสบที่ไม่ใช่สเตียรอยด์ (NSAIDs)', ['Acetaminophen (Paracetamol)','Acetyl salicylic acid (Aspirin)','Ibuprofen','Diclofenac']],
+            ['2. ยาแก้แพ้ (Antihistamines)', ['Chlorpheniramine maleate','Cetirizine','Hydroxyzine']],
+            ['3. ยาแก้แพ้เฉียบพลัน / ช็อก', ['Epinephrine (Adrenaline) — ฉุกเฉิน ฉีดเข้ากล้ามเนื้อ']],
+            ['4. กลุ่มยาระบบทางเดินหายใจ', ['Dextromethorphan','Brown mixture','Scill Ammon mixt','Guaifenesin']],
+            ['5. ยาระบบทางเดินอาหาร', ['Simethicone','Sodium bicarbonate','Carminative mixture','Aluminum hydroxide and magnesium hydroxide','Ranitidine','Omeprazole','Dimenhydrinate','Domperidone','Hyoscine-N-butylbromide (Buscopan)','Bisacodyl','Magnesium Hydroxide (Milk of Magnesia)']],
+            ['6. วิตามินและเกลือแร่', ['วิตามินรวม (Multivitamin)','วิตามินบีรวม (B Complex)','วิตามินบีหนึ่ง (Vitamin B1)','วิตามินบีหก (Vitamin B6)','วิตามินซี (Vitamin C)','Oral Rehydration Salts (ORS)']],
+            ['7. ยาบำรุงโลหิต', ['Ferrous sulfate','Folic acid']],
+            ['8. ยาถ่ายพยาธิ', ['Albendazole','Mebendazole']],
+            ['9. ยาปฏิชีวนะ/ต้านจุลชีพ', ['Amoxycillin','Penicillin V','Erythromycin','Roxithromycin','Cotrimoxazole','Norfloxacin','Dicloxacillin','Doxycycline']],
+            ['10. ยารัดมดลูก', ['Methylergometrine (Methergine)','Syntocinon (Oxytocin) — ฉุกเฉินคลอด ฉีดเข้ากล้ามเนื้อเท่านั้น']],
+            ['11. ยาทาภายนอก / ยาหยอดตา', ['Triamcinolone acetonide','Gentian violet','Clotrimazole','Ketoconazole','Miconazole','Nystatin (cream)','Benzyl benzoate','Calamine lotion','Oxytetracycline eye ointment','Poly-Oph','Tetrahydrozoline+Antazoline (Histaoph eye drop)','น้ำตาเทียม (Artificial Tears)','Salicylic acid','Methyl salicylate','Nystatin (vaginal)','Silver nitrate']],
+            ['12. ยาสมุนไพร', ['ยาอมมะแว้ง','ยาเม็ดฟ้าทะลายโจร','ยาแก้ไอมะขามป้อม','ขมิ้นชัน','ยาระบายมะขามแขก','ครีมไพลจีซาล','ครีมพญายอ','ว่านหางจระเข้']],
+            ['13. ยาชาเฉพาะที่', ['Lidocaine HCL (Xylocaine) 2%']],
+            ['14. กลุ่มน้ำยาฆ่าเชื้อ', ['70% / 95% Alcohol','Chlorhexidine gluconate (Hibiscrub)','Povidone iodine','Sodium hypochlorite','Chlorhexidine+Cetrimide (Savlon)','0.9% Sodium chloride (NSS)']],
+            ['15. กลูโคสและสารน้ำ (กรณีฉุกเฉิน)', ['50% Glucose','5% Dextrose in 0.9% NaCl (D5NSS)','5% Dextrose in 0.45% NaCl (D5N/2)','5% Dextrose in 0.3% NaCl (D5N/3)','Lactated Ringer’s Solution','0.9% Sodium chloride (NSS)']],
+            ['16. ยาคุมกำเนิด', ['ยาเม็ดคุมกำเนิดชนิดรวม','ยาเม็ดคุมกำเนิดชนิดโปรเจสเตอโรน','Depot medroxyprogesterone acetate (DMPA)']],
+            ['17. วัคซีน', ['วัคซีน BCG ป้องกันวัณโรค','วัคซีนตับอักเสบบี (HBV)','วัคซีนคอตีบ-บาดทะยัก-ไอกรน (DPT)','วัคซีนโปลิโอ (OPV)','วัคซีนหัด-คางทูม-หัดเยอรมัน (MMR)','วัคซีนไข้สมองอักเสบเจอี (JE)','Diphtheria-tetanus (dT)','Tetanus Toxoid']],
+            ['18.1 ยาลดความดันโลหิต (refill ตามแผนแพทย์)', ['Hydrochlorothiazide','Propranolol','Atenolol','Enalapril','Amlodipine','Losartan']],
+            ['18.2 ยาเบาหวาน (refill)', ['Glibenclamide','Glipizide','Metformin']],
+            ['18.3 ยาลดไขมัน (refill)', ['Simvastatin','Gemfibrozil','Fenofibrate']],
+            ['18.4 ยารักษาโรคเกาต์ (refill)', ['Colchicine','Allopurinol']],
+            ['18.5 ยารักษาโรคหืด / ปอดอุดกั้นเรื้อรัง (refill)', ['Salbutamol','Terbutaline','Theophylline SR','Ipratropium+Fenoterol (Berodual)','Budesonide']],
+            ['18.6 Antithyroid / Thyroid hormone (refill)', ['Propylthiouracil','Methimazole','Levothyroxine Sodium']],
+            ['18.7 ยารักษาโรคหัวใจขาดเลือด (refill)', ['Isosorbide dinitrate','Isosorbide-5-Mononitrate']],
+            ['18.8 ยานอนหลับ/คลายเครียด/แก้ซึมเศร้า (refill)', ['Diazepam','Amitriptyline']],
+            ['18.9 ยาไมเกรน (refill)', ['Ergotamine+Caffeine (Cafergot)']],
+            ['18.10 ยาแก้วิงเวียน (refill)', ['Betahistine mesilate']],
+            ['19. กลุ่มสารวินิจฉัย (Diagnostic agents)', ['ชุดวินิจฉัยการตั้งครรภ์','แถบตรวจกลูโคสและโปรตีนในปัสสาวะ','แถบวัดระดับน้ำตาลในเลือดจากปลายนิ้ว']]
+        ],
+        professional: [
+            ['1. ยาแก้ปวดท้อง ท้องอืด ท้องเฟ้อ', ['ยาเม็ดลดกรด อะลูมินา-แมกนีเชีย','ยาน้ำลดกรด อะลูมินา-แมกนีเชีย','ยาเม็ดแก้ท้องอืด โซดามิ้นท์','ยาขับลม','ยาธาตุน้ำแดง','ยาน้ำแก้ท้องอืด โซเดียมไบคาร์บอเนต','ทิงเจอร์มหาหิงคุ์']],
+            ['2. ยาแก้ท้องเสีย', ['ผงน้ำตาลเกลือแร่ (ORS)']],
+            ['3. ยาระบาย', ['กลีเซอรีนเหน็บทวารสำหรับเด็ก','กลีเซอรีนเหน็บทวารสำหรับผู้ใหญ่','ยาระบายแมกนีเซีย','ยาระบายมะขามแขก','โซเดียมคลอไรด์ชนิดสวนทวาร']],
+            ['4. ยาถ่ายพยาธิลำไส้', ['มีเบนดาโซล (Mebendazole)']],
+            ['5. ยาบรรเทาปวด ลดไข้', ['พาราเซตามอล 500 มก.','พาราเซตามอล 325 มก.','พาราเซตามอลชนิดน้ำ','พลาสเตอร์บรรเทาปวด']],
+            ['6. ยาแก้แพ้ ลดน้ำมูก', ['คลอร์เฟนิรามีน (Chlorpheniramine)']],
+            ['7. ยาแก้ไอ ขับเสมหะ', ['ยาน้ำแก้ไอขับเสมหะสำหรับเด็ก','ยาแก้ไอน้ำดำ']],
+            ['8. ยาดม/ทาแก้วิงเวียน คัดจมูก', ['เหล้าแอมโมเนียหอม','ยาดมแก้คัดจมูก','ยาทาระเหยชนิดขี้ผึ้ง']],
+            ['9. ยาแก้เมารถ เมาเรือ', ['ไดเมนไฮดริเนท (Dimenhydrinate)']],
+            ['10. ยาสำหรับโรคตา', ['ยาหยอดตาซัลฟาเซตาไมด์','ยาล้างตา']],
+            ['11. ยาสำหรับโรคปากและคอ', ['ยากวาดคอ','เยนเชี่ยนไวโอเลต','ยาแก้ปวดฟัน','ยาอมบรรเทาระคายคอ','ยาอมบรรเทาเจ็บคอ']],
+            ['12. ยาใส่แผล ล้างแผล', ['ทิงเจอร์ไอโอดีน','ทิงเจอร์ไทเมอรอซอล','โพวิโดน-ไอโอดีน','ไอโซโพรพิลแอลกอฮอล์','เอทิลแอลกอฮอล์','น้ำเกลือล้างแผล']],
+            ['13. ยารักษาแผลติดเชื้อ ไฟไหม้ น้ำร้อนลวก', ['ซิลเวอร์ซัลฟาไดอาซีนครีม (Silver sulfadiazine)']],
+            ['14. ยาบรรเทาปวดกล้ามเนื้อ แมลงกัดต่อย', ['ยาหม่องชนิดขี้ผึ้ง']],
+            ['15. ยาสำหรับโรคผิวหนัง', ['เบนซิลเบนโซเอต','ขี้ผึ้งกำมะถัน','ยารักษาน้ำกัดเท้า','ยารักษาโรคผิวหนังเรื้อรัง','คาลาไมน์','โซเดียมไทโอซัลเฟต']],
+            ['16. ยาบำรุงร่างกาย', ['วิตามินบีรวม','วิตามินซี','เฟอร์รัสซัลเฟต','วิตามินรวม','น้ำมันตับปลาชนิดแคปซูล','น้ำมันตับปลาชนิดน้ำ']]
+        ]
+    };
+    let _councilTab = 'practitioner';
+    function _invHay(){ return ' '+_normDrug((State.inventory||[]).map(it=>[it.name,it.dbName,it.opdName,it.previewName].join(' ')).join(' '))+' '; }
+    function _councilInStock(itemStr, hay){
+        // ดึงคีย์: คำอังกฤษยาว ≥5 และคำไทยยาว ≥4 จากชื่อยา
+        const norm=_normDrug(itemStr);
+        const keys=norm.split(' ').filter(w=> (/[a-z]/.test(w)&&w.length>=5) || (/[ก-๙]/.test(w)&&w.length>=4) );
+        return keys.some(k=>hay.includes(' '+k) || hay.includes(k+' '));
+    }
+    function renderCouncil(tab){
+        if(tab) _councilTab=tab;
+        // สไตล์แท็บ
+        ['practitioner','professional'].forEach(t=>{
+            const b=$('#councilTab-'+t); if(!b) return;
+            const on=t===_councilTab;
+            b.className = 'px-4 py-2 font-medium '+(t==='professional'?'border-l border-brand-bluePale/50 ':'')+(on?'bg-brand-blueMain text-white':'bg-white text-gray-600');
+        });
+        const q=($('#councilSearch')?.value||'').trim().toLowerCase();
+        const hay=_invHay();
+        const groups=COUNCIL_DATA[_councilTab]||[];
+        let total=0, stocked=0, html='';
+        groups.forEach(([cat,items])=>{
+            const rows=items.filter(it=>!q||it.toLowerCase().includes(q));
+            if(!rows.length) return;
+            html+=`<div class="bg-white rounded-xl shadow-sm border border-brand-bluePale/30 overflow-hidden">
+                <div class="px-4 py-2.5 bg-brand-bg/60 font-semibold text-brand-blueDark text-sm border-b border-gray-100">${esc(cat)}</div>
+                <div class="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">`;
+            rows.forEach(it=>{
+                total++; const inStock=_councilInStock(it,hay); if(inStock) stocked++;
+                html+=`<div class="flex items-start gap-2 text-sm p-1.5 rounded ${inStock?'bg-green-50':''}">
+                    <i class="ph ${inStock?'ph-check-circle text-green-600':'ph-circle text-gray-300'} text-base mt-0.5 shrink-0"></i>
+                    <span class="${inStock?'text-green-800 font-medium':'text-gray-600'}">${esc(it)}</span></div>`;
+            });
+            html+='</div></div>';
+        });
+        $('#councilList').innerHTML = html || '<p class="text-center text-gray-400 py-8">ไม่พบรายการที่ค้นหา</p>';
+        $('#councilSummary').textContent = `มีในคลัง ${stocked} / ${total} รายการ`;
+    }
     function renderSettings(){ $('#apiUrl').value = Store.url(); updateConnBox(); }
     function updateConnBox(){
         const online=Store.online(); const box=$('#connBox');
