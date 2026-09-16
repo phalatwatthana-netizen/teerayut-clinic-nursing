@@ -2623,6 +2623,14 @@
         for(const raw of NURSE_RX_NAMES){ const k=_normDrug(raw); if(k.length>=3 && hay.includes(k+' ')) return _titleDrug(raw); }
         return '';
     }
+    /* ตัวเลือกดรอปดาวน์ = รายการยาตามประกาศสภาการพยาบาล (รวมทั้ง 2 กลุ่ม, ไม่ซ้ำ) */
+    function councilRxOptions(){
+        const seen=new Set(), opts=[];
+        (typeof COUNCIL_DATA!=='undefined'?[...(COUNCIL_DATA.practitioner||[]),...(COUNCIL_DATA.professional||[])]:[]).forEach(([,items])=>{
+            items.forEach(it=>{ const v=String(it).trim(); const k=v.toLowerCase(); if(v&&!seen.has(k)){ seen.add(k); opts.push(v); } });
+        });
+        return opts.map(v=>`<option value="${esc(v)}"></option>`).join('');
+    }
     function renderInventory(){
         const q=($('#invSearch')?.value||'').toLowerCase().trim();
         let list=State.inventory.slice().sort((a,b)=>String(a.code).localeCompare(String(b.code)));
@@ -2722,8 +2730,9 @@
                 </div>
                 <div><label class="block text-xs text-gray-600 mb-1">ชื่อยา/เวชภัณฑ์ <span class="text-red-500">*</span></label><input id="inv_name" required value="${esc(it.name||'')}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
                 <div><label class="block text-xs text-gray-600 mb-1">ชื่อในฐานข้อมูล (ตัวช่วยวินิจฉัย)</label><input id="inv_dbname" list="invDbList" value="${esc(it.dbName||'')}" placeholder="เลือกชื่อสามัญจากฐานข้อมูล" class="w-full px-3 py-2 border border-gray-200 rounded-lg"><datalist id="invDbList">${(window.DIAGNOSIS_MASTER||[]).map(d=>`<option value="${esc(d.name)}">`).join('')}</datalist></div>
-                <div><label class="block text-xs text-gray-600 mb-1">ชื่อบน OPD card (ชื่อยาที่พิมพ์บนเวชระเบียน)</label><input id="inv_opdname" value="${esc(it.opdName||'')}" placeholder="เว้นว่าง = ใช้ชื่อยา/เวชภัณฑ์" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
-                <div><label class="block text-xs text-gray-600 mb-1">ชื่อบนพรีวิว (ชื่อที่แสดงในหน้าพรีวิว)</label><input id="inv_previewname" value="${esc(it.previewName||'')}" placeholder="เว้นว่าง = ใช้ชื่อยา/เวชภัณฑ์" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <datalist id="invRxList">${councilRxOptions()}</datalist>
+                <div><label class="block text-xs text-gray-600 mb-1">ชื่อบน OPD card (เลือกจากรายการสภาการพยาบาล หรือพิมพ์เอง)</label><input id="inv_opdname" list="invRxList" value="${esc(it.opdName||'')}" placeholder="เว้นว่าง = ใช้ชื่อยา/เวชภัณฑ์" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
+                <div><label class="block text-xs text-gray-600 mb-1">ชื่อบนพรีวิว (เลือกจากรายการสภาการพยาบาล หรือพิมพ์เอง)</label><input id="inv_previewname" list="invRxList" value="${esc(it.previewName||'')}" placeholder="เว้นว่าง = ใช้ชื่อยา/เวชภัณฑ์" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
                 <div class="grid grid-cols-3 gap-3">
                     <div><label class="block text-xs text-gray-600 mb-1">หน่วย</label><input id="inv_unit" value="${esc(it.unit||'')}" placeholder="เม็ด/แผง/ขวด" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
                     <div><label class="block text-xs text-gray-600 mb-1">ราคา/หน่วย</label><input id="inv_price" type="number" step="0.01" min="0" value="${it.price??''}" class="w-full px-3 py-2 border border-gray-200 rounded-lg"></div>
