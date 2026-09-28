@@ -3554,20 +3554,40 @@
     function printHTML(html){ const pa=$('#print-area'); pa.innerHTML=html; pa.classList.remove('hidden'); window.print(); setTimeout(()=>{ pa.classList.add('hidden'); pa.innerHTML=''; }, 500); }
     function printReceipt(vn){
         const v=visitByVN(vn); const p=patientByHN(v.hn)||{};
-        const meds=(v.meds||[]).map(m=>`<tr><td>${esc(m.name)}</td><td style="text-align:center">${m.qty}</td><td style="text-align:right">${money(m.qty*m.price)}</td></tr>`).join('');
-        printHTML(`<div style="font-family:'Noto Sans Thai',sans-serif;max-width:420px;margin:auto">
-            <h2 style="text-align:center;color:#2792E8;margin:0">✚ ${CLINIC.name}</h2>
-            <p style="text-align:center;color:#666;font-size:12px;margin:4px 0 10px">ใบเสร็จรับเงิน / ใบสรุปค่าบริการ</p><hr>
-            <div style="font-size:13px">VN: ${esc(v.vn)} &nbsp; วันที่: ${fmtDateTH(v.date)} ${fmtTime(v.doneAt)}</div>
-            <div style="font-size:13px">${esc(v.hn)} — ${esc(pname(p))}</div>
-            <div style="font-size:13px">วินิจฉัย: ${esc(v.dx||'-')}</div><hr>
-            <table style="width:100%;border-collapse:collapse;font-size:12px"><tr><th style="text-align:left">รายการ</th><th>จำนวน</th><th style="text-align:right">บาท</th></tr>${meds||'<tr><td colspan=3 style="color:#888">- ไม่มีรายการยา -</td></tr>'}</table><hr>
-            <div style="display:flex;justify-content:space-between;font-size:13px"><span>ค่ายา</span><span>${money(v.medTotal)}</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:13px"><span>ค่าบริการ</span><span>${money(v.serviceFee)}</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:13px"><span>ค่าหัตถการ/อื่นๆ</span><span>${money(v.otherFee)}</span></div><hr>
-            <div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px;color:#2792E8"><span>ยอดสุทธิ</span><span>${money(v.total)} ฿</span></div>
-            <div style="font-size:12px;margin-top:4px">ชำระโดย: ${esc(v.payMethod||'-')}</div>
-            <hr><p style="text-align:center;color:#666;font-size:12px">ขอบคุณที่ใช้บริการ</p></div>`);
+        const NAVY='#0f3d91'; const logo=currentLogo();
+        const FONT="font-family:'TH Sarabun New','TH Sarabun PSK','Sarabun','Noto Sans Thai',sans-serif";
+        const logoImg = logo ? `<img src="${esc(logo)}" alt="logo" style="height:150px;width:auto;max-width:100%;object-fit:contain;display:block;margin:-12px auto -8px" onerror="this.style.display='none'">` : '';
+        const head = `<div style="text-align:center;margin-bottom:10px">
+                ${logoImg}
+                <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.25">${CLINIC.address}</div>
+                <div style="font-size:14px;font-weight:600;color:${NAVY};line-height:1.25">โทร. ${CLINIC.phone}</div>
+            </div>`;
+        const meds=(v.meds||[]).map(m=>`<tr><td style="padding:3px 0">${esc(m.name)}</td><td style="text-align:center">${m.qty}</td><td style="text-align:right">${money(m.qty*m.price)}</td></tr>`).join('');
+        const line=(l,val,bold)=>`<div style="display:flex;justify-content:space-between;font-size:${bold?'19px':'16px'};${bold?`font-weight:700;color:${NAVY};`:''}margin:2px 0"><span>${l}</span><span>${val}</span></div>`;
+        printHTML(`<div style="width:148mm;min-height:210mm;padding:12mm 14mm;box-sizing:border-box;${FONT};color:#111"><style>@page{size:A5 portrait;margin:0;}</style>
+            ${head}
+            <div style="text-align:center;font-size:20px;font-weight:700;color:${NAVY};margin:6px 0 12px">ใบเสร็จรับเงิน / ใบสรุปค่าบริการ</div>
+            <div style="font-size:16px;line-height:1.7">
+                <div style="display:flex;justify-content:space-between"><span><b style="color:${NAVY}">VN:</b> ${esc(v.vn)}</span><span><b style="color:${NAVY}">วันที่:</b> ${fmtDateTH(v.date)} ${fmtTime(v.doneAt)}</span></div>
+                <div><b style="color:${NAVY}">ผู้รับบริการ:</b> ${esc(v.hn)} — ${esc(pname(p))}</div>
+                <div><b style="color:${NAVY}">วินิจฉัย:</b> ${esc(v.dx||'-')}</div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:16px;margin-top:10px">
+                <thead><tr style="border-bottom:1.5px solid ${NAVY};color:${NAVY}"><th style="text-align:left;padding:3px 0">รายการ</th><th style="text-align:center">จำนวน</th><th style="text-align:right">บาท</th></tr></thead>
+                <tbody>${meds||'<tr><td colspan="3" style="color:#888;padding:6px 0">- ไม่มีรายการยา -</td></tr>'}</tbody>
+            </table>
+            <div style="border-top:1px dashed #999;margin:10px 0;padding-top:8px">
+                ${line('ค่ายา', money(v.medTotal))}
+                ${line('ค่าบริการ', money(v.serviceFee))}
+                ${line('ค่าหัตถการ/อื่นๆ', money(v.otherFee))}
+                <div style="border-top:1.5px solid ${NAVY};margin-top:6px;padding-top:6px">${line('ยอดสุทธิ', money(v.total)+' ฿', true)}</div>
+                <div style="font-size:14px;margin-top:4px">ชำระโดย: ${esc(v.payMethod||'-')}</div>
+            </div>
+            <div style="margin-top:28px;display:flex;justify-content:flex-end;text-align:center;font-size:15px">
+                <div>ลงชื่อ ...............................................<div style="margin-top:2px">ผู้รับเงิน</div></div>
+            </div>
+            <p style="text-align:center;color:#666;font-size:14px;margin-top:16px">ขอบคุณที่ใช้บริการ</p>
+        </div>`);
     }
     function printPrescription(vn){
         const v=visitByVN(vn); const p=patientByHN(v.hn)||{};
