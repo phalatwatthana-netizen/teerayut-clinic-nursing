@@ -1057,17 +1057,15 @@
                 }
                 throw lastErr;
             }
+            return Store.cache();
+        },
+        /* อ่านสแนปช็อตล่าสุดจากเครื่อง (ใช้โชว์ทันทีก่อนเน็ตจะตอบ) */
+        cache(){
+            const g=(k)=>{ try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(e){ return []; } };
             return {
-                patients: JSON.parse(localStorage.getItem('clinic_patients')||'[]'),
-                visits: JSON.parse(localStorage.getItem('clinic_visits')||'[]'),
-                appointments: JSON.parse(localStorage.getItem('clinic_appts')||'[]'),
-                inventory: JSON.parse(localStorage.getItem('clinic_inventory')||'[]'),
-                signs: JSON.parse(localStorage.getItem('clinic_signs')||'[]'),
-                logos: JSON.parse(localStorage.getItem('clinic_logos')||'[]'),
-                referrals: JSON.parse(localStorage.getItem('clinic_referrals')||'[]'),
-                templates: JSON.parse(localStorage.getItem('clinic_templates')||'[]'),
-                formulas: JSON.parse(localStorage.getItem('clinic_formulas')||'[]'),
-                ledger: JSON.parse(localStorage.getItem('clinic_ledger')||'[]')
+                patients:g('clinic_patients'), visits:g('clinic_visits'), appointments:g('clinic_appts'),
+                inventory:g('clinic_inventory'), signs:g('clinic_signs'), logos:g('clinic_logos'),
+                referrals:g('clinic_referrals'), templates:g('clinic_templates'), formulas:g('clinic_formulas'), ledger:g('clinic_ledger')
             };
         },
         localSave(){
@@ -4046,33 +4044,41 @@
         });
     }
     function updateDate(){ const el=$('#currentDateDisplay'); if(el) el.innerText=new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }
+    function currentSection(){ return document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard'; }
+    function assignState(d){
+        State.patients=d.patients||[]; State.visits=d.visits||[]; State.appointments=d.appointments||[];
+        State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[];
+        State.referrals=d.referrals||[]; State.templates=d.templates||[]; State.formulas=d.formulas||[]; State.ledger=d.ledger||[];
+    }
     async function boot(){
         updateConnBox();
-        try{ const d=await Store.load(); State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments; State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[]; State.referrals=d.referrals||[]; State.templates=d.templates||[]; State.formulas=d.formulas||[]; State.ledger=d.ledger||[]; normalizePhones(); Store.localSave(); }
-        catch(e){ showToast('โหลดข้อมูลไม่สำเร็จ: '+e.message,'error'); }
-        const cur = document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard';
-        renderView(cur); updateBadges();
+        // 1) โชว์จากแคชในเครื่องทันที — เปิดเร็วทุกอุปกรณ์ ไม่ต้องรอเน็ต
+        try{ assignState(Store.cache()); normalizePhones(); }catch(e){}
+        renderView(currentSection()); updateBadges();
+        // 2) ดึงข้อมูลสดเบื้องหลัง แล้วรีเฟรชจออีกครั้ง (ไม่เด้ง error ถ้าเน็ตช้า)
+        if(Store.online()){
+            try{
+                const d=await Store.load(); assignState(d); normalizePhones(); Store.localSave();
+                renderView(currentSection()); updateBadges(); updateConnBox();
+            }catch(e){ if(!State.patients.length) showToast('เชื่อมต่อช้า กำลังใช้ข้อมูลที่บันทึกไว้','info'); }
+        }
         // พรีโหลดโลโก้/ลายเซ็นเป็น data URL เงียบๆ (กดบันทึกครั้งแรกจะเร็ว)
         setTimeout(()=>{ try{ currentLogoData(); (State.signs||[]).forEach(s=>s.signUrl&&driveImgData(driveImg(s.signUrl))); }catch(e){} }, 1500);
     }
-    /* ---------- ซิงก์ข้อมูลอัตโนมัติ (รองรับหลายเครื่องพร้อมกัน) ----------
-       ดึงข้อมูลล่าสุดจากชีตเงียบๆ เมื่อสลับกลับมาหน้าจอ + ทุก 30 วิ
-       โดยไม่รบกวนฟอร์มที่กำลังกรอกอยู่ */
+    /* ---------- ซิงก์ข้อมูลอัตโนมัติ (เรียลไทม์ รองรับหลายเครื่องพร้อมกัน) ----------
+       ดึงข้อมูลล่าสุดเงียบๆ เมื่อสลับกลับมาหน้าจอ + ทุก 15 วิ โดยไม่รบกวนฟอร์มที่กำลังกรอก */
     let _lastSync = 0, _syncing = false;
     async function autoSync(force){
         if(!Store.online() || document.hidden || _syncing) return;
-        if(!force && Date.now()-_lastSync < 20000) return;   // throttle 20 วิ
+        if(!force && Date.now()-_lastSync < 12000) return;   // throttle 12 วิ
         // ไม่ซิงก์ถ้ากำลังพิมพ์อยู่ในฟอร์ม (กันข้อมูลที่ยังไม่บันทึกหาย)
         const ae = document.activeElement;
         if(ae && (ae.tagName==='INPUT' || ae.tagName==='TEXTAREA' || ae.tagName==='SELECT')) return;
         _syncing = true; _lastSync = Date.now();
         try{
             const d = await Store.load();
-            State.patients=d.patients; State.visits=d.visits; State.appointments=d.appointments;
-            State.inventory=d.inventory||[]; State.signs=d.signs||[]; State.logos=d.logos||[];
-            State.referrals=d.referrals||[]; State.templates=d.templates||[]; State.ledger=d.ledger||[];
-            normalizePhones(); Store.localSave();
-            const cur = document.querySelector('.app-section.active')?.id?.replace('section-','') || 'dashboard';
+            assignState(d); normalizePhones(); Store.localSave();
+            const cur = currentSection();
             // ห้องที่มีฟอร์มแก้ไข: รีเฟรชเฉพาะตอนยังไม่ได้เลือกคนไข้ (ปลอดภัย ไม่ทับที่กรอก)
             const roomForms = ['triage','examination','pharmacy','billing'];
             if(roomForms.includes(cur)){ if(!State.current.vn) renderView(cur); else updateBadges(); }
@@ -4084,7 +4090,7 @@
         updateDate(); setInterval(updateDate, 60000);
         document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) autoSync(true); });
         window.addEventListener('focus', ()=>autoSync(true));
-        setInterval(()=>autoSync(false), 30000);
+        setInterval(()=>autoSync(false), 15000);   // เรียลไทม์ ~15 วิ
         const session = Auth.get();
         if(session){ applyUser(session); hideLogin(); boot(); }
         else { showLogin(); }
