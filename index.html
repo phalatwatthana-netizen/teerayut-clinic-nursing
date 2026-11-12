@@ -4026,12 +4026,16 @@
         const id=$('#lg_id').value || ('L'+Date.now());
         const ex=(State.ledger||[]).find(x=>String(x.id)===String(id));
         const rec={ id, date:$('#lg_date').value||todayISO(), kind:$('#lg_kind').value, category:$('#lg_category').value, amount:Number($('#lg_amount').value)||0, note:$('#lg_note').value.trim(), createdAt:(ex&&ex.createdAt)||nowISO() };
+        // แสดงผลทันที (optimistic) แล้วค่อยซิงก์ขึ้นชีต
+        const i=(State.ledger||[]).findIndex(x=>String(x.id)===String(id)); if(i>=0) State.ledger[i]=rec; else State.ledger.push(rec);
+        Store.localSave(); resetLedgerForm(); renderLedgerCalendar(); renderLedgerKpi(); renderLedgerDayList(); renderLedgerMonthList();
         try{
             await Store.saveLedger(rec);
-            const i=(State.ledger||[]).findIndex(x=>String(x.id)===String(id)); if(i>=0) State.ledger[i]=rec; else State.ledger.push(rec);
-            Store.localSave(); resetLedgerForm(); renderLedgerCalendar(); renderLedgerKpi(); renderLedgerDayList(); renderLedgerMonthList();
             showToast('บันทึกรายการแล้ว');
-        }catch(err){ showToast('บันทึกไม่สำเร็จ: '+err.message,'error'); }
+        }catch(err){
+            const msg=/unknown action|Ledger/i.test(err.message||'') ? 'บันทึกในเครื่องแล้ว — แต่ต้องอัปเดต Code.gs (เพิ่มชีต Ledger) + Deploy ใหม่ เพื่อเก็บถาวร/ซิงก์ข้ามเครื่อง' : ('บันทึกในเครื่องแล้ว แต่ซิงก์ขึ้นชีตไม่สำเร็จ: '+err.message);
+            showToast(msg,'error');
+        }
     }
     async function deleteLedgerEntry(id){
         if(!await confirmDialog('ลบรายการนี้?', {title:'ลบรายการ', okText:'ลบ', danger:true})) return;
