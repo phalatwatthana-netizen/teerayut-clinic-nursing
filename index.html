@@ -863,7 +863,7 @@
                         <h3 class="font-bold text-brand-blueDark flex items-center"><i class="ph ph-list-bullets text-brand-teal mr-2"></i> รายการที่บันทึก (<span id="ledgerMonthName"></span>)</h3>
                         <span id="ledgerMonthCount" class="text-xs text-gray-400"></span>
                     </div>
-                    <div id="ledgerMonthList" class="space-y-1.5 max-h-[42vh] overflow-y-auto pr-1"></div>
+                    <div id="ledgerMonthList" class="max-h-[42vh] overflow-auto"></div>
                 </div>
             </section>
 
@@ -3901,24 +3901,51 @@
     function renderLedgerMonthList(){
         const {y,m}=_ledgerYM; const pre=`${y}-${String(m+1).padStart(2,'0')}`;
         $('#ledgerMonthName').textContent = new Date(y,m,1).toLocaleDateString('th-TH',{month:'long'})+' '+(y+543);
+        // เรียงเก่า→ใหม่ เพื่อคำนวณยอดคงเหลือสะสม
         const items=(State.ledger||[]).filter(l=>String(l.date||'').startsWith(pre))
-            .sort((a,b)=>String(b.date+'/'+(b.createdAt||'')).localeCompare(String(a.date+'/'+(a.createdAt||''))));
+            .sort((a,b)=>String(a.date+'/'+(a.createdAt||'')).localeCompare(String(b.date+'/'+(b.createdAt||''))));
         $('#ledgerMonthCount').textContent = items.length+' รายการ';
-        $('#ledgerMonthList').innerHTML = items.length ? items.map(l=>{
-            const isInc=l.kind==='income';
-            return `<div class="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:bg-brand-bg/40">
-                <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isInc?'bg-green-50 text-green-600':'bg-red-50 text-red-600'}"><i class="ph ${isInc?'ph-arrow-down-left':'ph-arrow-up-right'}"></i></div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-sm font-medium text-gray-800 truncate">${esc(l.category||'-')}${l.note?` <span class="text-xs text-gray-400 font-normal">· ${esc(l.note)}</span>`:''}</div>
-                    <div class="text-xs text-gray-400">${fmtDateTH(l.date)}</div>
-                </div>
-                <span class="text-sm font-bold shrink-0 ${isInc?'text-green-600':'text-red-600'}">${isInc?'+':'-'}${money(l.amount)}</span>
-                <div class="flex items-center gap-0.5 shrink-0">
+        if(!items.length){ $('#ledgerMonthList').innerHTML='<p class="text-center text-gray-400 text-sm py-6">ยังไม่มีรายการในเดือนนี้</p>'; return; }
+        let bal=0, totIn=0, totEx=0, rows='';
+        items.forEach(l=>{
+            const isInc=l.kind==='income'; const amt=Number(l.amount)||0;
+            if(isInc){ bal+=amt; totIn+=amt; } else { bal-=amt; totEx+=amt; }
+            rows+=`<tr class="border-b border-gray-50 hover:bg-brand-bg/40">
+                <td class="px-2 py-1.5 text-gray-500 whitespace-nowrap">${fmtDateTH(l.date)}</td>
+                <td class="px-2 py-1.5 text-gray-800">${esc(l.category||'-')}</td>
+                <td class="px-2 py-1.5 text-right text-green-600 font-medium whitespace-nowrap">${isInc?money(amt):''}</td>
+                <td class="px-2 py-1.5 text-right text-red-600 font-medium whitespace-nowrap">${!isInc?money(amt):''}</td>
+                <td class="px-2 py-1.5 text-right font-semibold whitespace-nowrap ${bal<0?'text-red-600':'text-gray-800'}">${money(bal)}</td>
+                <td class="px-2 py-1.5 text-gray-400 max-w-[120px] truncate" title="${esc(l.note||'')}">${esc(l.note||'')}</td>
+                <td class="px-1 py-1.5 text-right whitespace-nowrap">
                     <button onclick="editLedgerEntry('${esc(l.id)}')" class="p-1 text-gray-400 hover:text-brand-blueMain"><i class="ph ph-pencil-simple"></i></button>
                     <button onclick="deleteLedgerEntry('${esc(l.id)}')" class="p-1 text-gray-400 hover:text-red-500"><i class="ph ph-trash"></i></button>
-                </div>
-            </div>`;
-        }).join('') : '<p class="text-center text-gray-400 text-sm py-6">ยังไม่มีรายการในเดือนนี้</p>';
+                </td></tr>`;
+        });
+        $('#ledgerMonthList').innerHTML = `
+            <table class="w-full text-sm border-collapse">
+                <thead class="sticky top-0 bg-brand-bg text-gray-600 text-xs">
+                    <tr class="border-b border-gray-200">
+                        <th class="px-2 py-2 text-left font-medium">วันที่</th>
+                        <th class="px-2 py-2 text-left font-medium">หมวด</th>
+                        <th class="px-2 py-2 text-right font-medium text-green-700">รายรับ</th>
+                        <th class="px-2 py-2 text-right font-medium text-red-700">รายจ่าย</th>
+                        <th class="px-2 py-2 text-right font-medium">คงเหลือ</th>
+                        <th class="px-2 py-2 text-left font-medium">หมายเหตุ</th>
+                        <th class="px-1 py-2"></th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot class="sticky bottom-0 bg-white">
+                    <tr class="border-t-2 border-gray-200 font-bold">
+                        <td class="px-2 py-2" colspan="2">รวม</td>
+                        <td class="px-2 py-2 text-right text-green-700">${money(totIn)}</td>
+                        <td class="px-2 py-2 text-right text-red-700">${money(totEx)}</td>
+                        <td class="px-2 py-2 text-right ${(totIn-totEx)<0?'text-red-600':'text-brand-blueDark'}">${money(totIn-totEx)}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>`;
     }
     function renderLedgerKpi(){
         const {y,m}=_ledgerYM; const pre=`${y}-${String(m+1).padStart(2,'0')}`;
