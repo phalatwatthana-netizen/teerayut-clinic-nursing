@@ -857,6 +857,14 @@
                         </div>
                     </div>
                 </div>
+                <!-- ตารางกึ่งการ์ด: รายการทั้งเดือน -->
+                <div class="bg-white rounded-2xl shadow-sm border border-brand-bluePale/30 p-4 mt-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-brand-blueDark flex items-center"><i class="ph ph-list-bullets text-brand-teal mr-2"></i> รายการที่บันทึก (<span id="ledgerMonthName"></span>)</h3>
+                        <span id="ledgerMonthCount" class="text-xs text-gray-400"></span>
+                    </div>
+                    <div id="ledgerMonthList" class="space-y-1.5"></div>
+                </div>
             </section>
 
             <!-- ===== COUNCIL (ประกาศสภาการพยาบาล) ===== -->            <section id="section-council" class="app-section">
@@ -3847,14 +3855,16 @@
         setLedgerKind($('#lg_kind')?.value||'income');
         renderLedgerCalendar();
         renderLedgerKpi();
+        renderLedgerMonthList();
         selectLedgerDate(_ledgerSel, true);
     }
     function ledgerMonth(delta){
         let {y,m}=_ledgerYM; m+=delta; if(m<0){m=11;y--;} if(m>11){m=0;y++;}
-        _ledgerYM={y,m}; renderLedgerCalendar(); renderLedgerKpi();
+        _ledgerYM={y,m}; renderLedgerCalendar(); renderLedgerKpi(); renderLedgerMonthList();
     }
     function _ledgerOf(dateStr){ return (State.ledger||[]).filter(l=>l.date===dateStr); }
     function _sum(arr,kind){ return arr.filter(l=>l.kind===kind).reduce((s,l)=>s+(Number(l.amount)||0),0); }
+    function _lgShort(n){ n=Math.round(Number(n)||0); return n>=100000?(Math.round(n/1000)+'k'):(n>=10000?( (n/1000).toFixed(1).replace(/\.0$/,'')+'k'):n.toLocaleString('en-US')); }
     function renderLedgerCalendar(){
         const {y,m}=_ledgerYM;
         $('#ledgerMonthLabel').textContent = new Date(y,m,1).toLocaleDateString('th-TH',{month:'long'})+' '+(y+543);
@@ -3868,12 +3878,37 @@
             const items=_ledgerOf(iso);
             const inc=_sum(items,'income'), exp=_sum(items,'expense');
             const sel=iso===_ledgerSel, today=iso===tIso;
-            html+=`<button type="button" onclick="selectLedgerDate('${iso}')" class="relative aspect-square rounded-lg flex flex-col items-center justify-center text-sm transition-colors ${sel?'bg-brand-blueMain text-white shadow':'hover:bg-brand-bg'} ${today&&!sel?'ring-1 ring-brand-blueMain':''}">
-                <span class="${sel?'':'text-gray-700'}">${d}</span>
-                <span class="flex gap-0.5 mt-0.5 h-1.5">${inc>0?`<span class="w-1.5 h-1.5 rounded-full ${sel?'bg-white':'bg-green-500'}"></span>`:''}${exp>0?`<span class="w-1.5 h-1.5 rounded-full ${sel?'bg-white':'bg-red-500'}"></span>`:''}</span>
+            html+=`<button type="button" onclick="selectLedgerDate('${iso}')" class="relative rounded-lg flex flex-col items-center justify-start pt-1 pb-0.5 min-h-[46px] text-sm transition-colors ${sel?'bg-brand-blueMain text-white shadow':'bg-brand-bg/30 hover:bg-brand-bg'} ${today&&!sel?'ring-1 ring-brand-blueMain':''}">
+                <span class="${sel?'':'text-gray-700'} leading-none">${d}</span>
+                <span class="flex flex-col items-center mt-0.5 leading-tight" style="font-size:9px">
+                    ${inc>0?`<span class="${sel?'text-green-100':'text-green-600'} font-semibold">+${_lgShort(inc)}</span>`:''}
+                    ${exp>0?`<span class="${sel?'text-red-100':'text-red-600'} font-semibold">-${_lgShort(exp)}</span>`:''}
+                </span>
             </button>`;
         }
         $('#ledgerCalendar').innerHTML=html;
+    }
+    function renderLedgerMonthList(){
+        const {y,m}=_ledgerYM; const pre=`${y}-${String(m+1).padStart(2,'0')}`;
+        $('#ledgerMonthName').textContent = new Date(y,m,1).toLocaleDateString('th-TH',{month:'long'})+' '+(y+543);
+        const items=(State.ledger||[]).filter(l=>String(l.date||'').startsWith(pre))
+            .sort((a,b)=>String(b.date+'/'+(b.createdAt||'')).localeCompare(String(a.date+'/'+(a.createdAt||''))));
+        $('#ledgerMonthCount').textContent = items.length+' รายการ';
+        $('#ledgerMonthList').innerHTML = items.length ? items.map(l=>{
+            const isInc=l.kind==='income';
+            return `<div class="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:bg-brand-bg/40">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isInc?'bg-green-50 text-green-600':'bg-red-50 text-red-600'}"><i class="ph ${isInc?'ph-arrow-down-left':'ph-arrow-up-right'}"></i></div>
+                <div class="min-w-0 flex-1">
+                    <div class="text-sm font-medium text-gray-800 truncate">${esc(l.category||'-')}${l.note?` <span class="text-xs text-gray-400 font-normal">· ${esc(l.note)}</span>`:''}</div>
+                    <div class="text-xs text-gray-400">${fmtDateTH(l.date)}</div>
+                </div>
+                <span class="text-sm font-bold shrink-0 ${isInc?'text-green-600':'text-red-600'}">${isInc?'+':'-'}${money(l.amount)}</span>
+                <div class="flex items-center gap-0.5 shrink-0">
+                    <button onclick="editLedgerEntry('${esc(l.id)}')" class="p-1 text-gray-400 hover:text-brand-blueMain"><i class="ph ph-pencil-simple"></i></button>
+                    <button onclick="deleteLedgerEntry('${esc(l.id)}')" class="p-1 text-gray-400 hover:text-red-500"><i class="ph ph-trash"></i></button>
+                </div>
+            </div>`;
+        }).join('') : '<p class="text-center text-gray-400 text-sm py-6">ยังไม่มีรายการในเดือนนี้</p>';
     }
     function renderLedgerKpi(){
         const {y,m}=_ledgerYM; const pre=`${y}-${String(m+1).padStart(2,'0')}`;
@@ -3970,13 +4005,13 @@
         try{
             await Store.saveLedger(rec);
             const i=(State.ledger||[]).findIndex(x=>String(x.id)===String(id)); if(i>=0) State.ledger[i]=rec; else State.ledger.push(rec);
-            Store.localSave(); resetLedgerForm(); renderLedgerCalendar(); renderLedgerKpi(); renderLedgerDayList();
+            Store.localSave(); resetLedgerForm(); renderLedgerCalendar(); renderLedgerKpi(); renderLedgerDayList(); renderLedgerMonthList();
             showToast('บันทึกรายการแล้ว');
         }catch(err){ showToast('บันทึกไม่สำเร็จ: '+err.message,'error'); }
     }
     async function deleteLedgerEntry(id){
         if(!await confirmDialog('ลบรายการนี้?', {title:'ลบรายการ', okText:'ลบ', danger:true})) return;
-        try{ await Store.deleteLedger(id); State.ledger=(State.ledger||[]).filter(x=>String(x.id)!==String(id)); Store.localSave(); renderLedgerCalendar(); renderLedgerKpi(); renderLedgerDayList(); showToast('ลบแล้ว'); }
+        try{ await Store.deleteLedger(id); State.ledger=(State.ledger||[]).filter(x=>String(x.id)!==String(id)); Store.localSave(); renderLedgerCalendar(); renderLedgerKpi(); renderLedgerDayList(); renderLedgerMonthList(); showToast('ลบแล้ว'); }
         catch(e){ showToast('ลบไม่สำเร็จ: '+e.message,'error'); }
     }
     function renderSettings(){ $('#apiUrl').value = Store.url(); updateConnBox(); }
