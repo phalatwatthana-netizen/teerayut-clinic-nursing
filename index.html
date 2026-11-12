@@ -1154,7 +1154,7 @@
             openModal(opts.title||'กรอกข้อมูล', `
                 <div class="text-sm">
                     <p class="text-gray-600 mb-3">${esc(message)}</p>
-                    <input id="__promptInput" type="${opts.password?'password':'text'}" ${opts.password?'inputmode="numeric"':''} class="w-full px-3 py-2 border border-gray-300 rounded-lg text-center tracking-widest" onkeydown="if(event.key==='Enter')document.getElementById('__promptOk').click()">
+                    <input id="__promptInput" type="${opts.password?'password':'text'}" value="${esc(opts.value||'')}" ${opts.password?'inputmode="numeric"':''} class="w-full px-3 py-2 border border-gray-300 rounded-lg ${opts.password?'text-center tracking-widest':''}" onkeydown="if(event.key==='Enter')document.getElementById('__promptOk').click()">
                     <div class="flex justify-end gap-2 pt-3"><button type="button" id="__promptCancel" class="px-4 py-2 border border-gray-300 rounded-lg">ยกเลิก</button><button type="button" id="__promptOk" class="px-5 py-2 bg-brand-blueMain text-white rounded-lg font-medium">ตกลง</button></div>
                 </div>`);
             const inp=$('#__promptInput'); setTimeout(()=>inp.focus(),50);
@@ -3839,12 +3839,22 @@
         income:  ['ค่าบริการ','ค่ายา','ค่าหัตถการ','ค่าตรวจ','ค่าทำแผล','ค่าฉีดยา/วัคซีน','รายรับอื่นๆ'],
         expense: ['ค่ายา/เวชภัณฑ์','ค่าเช่าที่','ค่าน้ำ-ค่าไฟ','เงินเดือน/ค่าแรง','ค่าอุปกรณ์','ค่าเดินทาง','ภาษี/ค่าธรรมเนียม','รายจ่ายอื่นๆ']
     };
-    /* หมวดที่ใช้งานจริง = หมวดพื้นฐาน + หมวดที่ผู้ใช้เพิ่มเอง (เก็บในชีต Templates) */
-    function ledgerCustomCats(kind){ return (State.templates||[]).filter(t=>t.type==='lgcat_'+kind).map(t=>t.text).filter(Boolean); }
+    /* หมวดที่ใช้งานจริง: ถ้ามีในชีตแล้วใช้ของในชีต (แก้ได้ทั้งหมด) ถ้ายังไม่มีใช้ค่าพื้นฐานชั่วคราว */
+    function ledgerCatRecs(kind){ return (State.templates||[]).filter(t=>t.type==='lgcat_'+kind); }
     function ledgerCats(kind){
-        const base=LEDGER_CATS[kind]||[]; const out=[...base];
-        ledgerCustomCats(kind).forEach(c=>{ if(!out.includes(c)) out.push(c); });
-        return out;
+        const recs=ledgerCatRecs(kind);
+        return recs.length ? recs.map(t=>t.text).filter(Boolean) : (LEDGER_CATS[kind]||[]);
+    }
+    /* เขียนหมวดพื้นฐานลงชีตครั้งแรก เพื่อให้แก้ไข/ลบได้ */
+    async function ensureLedgerCatsSeeded(kind){
+        if(ledgerCatRecs(kind).length) return;
+        const base=LEDGER_CATS[kind]||[];
+        for(let i=0;i<base.length;i++){
+            const rec={ id:'LC'+Date.now()+'_'+i, type:'lgcat_'+kind, text:base[i], createdAt:nowISO() };
+            State.templates.push(rec);
+            try{ await Store.saveTemplate(rec); }catch(e){}
+        }
+        Store.localSave();
     }
     let _ledgerYM = null;         // {y, m} เดือนที่แสดง
     let _ledgerSel = null;        // 'YYYY-MM-DD' วันที่เลือก
@@ -3940,10 +3950,11 @@
         }
         const sel=$('#lg_category'); if(sel){ const cur=sel.value; sel.innerHTML=ledgerCats(kind).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join(''); if(cur&&ledgerCats(kind).includes(cur)) sel.value=cur; }
     }
-    /* จัดการหมวดรายรับรายจ่าย (เพิ่ม/ลบ) */
-    function openLedgerCatManager(){
+    /* จัดการหมวดรายรับรายจ่าย (เพิ่ม/แก้ชื่อ/ลบ — เก็บลงชีต Templates ทั้งหมด) */
+    async function openLedgerCatManager(){
         const kind=$('#lg_kind')?.value||'income';
-        const base=LEDGER_CATS[kind]||[]; const custom=ledgerCustomCats(kind);
+        await ensureLedgerCatsSeeded(kind);
+        const recs=ledgerCatRecs(kind);
         openModal((kind==='income'?'จัดการหมวดรายรับ':'จัดการหมวดรายจ่าย'), `
             <div class="space-y-3 text-sm">
                 <div class="flex gap-2">
@@ -3951,8 +3962,12 @@
                     <button onclick="addLedgerCat('${kind}')" class="px-4 py-2 bg-brand-greenMain text-white rounded-lg font-medium shrink-0"><i class="ph ph-plus"></i> เพิ่ม</button>
                 </div>
                 <div class="max-h-[50vh] overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-lg">
-                    ${base.map(c=>`<div class="flex justify-between items-center px-3 py-2 bg-brand-bluePale/10"><span class="text-brand-blueDark">${esc(c)} <span class="text-[10px] text-gray-400">(พื้นฐาน)</span></span><i class="ph ph-lock-simple text-gray-300"></i></div>`).join('')}
-                    ${custom.map(c=>{ const t=(State.templates||[]).find(x=>x.type==='lgcat_'+kind && x.text===c); return `<div class="flex justify-between items-center px-3 py-2"><span>${esc(c)}</span><button onclick="delLedgerCat('${esc(t?t.id:'')}')" class="text-red-500 hover:bg-red-50 rounded p-1"><i class="ph ph-trash"></i></button></div>`; }).join('')}
+                    ${recs.length?recs.map(t=>`<div class="flex justify-between items-center px-3 py-2">
+                        <span class="text-gray-800">${esc(t.text)}</span>
+                        <span class="flex items-center gap-1">
+                            <button onclick="renameLedgerCat('${esc(t.id)}')" class="text-gray-400 hover:text-brand-blueMain rounded p-1" title="แก้ชื่อ"><i class="ph ph-pencil-simple"></i></button>
+                            <button onclick="delLedgerCat('${esc(t.id)}')" class="text-red-500 hover:bg-red-50 rounded p-1" title="ลบ"><i class="ph ph-trash"></i></button>
+                        </span></div>`).join(''):'<p class="text-center text-gray-400 py-6">ยังไม่มีหมวด</p>'}
                 </div>
                 <div class="flex justify-end pt-1"><button onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg">ปิด</button></div>
             </div>`);
@@ -3963,6 +3978,15 @@
         const rec={ id:'LC'+Date.now(), type:'lgcat_'+kind, text, createdAt:nowISO() };
         State.templates.push(rec);
         try{ await Store.saveTemplate(rec); Store.localSave(); setLedgerKind(kind); openLedgerCatManager(); showToast('เพิ่มหมวดแล้ว'); }
+        catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message,'error'); }
+    }
+    async function renameLedgerCat(id){
+        const t=(State.templates||[]).find(x=>String(x.id)===String(id)); if(!t) return;
+        const nv=await promptDialog('แก้ชื่อหมวด', {title:'แก้ชื่อหมวด', value:t.text, okText:'บันทึก'});
+        if(nv===null) return; const val=nv.trim(); if(!val || val===t.text){ openLedgerCatManager(); return; }
+        const kind=t.type.replace('lgcat_','');
+        t.text=val;
+        try{ await Store.saveTemplate(t); Store.localSave(); setLedgerKind(kind); renderLedgerDayList(); renderLedgerMonthList(); openLedgerCatManager(); showToast('แก้ไขแล้ว'); }
         catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message,'error'); }
     }
     async function delLedgerCat(id){
