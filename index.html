@@ -3890,9 +3890,9 @@
             const sel=iso===_ledgerSel, today=iso===tIso;
             html+=`<button type="button" onclick="selectLedgerDate('${iso}')" class="relative rounded-lg flex flex-col items-center justify-start pt-1 pb-0.5 min-h-[46px] text-sm transition-colors ${sel?'bg-brand-blueMain text-white shadow':'bg-brand-bg/30 hover:bg-brand-bg'} ${today&&!sel?'ring-1 ring-brand-blueMain':''}">
                 <span class="${sel?'':'text-gray-700'} leading-none">${d}</span>
-                <span class="flex flex-col items-center mt-0.5 leading-tight" style="font-size:9px">
-                    ${inc>0?`<span class="${sel?'text-green-100':'text-green-600'} font-semibold">+${_lgShort(inc)}</span>`:''}
-                    ${exp>0?`<span class="${sel?'text-red-100':'text-red-600'} font-semibold">-${_lgShort(exp)}</span>`:''}
+                <span class="flex flex-col items-stretch gap-0.5 w-full px-1 mt-0.5 leading-tight" style="font-size:9px">
+                    ${inc>0?`<span class="rounded px-1 text-center font-bold ${sel?'bg-white/25 text-white':'bg-green-100 text-green-700'}">+${_lgShort(inc)}</span>`:''}
+                    ${exp>0?`<span class="rounded px-1 text-center font-bold ${sel?'bg-white/25 text-white':'bg-red-100 text-red-700'}">-${_lgShort(exp)}</span>`:''}
                 </span>
             </button>`;
         }
