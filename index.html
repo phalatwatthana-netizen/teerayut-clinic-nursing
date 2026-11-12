@@ -827,6 +827,7 @@
                             <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-green-500"></span> รายรับ</span>
                             <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> รายจ่าย</span>
                         </div>
+                        <div id="ledgerSummaryCard" class="mt-4"></div>
                     </div>
                     <!-- ฟอร์มบันทึก + รายการของวัน -->
                     <div class="bg-white rounded-2xl shadow-sm border border-brand-bluePale/30 p-4">
@@ -3957,6 +3958,36 @@
             {ic:'ph-scales',col:'blueMain',label:'คงเหลือ',val:(bal<0?'-':'')+money(Math.abs(bal))+' ฿'}
         ];
         $('#ledgerKpi').innerHTML=kpis.map(k=>`<div class="bg-white p-4 rounded-xl shadow-sm border border-brand-bluePale/20 flex items-center"><div class="w-10 h-10 rounded-full bg-brand-${k.col}/20 text-brand-${k.col} flex items-center justify-center text-xl mr-3 shrink-0"><i class="ph-fill ${k.ic}"></i></div><div><p class="text-xs text-gray-500">${k.label}</p><p class="text-lg font-bold text-gray-800">${k.val}</p></div></div>`).join('');
+        // การ์ดสรุปสวยงาม เฟดสีตามธีม (ในกล่องปฏิทิน)
+        const card=$('#ledgerSummaryCard');
+        if(card){
+            const monthTxt=new Date(y,m,1).toLocaleDateString('th-TH',{month:'long'})+' '+(y+543);
+            card.innerHTML=`
+            <div class="relative overflow-hidden rounded-2xl p-4 text-white shadow-md" style="background:linear-gradient(135deg,#2792E8 0%,#148A8E 55%,#48BC49 100%)">
+                <div class="absolute -right-6 -top-8 w-28 h-28 rounded-full bg-white/10"></div>
+                <div class="absolute -right-10 top-6 w-20 h-20 rounded-full bg-white/10"></div>
+                <div class="relative">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-white/80">สรุปการเงินเดือน</span>
+                        <span class="text-xs font-semibold bg-white/20 rounded-full px-2 py-0.5">${monthTxt}</span>
+                    </div>
+                    <div class="mt-2">
+                        <p class="text-[11px] text-white/80">คงเหลือสุทธิ</p>
+                        <p class="text-3xl font-extrabold leading-tight">${money(bal)} ฿</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-3">
+                        <div class="bg-white/15 rounded-xl px-3 py-2">
+                            <p class="text-[11px] text-white/80 flex items-center gap-1"><i class="ph-fill ph-arrow-down-left"></i> รายรับ</p>
+                            <p class="text-base font-bold">${money(inc)} ฿</p>
+                        </div>
+                        <div class="bg-white/15 rounded-xl px-3 py-2">
+                            <p class="text-[11px] text-white/80 flex items-center gap-1"><i class="ph-fill ph-arrow-up-right"></i> รายจ่าย</p>
+                            <p class="text-base font-bold">${money(exp)} ฿</p>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
     }
     function selectLedgerDate(iso, keepForm){
         _ledgerSel=iso;
